@@ -18,6 +18,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
+const ALL_ACTIONS_VALUE = "__ALL_ACTIONS__";
+
 export default function LogsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -27,7 +29,7 @@ export default function LogsPage() {
   const [filteredLogEntries, setFilteredLogEntries] = useState<LogEntry[]>(allLogs);
   
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
-  const [selectedAction, setSelectedAction] = useState<string>("");
+  const [selectedAction, setSelectedAction] = useState<string>(ALL_ACTIONS_VALUE);
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState<boolean>(false);
 
@@ -73,24 +75,25 @@ export default function LogsPage() {
       }
     }
     
-
-    if (selectedAction) {
+    if (selectedAction && selectedAction !== ALL_ACTIONS_VALUE) {
       tempFilteredLogs = tempFilteredLogs.filter(log => log.action === selectedAction);
     }
 
     setFilteredLogEntries(tempFilteredLogs);
-    setIsFilterActive(!!dateRange.from || !!dateRange.to || !!selectedAction);
+    const activeFilters = !!dateRange.from || !!dateRange.to || (!!selectedAction && selectedAction !== ALL_ACTIONS_VALUE);
+    setIsFilterActive(activeFilters);
     setIsFilterPopoverOpen(false);
-    if (!!dateRange.from || !!dateRange.to || !!selectedAction) {
+
+    if (activeFilters) {
         toast({ title: "Filters Applied", description: "Log entries have been filtered." });
     } else {
-        toast({ title: "Filters Cleared", description: "Showing all log entries." });
+        toast({ title: "Filters Cleared/No Filters", description: "Showing all log entries." });
     }
   };
 
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
-    setSelectedAction("");
+    setSelectedAction(ALL_ACTIONS_VALUE);
     setFilteredLogEntries(allLogs);
     setIsFilterActive(false);
     setIsFilterPopoverOpen(false);
@@ -185,7 +188,7 @@ export default function LogsPage() {
                       <SelectValue placeholder="Select action" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Actions</SelectItem>
+                      <SelectItem value={ALL_ACTIONS_VALUE}>All Actions</SelectItem>
                       {availableActions.map(action => (
                         <SelectItem key={action} value={action}>{action}</SelectItem>
                       ))}
@@ -264,3 +267,4 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
     {children}
   </label>
 );
+
