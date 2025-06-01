@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { mockProducts } from "@/lib/data";
+import { mockProducts, mockLogEntries } from "@/lib/data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -11,16 +11,28 @@ import { Input } from "@/components/ui/input";
 import { Edit, PlusCircle, PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product } from '@/types';
+import type { Product, LogEntry } from '@/types';
 import AddStockDialog from "@/components/products/AddStockDialog";
-import AddProductDialog from "@/components/products/AddProductDialog"; // Import the new dialog
+import AddProductDialog from "@/components/products/AddProductDialog"; 
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts);
+  const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts.sort((a,b) => a.name.localeCompare(b.name)));
   const [productToRestock, setProductToRestock] = useState<Product | null>(null);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+
+  const addLog = (action: string, details: string) => {
+    if (!user) return;
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: user.name,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog); // Add to the beginning of the array
+  };
 
   const handleEditProduct = (productId: string) => {
     toast({ title: "Action Required", description: `Editing product ${productId} details - (Not Implemented)` });
@@ -32,49 +44,52 @@ export default function ProductsPage() {
 
   const handleConfirmAddProduct = (newProductData: { name: string; price: number; stock: number }) => {
     const newProduct: Product = {
-      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, // More unique ID
+      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: newProductData.name,
       price: newProductData.price,
       stock: newProductData.stock,
     };
     setCurrentProducts(prevProducts => [newProduct, ...prevProducts].sort((a,b) => a.name.localeCompare(b.name)));
+    
+    addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added with price NRP ${newProduct.price.toFixed(2)} and stock ${newProduct.stock}.`);
     toast({
       title: "Product Added",
       description: `${newProduct.name} has been successfully added to the inventory.`,
     });
-    setIsAddProductDialogOpen(false); // Close dialog handled by AddProductDialog's onClose
+    // setIsAddProductDialogOpen(false); // Dialog handles its own closing
   };
 
 
   const handleStockChange = (productId: string, value: number | string) => {
-    setCurrentProducts(prevProducts => {
-        const product = prevProducts.find(p => p.id === productId);
-        if (!product) return prevProducts;
+    const productBeforeChange = currentProducts.find(p => p.id === productId);
+    if (!productBeforeChange) return;
 
-        let stockToSet: number;
+    let stockToSet: number;
 
-        if (value === "") { 
-            stockToSet = 0;
-        } else if (typeof value === 'number' && !isNaN(value)) {
-            stockToSet = Math.max(0, value); 
+    if (value === "") { 
+        stockToSet = 0;
+    } else if (typeof value === 'number' && !isNaN(value)) {
+        stockToSet = Math.max(0, value); 
+    } else {
+        const parsedValue = parseInt(String(value), 10);
+        if (!isNaN(parsedValue)) {
+            stockToSet = Math.max(0, parsedValue);
         } else {
-            const parsedValue = parseInt(String(value), 10);
-            if (!isNaN(parsedValue)) {
-                stockToSet = Math.max(0, parsedValue);
-            } else {
-                toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
-                return prevProducts; 
-            }
+            toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
+            return;
         }
-        
-        if (product.stock !== stockToSet) {
-             toast({
-                title: "Stock Updated",
-                description: `Stock for ${product.name} set to ${stockToSet} (locally).`,
-            });
-        }
-        return prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p);
-    });
+    }
+    
+    if (productBeforeChange.stock !== stockToSet) {
+        setCurrentProducts(prevProducts => 
+            prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p)
+        );
+        addLog("Product Stock Quantity Set", `Stock for product '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) set from ${productBeforeChange.stock} to ${stockToSet}.`);
+        toast({
+            title: "Stock Updated",
+            description: `Stock for ${productBeforeChange.name} set to ${stockToSet}.`,
+        });
+    }
   };
 
   const handleOpenAddStockDialog = (product: Product) => {
@@ -82,18 +97,21 @@ export default function ProductsPage() {
   };
 
   const handleConfirmAddStock = (productId: string, quantityToAdd: number) => {
+    const product = currentProducts.find(p => p.id === productId);
+    if (!product) return;
+
+    const newStockLevel = product.stock + quantityToAdd;
     setCurrentProducts(prevProducts => 
       prevProducts.map(p => 
-        p.id === productId ? { ...p, stock: p.stock + quantityToAdd } : p
+        p.id === productId ? { ...p, stock: newStockLevel } : p
       )
     );
-    const updatedProduct = currentProducts.find(p => p.id === productId); // Find after update
-     if (updatedProduct) { // Check if product was found
-        toast({
-        title: "Stock Added",
-        description: `${quantityToAdd} units added to ${updatedProduct.name}. New stock: ${updatedProduct.stock + quantityToAdd} (locally).`
-        });
-    }
+    
+    addLog("Product Stock Added", `${quantityToAdd} units of stock added to product '${product.name}' (ID: ${productId.substring(0,8)}...). New stock: ${newStockLevel}.`);
+    toast({
+      title: "Stock Added",
+      description: `${quantityToAdd} units added to ${product.name}. New stock: ${newStockLevel}.`
+    });
     setProductToRestock(null); 
   };
 
