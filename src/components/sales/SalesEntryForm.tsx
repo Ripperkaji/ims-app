@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, ShoppingCart, DollarSign, Users } from 'lucide-react';
+import { PlusCircle, Trash2, ShoppingCart, Landmark } from 'lucide-react'; // Changed DollarSign to Landmark
 import type { Product, SaleItem } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -95,7 +96,6 @@ export default function SalesEntryForm() {
       createdBy: user?.name || 'Unknown Staff',
     };
 
-    // Simulate saving the sale and updating stock
     const updatedProducts = [...products];
     selectedItems.forEach(item => {
       const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
@@ -103,12 +103,10 @@ export default function SalesEntryForm() {
         updatedProducts[productIndex].stock -= item.quantity;
       }
     });
-    setProducts(updatedProducts); // Update local product stock state
+    setProducts(updatedProducts); 
 
-    console.log('New Sale:', newSale); // In a real app, send to backend
-    toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling $${totalAmount.toFixed(2)} has been recorded.` });
+    toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${totalAmount.toFixed(2)} has been recorded.` });
 
-    // Reset form
     setCustomerName('');
     setSelectedItems([]);
     setPaymentMethod('Cash');
@@ -152,12 +150,12 @@ export default function SalesEntryForm() {
                     <SelectContent>
                       {availableProductsForDropdown.map((p) => (
                         <SelectItem key={p.id} value={p.id} disabled={selectedItems.some(si => si.productId === p.id && si.productId !== item.productId)}>
-                          {p.name} (Stock: {p.stock}, Price: ${p.price.toFixed(2)})
+                          {p.name} (Stock: {p.stock}, Price: NRP {p.price.toFixed(2)})
                         </SelectItem>
                       ))}
                        {products.find(p=>p.id === item.productId) && !availableProductsForDropdown.find(p=>p.id === item.productId) && (
                          <SelectItem key={item.productId} value={item.productId}>
-                          {item.productName} (Stock: {products.find(p=>p.id === item.productId)?.stock || 0}, Price: ${item.unitPrice.toFixed(2)})
+                          {item.productName} (Stock: {products.find(p=>p.id === item.productId)?.stock || 0}, Price: NRP {item.unitPrice.toFixed(2)})
                         </SelectItem>
                        )}
                     </SelectContent>
@@ -176,7 +174,7 @@ export default function SalesEntryForm() {
                 </div>
                 <div className="text-right w-28 space-y-2">
                     <Label>Subtotal</Label>
-                    <p className="font-semibold text-lg h-10 flex items-center justify-end">${item.totalPrice.toFixed(2)}</p>
+                    <p className="font-semibold text-lg h-10 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
                 </div>
                 <Button
                   type="button"
@@ -211,13 +209,13 @@ export default function SalesEntryForm() {
             </div>
             <div className="text-right">
               <p className="text-sm text-muted-foreground">Total Amount</p>
-              <p className="text-3xl font-bold font-headline">${totalAmount.toFixed(2)}</p>
+              <p className="text-3xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
             </div>
           </div>
         </CardContent>
         <CardFooter>
           <Button type="submit" size="lg" className="w-full text-lg py-3">
-            <DollarSign className="mr-2 h-5 w-5" /> Record Sale
+            <Landmark className="mr-2 h-5 w-5" /> Record Sale
           </Button>
         </CardFooter>
       </form>

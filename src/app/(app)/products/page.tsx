@@ -1,27 +1,57 @@
+
 "use client";
 
+import { useState } from "react";
 import { mockProducts } from "@/lib/data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Added Input
 import { Edit, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import type { Product } from '@/types';
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts);
 
   const handleEditProduct = (productId: string) => {
-    toast({ title: "Action Required", description: `Editing product ${productId} - (Not Implemented)` });
-    // Placeholder for edit functionality
+    toast({ title: "Action Required", description: `Editing product ${productId} details - (Not Implemented)` });
   };
 
   const handleAddProduct = () => {
     toast({ title: "Action Required", description: "Adding new product - (Not Implemented)" });
-    // Placeholder for add functionality
   };
+
+  const handleStockChange = (productId: string, value: number | string) => {
+    setCurrentProducts(prevProducts => {
+        const product = prevProducts.find(p => p.id === productId);
+        if (!product) return prevProducts;
+
+        let stockToSet: number;
+
+        if (value === "") { 
+            stockToSet = 0;
+        } else if (typeof value === 'number' && !isNaN(value)) {
+            stockToSet = Math.max(0, value); 
+        } else {
+            toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
+            return prevProducts; 
+        }
+
+        if (product.stock !== stockToSet) {
+            toast({
+                title: "Stock Updated",
+                description: `Stock for ${product.name} updated to ${stockToSet} (locally).`,
+            });
+        }
+        return prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p);
+    });
+  };
+
 
   if (!user) return null;
 
@@ -54,12 +84,27 @@ export default function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockProducts.map((product) => (
+              {currentProducts.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.id}</TableCell>
                   <TableCell>{product.name}</TableCell>
-                  <TableCell>${product.price.toFixed(2)}</TableCell>
-                  <TableCell>{product.stock}</TableCell>
+                  <TableCell>NRP {product.price.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {user.role === 'admin' ? (
+                      <Input
+                        type="number"
+                        value={product.stock}
+                        onChange={(e) => {
+                           const val = e.target.value;
+                           handleStockChange(product.id, val === "" ? "" : e.target.valueAsNumber);
+                        }}
+                        className="w-24 h-9"
+                        min="0"
+                      />
+                    ) : (
+                      product.stock
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={product.stock > 10 ? 'default' : (product.stock > 0 ? 'secondary' : 'destructive')}
                            className={product.stock > 10 ? 'bg-green-500 hover:bg-green-600' : (product.stock > 0 ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-red-500 hover:bg-red-600')}>
@@ -78,7 +123,7 @@ export default function ProductsPage() {
               ))}
             </TableBody>
           </Table>
-          {mockProducts.length === 0 && (
+          {currentProducts.length === 0 && (
              <div className="text-center py-8 text-muted-foreground">
               No products found.
             </div>

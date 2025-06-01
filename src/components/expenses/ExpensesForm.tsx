@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { DollarSign, CalendarDays, Tag, FilePenLine } from 'lucide-react';
+import { CalendarDays, FilePenLine, Landmark, ReceiptText } from 'lucide-react'; // Using Landmark as generic currency icon
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -42,11 +43,9 @@ export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newE
       recordedBy: user?.name || 'Admin',
     };
     
-    onExpenseAdded(newExpense); // Pass to parent to update list
-    console.log('New Expense:', newExpense); // In a real app, send to backend
-    toast({ title: "Expense Recorded!", description: `${category} expense of $${numericAmount.toFixed(2)} recorded.`});
+    onExpenseAdded(newExpense); 
+    toast({ title: "Expense Recorded!", description: `${category} expense of NRP ${numericAmount.toFixed(2)} recorded.`});
 
-    // Reset form
     setDate(new Date());
     setDescription('');
     setCategory('');
@@ -85,9 +84,9 @@ export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newE
               </Popover>
             </div>
             <div>
-              <Label htmlFor="expenseAmount" className="text-base">Amount ($)</Label>
+              <Label htmlFor="expenseAmount" className="text-base">Amount (NRP)</Label>
               <div className="relative mt-1">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <ReceiptText className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   id="expenseAmount"
                   type="number"
@@ -130,7 +129,7 @@ export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newE
         </CardContent>
         <CardFooter>
           <Button type="submit" size="lg" className="w-full text-lg py-3">
-            <DollarSign className="mr-2 h-5 w-5" /> Record Expense
+            <Landmark className="mr-2 h-5 w-5" /> Record Expense
           </Button>
         </CardFooter>
       </form>

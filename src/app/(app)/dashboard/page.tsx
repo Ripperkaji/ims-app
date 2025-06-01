@@ -1,3 +1,4 @@
+
 "use client";
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
@@ -8,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from "recharts"
 import { format } from 'date-fns';
@@ -101,7 +104,7 @@ export default function DashboardPage() {
                   {recentSales.map(sale => (
                     <TableRow key={sale.id}>
                       <TableCell>{sale.customerName}</TableCell>
-                      <TableCell>${sale.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                           {sale.status}

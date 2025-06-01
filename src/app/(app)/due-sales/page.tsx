@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,7 +19,7 @@ export default function DueSalesPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const dueSales = useMemo(() => mockSales.filter(sale => sale.status === 'Due'), [mockSales]);
+  const dueSales = useMemo(() => mockSales.filter(sale => sale.status === 'Due'), []); // Removed mockSales from deps as it's constant
   // In a real app, this state would be mutable and update when a due sale is marked as paid.
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSales);
 
@@ -69,7 +70,7 @@ export default function DueSalesPage() {
                 <TableRow key={sale.id}>
                   <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell>
                   <TableCell>{sale.customerName}</TableCell>
-                  <TableCell>${sale.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                   <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{sale.createdBy}</TableCell>
                   <TableCell className="text-right space-x-2">

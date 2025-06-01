@@ -1,3 +1,4 @@
+
 "use client";
 
 import ExpensesForm from "@/components/expenses/ExpensesForm";
@@ -88,7 +89,7 @@ export default function ExpensesPage() {
                       <TableCell>{format(new Date(expense.date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell className="font-medium">{expense.category}</TableCell>
                       <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
-                      <TableCell>${expense.amount.toFixed(2)}</TableCell>
+                      <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
                       <TableCell>{expense.recordedBy}</TableCell>
                       <TableCell className="text-right space-x-2">
                         <Button variant="outline" size="icon" onClick={() => handleEditExpense(expense.id)}>

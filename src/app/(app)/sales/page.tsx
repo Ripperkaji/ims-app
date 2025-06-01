@@ -1,3 +1,4 @@
+
 "use client";
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
@@ -78,7 +79,7 @@ export default function SalesPage() {
                 <TableRow key={sale.id}>
                   <TableCell className="font-medium">{sale.id.substring(0, 8)}...</TableCell>
                   <TableCell>{sale.customerName}</TableCell>
-                  <TableCell>${sale.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                   <TableCell>{sale.paymentMethod}</TableCell>
                   <TableCell>
                     <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
