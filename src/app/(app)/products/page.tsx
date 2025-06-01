@@ -7,16 +7,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Added Input
-import { Edit, PlusCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Edit, PlusCircle, PackagePlus } from "lucide-react"; // Added PackagePlus
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from '@/types';
+import AddStockDialog from "@/components/products/AddStockDialog"; // Import the new dialog
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts);
+  const [productToRestock, setProductToRestock] = useState<Product | null>(null);
 
   const handleEditProduct = (productId: string) => {
     toast({ title: "Action Required", description: `Editing product ${productId} details - (Not Implemented)` });
@@ -38,18 +40,43 @@ export default function ProductsPage() {
         } else if (typeof value === 'number' && !isNaN(value)) {
             stockToSet = Math.max(0, value); 
         } else {
-            toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
-            return prevProducts; 
+            // Attempt to parse string to number if it's not empty
+            const parsedValue = parseInt(String(value), 10);
+            if (!isNaN(parsedValue)) {
+                stockToSet = Math.max(0, parsedValue);
+            } else {
+                toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
+                return prevProducts; 
+            }
         }
-
+        
+        // Only show toast if the value actually changes
         if (product.stock !== stockToSet) {
-            toast({
+             toast({
                 title: "Stock Updated",
-                description: `Stock for ${product.name} updated to ${stockToSet} (locally).`,
+                description: `Stock for ${product.name} set to ${stockToSet} (locally).`,
             });
         }
         return prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p);
     });
+  };
+
+  const handleOpenAddStockDialog = (product: Product) => {
+    setProductToRestock(product);
+  };
+
+  const handleConfirmAddStock = (productId: string, quantityToAdd: number) => {
+    setCurrentProducts(prevProducts => 
+      prevProducts.map(p => 
+        p.id === productId ? { ...p, stock: p.stock + quantityToAdd } : p
+      )
+    );
+    const updatedProduct = currentProducts.find(p => p.id === productId);
+    toast({
+      title: "Stock Added",
+      description: `${quantityToAdd} units added to ${updatedProduct?.name}. New stock: ${updatedProduct ? updatedProduct.stock + quantityToAdd : ''} (locally).`
+    });
+    setProductToRestock(null); // Close dialog
   };
 
 
@@ -112,8 +139,12 @@ export default function ProductsPage() {
                     </Badge>
                   </TableCell>
                   {user.role === 'admin' && (
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="icon" onClick={() => handleEditProduct(product.id)}>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="outline" size="icon" onClick={() => handleOpenAddStockDialog(product)} title="Add Stock">
+                        <PackagePlus className="h-4 w-4" />
+                        <span className="sr-only">Add Stock</span>
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => handleEditProduct(product.id)} title="Edit Product">
                         <Edit className="h-4 w-4" />
                         <span className="sr-only">Edit Product</span>
                       </Button>
@@ -130,6 +161,14 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
+      {productToRestock && (
+        <AddStockDialog
+          product={productToRestock}
+          isOpen={!!productToRestock}
+          onClose={() => setProductToRestock(null)}
+          onConfirmAddStock={handleConfirmAddStock}
+        />
+      )}
     </div>
   );
 }
