@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2, Phone, Flag } from "lucide-react";
+import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -47,6 +47,8 @@ export default function SalesPage() {
   );
 
   useEffect(() => {
+    // This effect can be simplified if mockSales is mutated and we rely on onSaleAdded to refresh.
+    // For now, keeping it to re-sort on initial mount if mockSales was pre-populated differently.
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }, []);
 
@@ -60,6 +62,7 @@ export default function SalesPage() {
   };
 
   const handleSaleAdded = () => {
+    // Re-fetch and sort sales from the global mockSales array
     setSalesData(prevSales => 
       [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     );
@@ -80,12 +83,13 @@ export default function SalesPage() {
 
   const sortedMonthYearKeys = useMemo(() => {
     if (user?.role !== 'admin') return [];
-    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a));
+    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a)); // Sort descending (newest month first)
   }, [salesByMonth, user]);
 
 
   if (!user) return null;
 
+  // Staff View (only SalesEntryForm)
   if (user.role === 'staff') {
     return (
       <div>
@@ -94,7 +98,7 @@ export default function SalesPage() {
     );
   }
 
-  // Admin View
+  // Admin View (SalesEntryForm + Monthly Sales Tables)
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
@@ -118,7 +122,7 @@ export default function SalesPage() {
       )}
 
       {salesData.length > 0 && sortedMonthYearKeys.map(monthYearKey => {
-        const monthDisplay = format(new Date(monthYearKey + '-01T00:00:00'), 'MMMM yyyy'); // Add T00:00:00 to ensure correct date parsing
+        const monthDisplay = format(new Date(monthYearKey + '-01T00:00:00'), 'MMMM yyyy');
         const monthlySales = salesByMonth[monthYearKey];
         
         return (
@@ -156,15 +160,27 @@ export default function SalesPage() {
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>{getPaymentSummary(sale)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-1">
                           <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                             {sale.status}
                           </Badge>
+                          {sale.amountDue > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>This sale has an outstanding payment of NRP {sale.amountDue.toFixed(2)}.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           {sale.isFlagged && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
+                                  <Flag className="h-4 w-4 text-destructive cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{sale.flaggedComment || "Flagged for review"}</p>

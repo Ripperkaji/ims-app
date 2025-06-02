@@ -61,7 +61,7 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     return [];
-  }, [user, triggerRefresh]); // mockSales is mutated directly, so triggerRefresh helps
+  }, [user, triggerRefresh]); 
 
   const handleOpenFlagDialog = (sale: Sale) => {
     setSaleToFlag(sale);
@@ -168,15 +168,27 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center">
+                        <div className="flex items-center space-x-1">
                           <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                             {sale.status}
                           </Badge>
+                           {sale.amountDue > 0 && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           {sale.isFlagged && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
+                                  <Flag className="h-4 w-4 text-destructive cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>{sale.flaggedComment || "Flagged for review"}</p>
@@ -247,9 +259,23 @@ export default function DashboardPage() {
                         <TableCell>{sale.customerName}</TableCell>
                         <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
-                            {sale.status}
-                          </Badge>
+                          <div className="flex items-center space-x-1">
+                            <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                              {sale.status}
+                            </Badge>
+                            {sale.amountDue > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                         <TableCell>

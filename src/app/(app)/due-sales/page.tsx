@@ -7,33 +7,31 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, CheckCircle2, Phone, Flag } from "lucide-react";
+import { Edit, CheckCircle2, Phone } from "lucide-react"; // Removed Flag
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
 import type { Sale } from '@/types';
 import { useRouter } from "next/navigation";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Removed Tooltip imports as Flag icon is removed from this page
 
 export default function DueSalesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
-  // Filter sales that have an amountDue > 0
   const dueSalesList = useMemo(() => mockSales.filter(sale => sale.amountDue > 0)
     .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
-    [] // mockSales changes are handled by useEffect below
+    [] 
   );
   
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSalesList);
 
   useEffect(() => {
-    // Update currentDueSales if the underlying mockSales data changes that affects dueSalesList
      const updatedDueSales = mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
      setCurrentDueSales(updatedDueSales);
-  }, []); // Re-calculate on mount. For real-time updates, a global state or more complex effect deps would be needed.
+  }, []); 
 
 
   useEffect(() => {
@@ -46,11 +44,10 @@ export default function DueSalesPage() {
   const handleMarkAsPaid = (saleId: string) => {
     const saleIndex = mockSales.findIndex(s => s.id === saleId);
     if (saleIndex !== -1) {
-        mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; // Assume remaining is paid by cash
+        mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
         mockSales[saleIndex].amountDue = 0;
         mockSales[saleIndex].status = 'Paid'; 
         
-        // Update the local state to reflect the change by filtering out the paid sale
         setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleId));
         
         toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid.` });
@@ -94,21 +91,8 @@ export default function DueSalesPage() {
                 <TableRow key={sale.id}>
                   <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell>
                   <TableCell>
-                    <div className="flex items-center">
-                      {sale.customerName}
-                      {sale.isFlagged && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{sale.flaggedComment || "Flagged for review"}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
+                    {sale.customerName}
+                    {/* Flag icon and tooltip removed from here */}
                   </TableCell>
                   <TableCell>
                     {sale.customerContact ? (
