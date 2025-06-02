@@ -41,22 +41,51 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setFormProductList([...allGlobalProducts]);
   }, []);
 
+  const totalAmount = useMemo(() => {
+    try {
+      if (!Array.isArray(selectedItems)) {
+        console.error("SalesEntryForm: selectedItems is not an array in totalAmount calculation.");
+        return 0;
+      }
+      return selectedItems.reduce((sum, item) => {
+        if (item && typeof item.totalPrice === 'number' && !isNaN(item.totalPrice)) {
+          return sum + item.totalPrice;
+        }
+        // console.warn("SalesEntryForm: Invalid item or totalPrice in selectedItems:", item);
+        return sum;
+      }, 0);
+    } catch (e) {
+      console.error("SalesEntryForm: Error calculating totalAmount:", e);
+      return 0; // Fallback value
+    }
+  }, [selectedItems]);
+
   useEffect(() => {
     if (formPaymentMethod === 'Hybrid') {
       setIsHybridPayment(true);
     } else {
       setIsHybridPayment(false);
-      // Reset hybrid fields when switching away from hybrid
       setHybridCashPaid('');
       setHybridDigitalPaid('');
       setHybridAmountLeftDue('');
     }
-    setValidationError(null); // Clear validation error when payment method changes
+    setValidationError(null); 
   }, [formPaymentMethod]);
 
-  // Auto-calculate one of the hybrid fields if two are entered
   useEffect(() => {
-    if (!isHybridPayment || totalAmount === 0) return;
+    if (!isHybridPayment) {
+        // If not hybrid payment, ensure validation error is cleared if it was related to hybrid sum
+        if (validationError && validationError.startsWith("Hybrid payments")) {
+             setValidationError(null);
+        }
+        return;
+    }
+    // Guard against totalAmount being zero unless some hybrid values are entered,
+    // to prevent validation errors when form is empty.
+    if (totalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
+        setValidationError(null);
+        return;
+    }
 
     const cash = parseFloat(hybridCashPaid) || 0;
     const digital = parseFloat(hybridDigitalPaid) || 0;
@@ -66,20 +95,29 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
     if (filledFields === 2) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
-        const remaining = totalAmount - cash - digital;
-        setHybridAmountLeftDue(remaining >= 0 ? remaining.toFixed(2) : '0.00');
+        const remainingForDue = totalAmount - cash - digital;
+        if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) { // Avoid re-set if already correct
+            setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+        }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
-        const remaining = totalAmount - cash - due;
-        setHybridDigitalPaid(remaining >= 0 ? remaining.toFixed(2) : '0.00');
+        const remainingForDigital = totalAmount - cash - due;
+         if (parseFloat(hybridDigitalPaid || "0") !== remainingForDigital) {
+            setHybridDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+         }
       } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
-        const remaining = totalAmount - cash - digital; // this was wrong, should be totalAmount - digital - due
-        setHybridCashPaid(remaining >=0 ? (totalAmount - digital - due).toFixed(2) : '0.00');
+        const calculatedCash = totalAmount - digital - due;
+        if (parseFloat(hybridCashPaid || "0") !== calculatedCash) {
+            setHybridCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+        }
       }
     }
     
-    // Basic validation for sum
-    if (cash + digital + due !== totalAmount && (cash + digital + due > 0 || totalAmount > 0)) {
-        setValidationError(`Hybrid payments (NRP ${ (cash + digital + due).toFixed(2) }) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
+    const currentCashForValidation = parseFloat(hybridCashPaid) || 0;
+    const currentDigitalForValidation = parseFloat(hybridDigitalPaid) || 0;
+    const currentDueForValidation = parseFloat(hybridAmountLeftDue) || 0;
+
+    if (Math.abs(currentCashForValidation + currentDigitalForValidation + currentDueForValidation - totalAmount) > 0.001 && (currentCashForValidation + currentDigitalForValidation + currentDueForValidation > 0 || totalAmount > 0)) {
+        setValidationError(`Hybrid payments (NRP ${(currentCashForValidation + currentDigitalForValidation + currentDueForValidation).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
     } else {
         setValidationError(null);
     }
@@ -142,7 +180,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck} items in stock.`, variant: "destructive" });
         item.quantity = stockToCheck;
       } else {
-        item.quantity = quantity >= 0 ? quantity : 0; // Allow 0 quantity
+        item.quantity = quantity >= 0 ? quantity : 0; 
       }
     }
     
@@ -155,9 +193,6 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setSelectedItems(selectedItems.filter((_, i) => i !== index));
   };
 
-  const totalAmount = useMemo(() => {
-    return selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
-  }, [selectedItems]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,7 +227,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" });
         return;
       }
-      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { // Check for floating point precision
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { 
         toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`, variant: "destructive" });
         setValidationError(`Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
         return;
@@ -278,11 +313,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       onSaleAdded(newSale);
     }
 
-    // Reset form
     setCustomerName('');
     setCustomerContact('');
     setSelectedItems([]);
-    setFormPaymentMethod('Cash'); // Resets isHybridPayment via useEffect
+    setFormPaymentMethod('Cash'); 
     setHybridCashPaid('');
     setHybridDigitalPaid('');
     setHybridAmountLeftDue('');
@@ -359,7 +393,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   <Input
                     id={`quantity-${index}`}
                     type="number"
-                    min="0" // Allow 0 to correct mistakes, validation on submit
+                    min="0" 
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                     className="text-center"
@@ -473,3 +507,4 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
+
