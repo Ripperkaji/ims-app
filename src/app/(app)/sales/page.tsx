@@ -3,12 +3,15 @@
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockSales } from "@/lib/data"; 
-import type { Sale } from "@/types";
+import { mockSales, mockLogEntries } from "@/lib/data"; 
+import type { Sale, LogEntry } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input"; // Keep if needed for other features, not directly for delete comment
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
+  // AlertDialogTrigger, // Trigger will be handled manually by the button
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,24 +49,78 @@ export default function SalesPage() {
     [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
 
-  useEffect(() => {
-    // This effect can be simplified if mockSales is mutated and we rely on onSaleAdded to refresh.
-    // For now, keeping it to re-sort on initial mount if mockSales was pre-populated differently.
-    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [deleteReason, setDeleteReason] = useState<string>("");
 
+  useEffect(() => {
+    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }, []); // Runs on initial mount
+
+  const addLog = (action: string, details: string) => {
+    if (!user) return;
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: user.name,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog);
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
 
   const handleAdjustSale = (saleId: string) => {
-    toast({ title: "Action Required", description: `Adjusting sale ${saleId} - (Not Implemented)` });
+    const sale = mockSales.find(s => s.id === saleId);
+    if (sale && user) {
+      addLog("Sale Adjustment Attempted", `Admin ${user.name} attempted to adjust sale ID ${saleId.substring(0,8)}... for ${sale.customerName}. (Feature not fully implemented).`);
+      toast({ 
+        title: "Action Required", 
+        description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet.` 
+      });
+    }
   };
   
-  const handleDeleteSale = (saleId: string) => {
-    toast({ title: "Action Required", description: `Deleting sale ${saleId} - (Not Implemented)` });
+  const openDeleteDialog = (sale: Sale) => {
+    setSaleToDelete(sale);
+    setDeleteReason(""); // Reset reason when opening dialog
+  };
+
+  const closeDeleteDialog = () => {
+    setSaleToDelete(null);
+    setDeleteReason("");
+  };
+
+  const handleConfirmDelete = () => {
+    if (!saleToDelete) return;
+    if (!deleteReason.trim()) {
+      toast({
+        title: "Reason Required",
+        description: "Please provide a reason for deleting this sale.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (user) {
+      addLog(
+        "Sale Deleted", 
+        `Sale ID ${saleToDelete.id.substring(0,8)}... (Customer: ${saleToDelete.customerName}, Amount: NRP ${saleToDelete.totalAmount.toFixed(2)}) deleted by ${user.name}. Reason: ${deleteReason}`
+      );
+    }
+
+    const saleIndex = mockSales.findIndex(s => s.id === saleToDelete.id);
+    if (saleIndex > -1) {
+      mockSales.splice(saleIndex, 1);
+    }
+    
+    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    
+    toast({ title: "Sale Deleted", description: `Sale ${saleToDelete.id.substring(0,8)}... has been deleted.` });
+    closeDeleteDialog();
   };
 
   const handleSaleAdded = () => {
-    // Re-fetch and sort sales from the global mockSales array
-    setSalesData(prevSales => 
+    setSalesData(
       [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     );
   };
@@ -83,13 +140,12 @@ export default function SalesPage() {
 
   const sortedMonthYearKeys = useMemo(() => {
     if (user?.role !== 'admin') return [];
-    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a)); // Sort descending (newest month first)
+    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a)); 
   }, [salesByMonth, user]);
 
 
   if (!user) return null;
 
-  // Staff View (only SalesEntryForm)
   if (user.role === 'staff') {
     return (
       <div>
@@ -98,7 +154,6 @@ export default function SalesPage() {
     );
   }
 
-  // Admin View (SalesEntryForm + Monthly Sales Tables)
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
@@ -171,7 +226,7 @@ export default function SalesPage() {
                                   <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>This sale has an outstanding payment of NRP {sale.amountDue.toFixed(2)}.</p>
+                                  <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -193,32 +248,14 @@ export default function SalesPage() {
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                       <TableCell>{sale.createdBy}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)}>
+                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title="Adjust Sale">
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Adjust Sale</span>
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete Sale</span>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the sale record. (This is a placeholder, no actual deletion will occur).
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteSale(sale.id)}>
-                                Continue
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete Sale</span>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -228,7 +265,39 @@ export default function SalesPage() {
           </Card>
         )
       })}
+
+      {saleToDelete && (
+        <AlertDialog open={!!saleToDelete} onOpenChange={(isOpen) => { if (!isOpen) closeDeleteDialog(); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Sale Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {saleToDelete.totalAmount.toFixed(2)})? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4 space-y-2">
+              <Label htmlFor="deleteReason">Reason for Deletion (Required)</Label>
+              <Textarea
+                id="deleteReason"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="E.g., Duplicate entry, incorrect sale, etc."
+                rows={3}
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={closeDeleteDialog}>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDelete} 
+                disabled={!deleteReason.trim()}
+                className={!deleteReason.trim() ? "bg-destructive/50" : "bg-destructive hover:bg-destructive/90"}
+              >
+                Confirm Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
-
