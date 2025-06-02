@@ -394,11 +394,11 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
             </div>
 
             {isHybridPayment && (
-                <DialogCard className="p-4 border-primary/50 bg-primary/5">
-                <DialogCardHeader className="p-2 pt-0">
+                <Card className="p-4 border-primary/50 bg-primary/5">
+                <CardHeader className="p-2 pt-0">
                     <DialogCardTitle className="text-lg font-semibold">Hybrid Payment Details</DialogCardTitle>
                     <DialogCardDescription>Amounts must sum to new total.</DialogCardDescription>
-                </DialogCardHeader>
+                </CardHeader>
                 <CardContent className="space-y-3 p-2">
                     <div>
                     <Label htmlFor="hybridCashPaid-edit">Cash Paid (NRP)</Label>
@@ -414,7 +414,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                     </div>
                     {validationError && (<Alert variant="destructive" className="mt-2"><Info className="h-4 w-4" /><AlertTitle>Payment Error</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>)}
                 </CardContent>
-                </DialogCard>
+                </Card>
             )}
 
             <div className="pt-2">
@@ -451,5 +451,4 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
   );
 }
 
-// Minor alias to avoid tsx conflict in this file
-const DialogCardHeader = CardHeader;
+    
