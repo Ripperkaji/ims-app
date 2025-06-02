@@ -3,8 +3,8 @@
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockSales, mockLogEntries } from "@/lib/data"; 
-import type { Sale, LogEntry } from "@/types";
+import { mockSales, mockLogEntries, mockProducts } from "@/lib/data"; 
+import type { Sale, LogEntry, Product } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle, ShieldCheck, Landmark } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -28,6 +28,9 @@ import {
 import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ResolveFlagDialog from "@/components/sales/ResolveFlagDialog";
+
+type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+
 
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
@@ -55,6 +58,7 @@ export default function SalesPage() {
   const [saleToResolveFlag, setSaleToResolveFlag] = useState<Sale | null>(null);
 
   useEffect(() => {
+    // Initial load and sort
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   }, []); 
 
@@ -72,12 +76,12 @@ export default function SalesPage() {
   };
 
   const handleAdjustSale = (saleId: string) => {
-    const sale = mockSales.find(s => s.id === saleId);
+    const sale = salesData.find(s => s.id === saleId); // Use salesData to find the sale
     if (sale && user) {
       if (sale.isFlagged) {
         setSaleToResolveFlag(sale);
       } else {
-        addLog("Sale Adjustment Attempted", `Admin ${user.name} attempted to adjust sale ID ${saleId.substring(0,8)}... for ${sale.customerName}. (Feature not fully implemented).`);
+        addLog("Sale Adjustment Attempted", `Admin ${user.name} attempted to adjust sale ID ${saleId.substring(0,8)}... for ${sale.customerName}. (Feature not fully implemented for non-flagged sales).`);
         toast({ 
           title: "Adjust Sale", 
           description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet for non-flagged sales.` 
@@ -86,17 +90,94 @@ export default function SalesPage() {
     }
   };
 
-  const handleFlagResolved = (saleId: string, resolutionComment: string) => {
-    const saleIndex = mockSales.findIndex(s => s.id === saleId);
-    if (saleIndex !== -1 && user) {
-      const originalComment = mockSales[saleIndex].flaggedComment;
-      mockSales[saleIndex].isFlagged = false;
-      mockSales[saleIndex].flaggedComment = `Original: ${originalComment}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${resolutionComment}`;
-      
-      addLog("Sale Flag Resolved", `Flag for sale ID ${saleId.substring(0,8)}... resolved by ${user.name}. Resolution: ${resolutionComment}`);
-      setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-      toast({ title: "Flag Resolved", description: `Flag for sale ${saleId.substring(0,8)}... has been resolved.` });
+  const handleFlagResolved = (
+    originalSaleId: string, 
+    updatedSaleDataFromDialog: Partial<Sale> & { // More specific type
+        customerName: string;
+        customerContact?: string;
+        items: SaleItem[];
+        totalAmount: number;
+        formPaymentMethod: PaymentMethodSelection;
+        cashPaid: number;
+        digitalPaid: number;
+        amountDue: number;
+    }, 
+    resolutionComment: string
+  ) => {
+    const originalSaleIndex = mockSales.findIndex(s => s.id === originalSaleId);
+    if (originalSaleIndex === -1 || !user) {
+      toast({ title: "Error", description: "Original sale not found or user not available.", variant: "destructive"});
+      return;
     }
+    const originalSale = mockSales[originalSaleIndex];
+
+    // 1. Revert stock for original items
+    originalSale.items.forEach(originalItem => {
+      const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
+      if (productIndex !== -1) {
+        mockProducts[productIndex].stock += originalItem.quantity;
+      }
+    });
+
+    // 2. Deduct stock for new/adjusted items
+    let stockSufficient = true;
+    for (const newItem of updatedSaleDataFromDialog.items) {
+      const productIndex = mockProducts.findIndex(p => p.id === newItem.productId);
+      if (productIndex !== -1) {
+        if (mockProducts[productIndex].stock >= newItem.quantity) {
+          mockProducts[productIndex].stock -= newItem.quantity;
+        } else {
+          // Not enough stock for the new item quantity, revert previous stock changes and abort
+          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available.`, variant: "destructive"});
+          // Re-add stock for items processed so far in this loop
+          for (let i = 0; i < updatedSaleDataFromDialog.items.indexOf(newItem); i++) {
+             const prevNewItem = updatedSaleDataFromDialog.items[i];
+             const prevProdIdx = mockProducts.findIndex(p => p.id === prevNewItem.productId);
+             if (prevProdIdx !== -1) mockProducts[prevProdIdx].stock += prevNewItem.quantity;
+          }
+          // Re-deduct stock for original items (as if the operation failed)
+          originalSale.items.forEach(origItem => {
+            const prodIdx = mockProducts.findIndex(p => p.id === origItem.productId);
+            if (prodIdx !== -1) mockProducts[prodIdx].stock -= origItem.quantity;
+          });
+          stockSufficient = false;
+          break;
+        }
+      } else {
+         toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment.`, variant: "destructive"});
+         stockSufficient = false;
+         break; 
+      }
+    }
+
+    if (!stockSufficient) {
+      setSaleToResolveFlag(null); // Close dialog
+      // No need to refresh salesData as no sale was actually updated
+      return; // Abort if stock adjustment failed
+    }
+    
+    // 3. Construct the final updated sale object
+    const finalUpdatedSale: Sale = {
+      ...originalSale, // Start with original to keep id, date, createdBy
+      customerName: updatedSaleDataFromDialog.customerName,
+      customerContact: updatedSaleDataFromDialog.customerContact,
+      items: updatedSaleDataFromDialog.items,
+      totalAmount: updatedSaleDataFromDialog.totalAmount,
+      cashPaid: updatedSaleDataFromDialog.cashPaid,
+      digitalPaid: updatedSaleDataFromDialog.digitalPaid,
+      amountDue: updatedSaleDataFromDialog.amountDue,
+      formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
+      isFlagged: false,
+      flaggedComment: `Original: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${resolutionComment}`,
+      status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
+    };
+    
+    mockSales[originalSaleIndex] = finalUpdatedSale;
+    
+    addLog("Sale Flag Resolved & Adjusted", `Flag for sale ID ${originalSaleId.substring(0,8)}... resolved and adjusted by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. Resolution: ${resolutionComment}`);
+    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    toast({ title: "Flag Resolved & Sale Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    
     setSaleToResolveFlag(null);
   };
   
@@ -120,6 +201,14 @@ export default function SalesPage() {
       });
       return;
     }
+
+    // Revert stock for deleted sale items
+    saleToDelete.items.forEach(item => {
+      const productIndex = mockProducts.findIndex(p => p.id === item.productId);
+      if (productIndex !== -1) {
+        mockProducts[productIndex].stock += item.quantity;
+      }
+    });
 
     if (user) {
       addLog(
@@ -280,9 +369,9 @@ export default function SalesPage() {
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                       <TableCell>{sale.createdBy}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title={sale.isFlagged ? "Resolve Flag" : "Adjust Sale"}>
+                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale (Placeholder)"}>
                           <Edit className="h-4 w-4" />
-                          <span className="sr-only">{sale.isFlagged ? "Resolve Flag" : "Adjust Sale"}</span>
+                          <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
                         </Button>
                         <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
                           <Trash2 className="h-4 w-4" />
@@ -304,7 +393,7 @@ export default function SalesPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Sale Deletion</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {saleToDelete.totalAmount.toFixed(2)})? This action cannot be undone.
+                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {saleToDelete.totalAmount.toFixed(2)})? This action cannot be undone. Stock for items in this sale will be reverted.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4 space-y-2">
@@ -337,9 +426,15 @@ export default function SalesPage() {
           isOpen={!!saleToResolveFlag}
           onClose={() => setSaleToResolveFlag(null)}
           onFlagResolved={handleFlagResolved}
+          allGlobalProducts={mockProducts} // Pass current global products
         />
       )}
     </div>
   );
 }
 
+// Minor alias to avoid tsx conflict in this file
+const DialogCardHeader = CardHeader;
+const DialogCardDescription = CardDescription;
+const DialogCardTitle = CardTitle;
+const DialogCard = Card;
