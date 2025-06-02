@@ -33,13 +33,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const [hybridDigitalPaid, setHybridDigitalPaid] = useState('');
   const [hybridAmountLeftDue, setHybridAmountLeftDue] = useState('');
 
-  const [formProductList, setFormProductList] = useState<Product[]>([...allGlobalProducts]);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-
-  useEffect(() => {
-    setFormProductList([...allGlobalProducts]);
-  }, []);
 
   const totalAmount = useMemo(() => {
     try {
@@ -51,12 +46,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         if (item && typeof item.totalPrice === 'number' && !isNaN(item.totalPrice)) {
           return sum + item.totalPrice;
         }
-        // console.warn("SalesEntryForm: Invalid item or totalPrice in selectedItems:", item);
         return sum;
       }, 0);
     } catch (e) {
       console.error("SalesEntryForm: Error calculating totalAmount:", e);
-      return 0; // Fallback value
+      return 0; 
     }
   }, [selectedItems]);
 
@@ -74,14 +68,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
   useEffect(() => {
     if (!isHybridPayment) {
-        // If not hybrid payment, ensure validation error is cleared if it was related to hybrid sum
         if (validationError && validationError.startsWith("Hybrid payments")) {
              setValidationError(null);
         }
         return;
     }
-    // Guard against totalAmount being zero unless some hybrid values are entered,
-    // to prevent validation errors when form is empty.
     if (totalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
         setValidationError(null);
         return;
@@ -96,7 +87,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     if (filledFields === 2) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
         const remainingForDue = totalAmount - cash - digital;
-        if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) { // Avoid re-set if already correct
+        if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) { 
             setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
         }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
@@ -122,7 +113,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment, validationError]);
 
 
   const addLog = (action: string, details: string) => {
@@ -139,7 +130,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    const firstAvailableProduct = formProductList.find(p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id));
+    const firstAvailableProduct = allGlobalProducts.find(p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id));
     if (firstAvailableProduct) {
       setSelectedItems([
         ...selectedItems,
@@ -161,7 +152,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     const item = newItems[index];
 
     if (field === 'productId') {
-      const newProduct = formProductList.find(p => p.id === value as string);
+      const newProduct = allGlobalProducts.find(p => p.id === value as string);
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
@@ -285,11 +276,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       return; 
     }
     
+    // Update the actual global array by replacing its contents
     allGlobalProducts.length = 0; 
     allGlobalProducts.push(...updatedGlobalProducts);
     
-    setFormProductList([...allGlobalProducts]); 
-
     mockSales.unshift(newSale);
     mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -324,7 +314,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const availableProductsForDropdown = (currentItemId?: string) => 
-    formProductList.filter(p => 
+    allGlobalProducts.filter(p => 
       p.stock > 0 || (currentItemId && p.id === currentItemId && allGlobalProducts.find(agp => agp.id === currentItemId)?.stock || 0) > 0 || selectedItems.some(si => si.productId === p.id && p.id === currentItemId)
     ).sort((a, b) => a.name.localeCompare(b.name));
 

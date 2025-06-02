@@ -31,7 +31,8 @@ export default function ProductsPage() {
       action,
       details,
     };
-    mockLogEntries.unshift(newLog); // Add to the beginning of the array
+    mockLogEntries.unshift(newLog); 
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
   const handleEditProduct = (productId: string) => {
@@ -49,14 +50,18 @@ export default function ProductsPage() {
       price: newProductData.price,
       stock: newProductData.stock,
     };
+    // Update local state for this page's table
     setCurrentProducts(prevProducts => [newProduct, ...prevProducts].sort((a,b) => a.name.localeCompare(b.name)));
     
+    // Update global mockProducts array
+    mockProducts.push(newProduct);
+    mockProducts.sort((a,b) => a.name.localeCompare(b.name)); // Keep global array sorted
+
     addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added with price NRP ${newProduct.price.toFixed(2)} and stock ${newProduct.stock}.`);
     toast({
       title: "Product Added",
       description: `${newProduct.name} has been successfully added to the inventory.`,
     });
-    // setIsAddProductDialogOpen(false); // Dialog handles its own closing
   };
 
 
@@ -81,9 +86,16 @@ export default function ProductsPage() {
     }
     
     if (productBeforeChange.stock !== stockToSet) {
+        // Update local state for this page's table
         setCurrentProducts(prevProducts => 
             prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p)
         );
+        // Update global mockProducts array
+        const globalProductIndex = mockProducts.findIndex(p => p.id === productId);
+        if (globalProductIndex !== -1) {
+            mockProducts[globalProductIndex].stock = stockToSet;
+        }
+
         addLog("Product Stock Quantity Set", `Stock for product '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) set from ${productBeforeChange.stock} to ${stockToSet}.`);
         toast({
             title: "Stock Updated",
@@ -101,11 +113,17 @@ export default function ProductsPage() {
     if (!product) return;
 
     const newStockLevel = product.stock + quantityToAdd;
+    // Update local state for this page's table
     setCurrentProducts(prevProducts => 
       prevProducts.map(p => 
         p.id === productId ? { ...p, stock: newStockLevel } : p
       )
     );
+    // Update global mockProducts array
+    const globalProductIndex = mockProducts.findIndex(p => p.id === productId);
+    if (globalProductIndex !== -1) {
+        mockProducts[globalProductIndex].stock = newStockLevel;
+    }
     
     addLog("Product Stock Added", `${quantityToAdd} units of stock added to product '${product.name}' (ID: ${productId.substring(0,8)}...). New stock: ${newStockLevel}.`);
     toast({
