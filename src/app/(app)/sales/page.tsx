@@ -9,10 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Keep if needed for other features, not directly for delete comment
+import { Input } from "@/components/ui/input"; 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle } from "lucide-react";
+import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle, ShieldCheck } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -24,10 +24,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  // AlertDialogTrigger, // Trigger will be handled manually by the button
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import ResolveFlagDialog from "@/components/sales/ResolveFlagDialog";
 
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
@@ -52,9 +52,11 @@ export default function SalesPage() {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [deleteReason, setDeleteReason] = useState<string>("");
 
+  const [saleToResolveFlag, setSaleToResolveFlag] = useState<Sale | null>(null);
+
   useEffect(() => {
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []); // Runs on initial mount
+  }, []); 
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -72,17 +74,35 @@ export default function SalesPage() {
   const handleAdjustSale = (saleId: string) => {
     const sale = mockSales.find(s => s.id === saleId);
     if (sale && user) {
-      addLog("Sale Adjustment Attempted", `Admin ${user.name} attempted to adjust sale ID ${saleId.substring(0,8)}... for ${sale.customerName}. (Feature not fully implemented).`);
-      toast({ 
-        title: "Action Required", 
-        description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet.` 
-      });
+      if (sale.isFlagged) {
+        setSaleToResolveFlag(sale);
+      } else {
+        addLog("Sale Adjustment Attempted", `Admin ${user.name} attempted to adjust sale ID ${saleId.substring(0,8)}... for ${sale.customerName}. (Feature not fully implemented).`);
+        toast({ 
+          title: "Adjust Sale", 
+          description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet for non-flagged sales.` 
+        });
+      }
     }
+  };
+
+  const handleFlagResolved = (saleId: string, resolutionComment: string) => {
+    const saleIndex = mockSales.findIndex(s => s.id === saleId);
+    if (saleIndex !== -1 && user) {
+      const originalComment = mockSales[saleIndex].flaggedComment;
+      mockSales[saleIndex].isFlagged = false;
+      mockSales[saleIndex].flaggedComment = `Original: ${originalComment}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${resolutionComment}`;
+      
+      addLog("Sale Flag Resolved", `Flag for sale ID ${saleId.substring(0,8)}... resolved by ${user.name}. Resolution: ${resolutionComment}`);
+      setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      toast({ title: "Flag Resolved", description: `Flag for sale ${saleId.substring(0,8)}... has been resolved.` });
+    }
+    setSaleToResolveFlag(null);
   };
   
   const openDeleteDialog = (sale: Sale) => {
     setSaleToDelete(sale);
-    setDeleteReason(""); // Reset reason when opening dialog
+    setDeleteReason(""); 
   };
 
   const closeDeleteDialog = () => {
@@ -202,7 +222,7 @@ export default function SalesPage() {
                 </TableHeader>
                 <TableBody>
                   {monthlySales.map((sale) => (
-                    <TableRow key={sale.id}>
+                    <TableRow key={sale.id} className={sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
                       <TableCell className="font-medium">{sale.id.substring(0, 8)}...</TableCell>
                       <TableCell>{sale.customerName}</TableCell>
                       <TableCell>
@@ -238,7 +258,19 @@ export default function SalesPage() {
                                   <Flag className="h-4 w-4 text-destructive cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                  <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                           {!sale.isFlagged && sale.flaggedComment && ( // Show resolved icon if not flagged but has a comment
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ShieldCheck className="h-4 w-4 text-green-600 cursor-default" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -248,9 +280,9 @@ export default function SalesPage() {
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                       <TableCell>{sale.createdBy}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title="Adjust Sale">
+                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title={sale.isFlagged ? "Resolve Flag" : "Adjust Sale"}>
                           <Edit className="h-4 w-4" />
-                          <span className="sr-only">Adjust Sale</span>
+                          <span className="sr-only">{sale.isFlagged ? "Resolve Flag" : "Adjust Sale"}</span>
                         </Button>
                         <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
                           <Trash2 className="h-4 w-4" />
@@ -298,6 +330,16 @@ export default function SalesPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {saleToResolveFlag && (
+        <ResolveFlagDialog
+          sale={saleToResolveFlag}
+          isOpen={!!saleToResolveFlag}
+          onClose={() => setSaleToResolveFlag(null)}
+          onFlagResolved={handleFlagResolved}
+        />
+      )}
     </div>
   );
 }
+
