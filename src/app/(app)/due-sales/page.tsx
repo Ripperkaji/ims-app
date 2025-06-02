@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, CheckCircle2 } from "lucide-react";
+import { Edit, CheckCircle2, Phone } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
@@ -19,8 +19,7 @@ export default function DueSalesPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const dueSales = useMemo(() => mockSales.filter(sale => sale.status === 'Due'), []); // Removed mockSales from deps as it's constant
-  // In a real app, this state would be mutable and update when a due sale is marked as paid.
+  const dueSales = useMemo(() => mockSales.filter(sale => sale.status === 'Due'), []);
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSales);
 
 
@@ -32,8 +31,6 @@ export default function DueSalesPage() {
   }, [user, router, toast]);
 
   const handleMarkAsPaid = (saleId: string) => {
-    // Placeholder: In a real app, update backend and refresh data.
-    // setCurrentDueSales(currentDueSales.filter(sale => sale.id !== saleId));
     toast({ title: "Action Required", description: `Marking sale ${saleId} as Paid - (Not Implemented)` });
   };
 
@@ -59,6 +56,7 @@ export default function DueSalesPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Amount Due</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Recorded By</TableHead>
@@ -70,6 +68,13 @@ export default function DueSalesPage() {
                 <TableRow key={sale.id}>
                   <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell>
                   <TableCell>{sale.customerName}</TableCell>
+                  <TableCell>
+                    {sale.customerContact ? (
+                      <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary">
+                        <Phone className="h-3 w-3" /> {sale.customerContact}
+                      </a>
+                    ) : 'N/A'}
+                  </TableCell>
                   <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                   <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{sale.createdBy}</TableCell>

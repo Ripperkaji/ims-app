@@ -3,7 +3,7 @@
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -31,7 +31,6 @@ export default function DashboardPage() {
   const totalProducts = mockProducts.length;
   const lowStockProducts = mockProducts.filter(p => p.stock < 10).length;
 
-  // Prepare data for sales trend chart (e.g., last 7 days)
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
     const day = format(new Date(sale.date), 'MMM dd');
@@ -39,12 +38,12 @@ export default function DashboardPage() {
   });
   const salesTrendData = Object.entries(salesByDay)
     .map(([date, sales]) => ({ date, sales }))
-    .slice(-7); // Last 7 entries for trend
+    .slice(-7);
 
   const recentSales = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
 
 
-  if (!user) return null; // Should be handled by layout, but good practice
+  if (!user) return null;
 
   return (
     <div className="space-y-6">
@@ -60,7 +59,7 @@ export default function DashboardPage() {
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
-        <AnalyticsCard title="Low Stock Items" value={lowStockProducts} icon={Users /* Using Users as placeholder, consider better icon */} description="Products needing restocking" />
+        <AnalyticsCard title="Low Stock Items" value={lowStockProducts} icon={Users} description="Products needing restocking" />
       </div>
 
       {user.role === 'admin' && (
@@ -95,6 +94,7 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Contact</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
@@ -104,6 +104,13 @@ export default function DashboardPage() {
                   {recentSales.map(sale => (
                     <TableRow key={sale.id}>
                       <TableCell>{sale.customerName}</TableCell>
+                       <TableCell>
+                        {sale.customerContact ? (
+                          <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 text-xs hover:underline text-primary">
+                            <Phone className="h-3 w-3" /> {sale.customerContact}
+                          </a>
+                        ) : <span className="text-xs">N/A</span>}
+                      </TableCell>
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
@@ -152,7 +159,6 @@ export default function DashboardPage() {
   );
 }
 
-// Placeholder for a more complex chart if needed later
 function PlaceholderChart() {
   return (
     <div className="flex items-center justify-center h-full w-full bg-muted/50 rounded-md p-8">

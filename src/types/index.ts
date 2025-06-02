@@ -1,3 +1,4 @@
+
 export type UserRole = 'admin' | 'staff';
 
 export interface Product {
@@ -18,6 +19,7 @@ export interface SaleItem {
 export interface Sale {
   id: string;
   customerName: string;
+  customerContact?: string; // Optional contact number
   items: SaleItem[];
   totalAmount: number;
   paymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due';

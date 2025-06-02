@@ -1,3 +1,4 @@
+
 import type { Product, Sale, Expense, LogEntry } from '@/types';
 
 export const mockProducts: Product[] = [
@@ -12,6 +13,7 @@ export const mockSales: Sale[] = [
   {
     id: 'sale1',
     customerName: 'John Doe',
+    customerContact: '98XXXXXXXX',
     items: [
       { productId: 'prod1', productName: 'Vape Juice - Mango Tango', quantity: 2, unitPrice: 15.99, totalPrice: 31.98 },
       { productId: 'prod3', productName: 'Coils - Pack of 5', quantity: 1, unitPrice: 9.99, totalPrice: 9.99 },
@@ -37,6 +39,7 @@ export const mockSales: Sale[] = [
   {
     id: 'sale3',
     customerName: 'Mike Johnson',
+    customerContact: '97XXXXXXXX',
     items: [
       { productId: 'prod2', productName: 'Vape Mod - Smok X', quantity: 1, unitPrice: 49.99, totalPrice: 49.99 },
     ],
@@ -81,20 +84,20 @@ export const mockLogEntries: LogEntry[] = [
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5*60*1000).toISOString(), 
     user: 'Staff Alice', 
     action: 'Sale Created', 
-    details: 'Sale ID sale1 for John Doe, Total: $41.97' 
+    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97' 
   },
   { 
     id: 'log2', 
     timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3*60*1000).toISOString(), 
     user: 'Staff Bob', 
     action: 'Sale Created (Due)', 
-    details: 'Sale ID sale2 for Jane Smith, Total: $37.50, Status: Due' 
+    details: 'Sale ID sale2 for Jane Smith, Total: NRP 37.50, Status: Due' 
   },
   { 
     id: 'log3', 
     timestamp: new Date().toISOString(), 
     user: 'Admin Eve', 
     action: 'Expense Added', 
-    details: 'Expense ID exp3, Category: Food, Amount: $45.50' 
+    details: 'Expense ID exp3, Category: Food, Amount: NRP 45.50' 
   },
 ];
