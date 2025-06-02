@@ -108,8 +108,20 @@ export default function DashboardPage() {
           <>
             <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
             <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
-            <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales with pending payment" iconClassName="text-destructive"/>
-            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={Flag} description="Sales marked by staff for review" iconClassName="text-destructive" />
+            <AnalyticsCard 
+              title="Due Payments" 
+              value={dueSalesCount} 
+              icon={AlertTriangle} 
+              description="Number of sales with pending payment" 
+              iconClassName={dueSalesCount > 0 ? "text-destructive" : "text-green-500"}
+            />
+            <AnalyticsCard 
+              title="Flagged Sales" 
+              value={flaggedSalesCount} 
+              icon={Flag} 
+              description="Sales marked by staff for review" 
+              iconClassName={flaggedSalesCount > 0 ? "text-destructive" : "text-green-500"}
+            />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
