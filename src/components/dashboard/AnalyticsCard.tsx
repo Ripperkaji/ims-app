@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface AnalyticsCardProps {
   title: string;
@@ -9,9 +10,10 @@ interface AnalyticsCardProps {
   description?: string;
   trend?: string; 
   trendDirection?: 'up' | 'down';
+  iconClassName?: string;
 }
 
-export default function AnalyticsCard({ title, value, icon: Icon, description, trend, trendDirection }: AnalyticsCardProps) {
+export default function AnalyticsCard({ title, value, icon: Icon, description, trend, trendDirection, iconClassName }: AnalyticsCardProps) {
   let displayValue: string;
 
   if (typeof value === 'number') {
@@ -30,7 +32,7 @@ export default function AnalyticsCard({ title, value, icon: Icon, description, t
     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className="h-5 w-5 text-primary" />
+        <Icon className={cn("h-5 w-5 text-primary", iconClassName)} />
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-bold font-headline">{displayValue}</div>

@@ -8,11 +8,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from "recharts"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
 import type { Sale, LogEntry } from '@/types';
 import React, { useMemo, useState } from 'react';
@@ -110,7 +109,7 @@ export default function DashboardPage() {
             <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
             <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
             <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales with pending payment" />
-            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={Flag} description="Sales marked by staff for review" />
+            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={Flag} description="Sales marked by staff for review" iconClassName="text-destructive" />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
