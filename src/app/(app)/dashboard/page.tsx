@@ -18,6 +18,7 @@ import type { Sale, LogEntry } from '@/types';
 import React, { useMemo, useState } from 'react';
 import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const chartConfig = {
   sales: { label: "Sales", color: "hsl(var(--primary))" },
@@ -109,7 +110,7 @@ export default function DashboardPage() {
             <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
             <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
             <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales with pending payment" />
-            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={AlertCircle} description="Sales marked by staff for review" />
+            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={Flag} description="Sales marked by staff for review" />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
@@ -171,7 +172,18 @@ export default function DashboardPage() {
                           <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                             {sale.status}
                           </Badge>
-                          {sale.isFlagged && <Flag className="h-4 w-4 text-destructive ml-2" title={sale.flaggedComment || "Flagged for review"} />}
+                          {sale.isFlagged && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
@@ -242,9 +254,18 @@ export default function DashboardPage() {
                         <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                         <TableCell>
                           {sale.isFlagged ? (
-                            <div className="flex items-center text-sm text-destructive">
-                              <Flag className="h-4 w-4 mr-1" /> Flagged
-                            </div>
+                             <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center text-sm text-destructive cursor-default">
+                                      <Flag className="h-4 w-4 mr-1" /> Flagged
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
                               <Flag className="h-4 w-4 mr-1" /> Flag
@@ -282,3 +303,4 @@ function PlaceholderChart() {
     </div>
   )
 }
+

@@ -7,12 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, CheckCircle2, Phone } from "lucide-react";
+import { Edit, CheckCircle2, Phone, Flag } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
 import type { Sale } from '@/types';
 import { useRouter } from "next/navigation";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function DueSalesPage() {
   const { user } = useAuth();
@@ -22,19 +23,17 @@ export default function DueSalesPage() {
   // Filter sales that have an amountDue > 0
   const dueSalesList = useMemo(() => mockSales.filter(sale => sale.amountDue > 0)
     .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
-    [mockSales] // Assuming mockSales itself might be reactive or re-fetched in a real app
+    [] // mockSales changes are handled by useEffect below
   );
   
-  // This local state holds the sales to be displayed. It's initialized from dueSalesList.
-  // If mockSales could change from outside, this setup might need adjustments
-  // or rely on dueSalesList directly if its re-computation is efficient enough.
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSalesList);
 
   useEffect(() => {
     // Update currentDueSales if the underlying mockSales data changes that affects dueSalesList
-     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
-    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []); // Re-calculate on mount, and if mockSales was a prop, it would be a dependency
+     const updatedDueSales = mockSales.filter(sale => sale.amountDue > 0)
+        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+     setCurrentDueSales(updatedDueSales);
+  }, []); // Re-calculate on mount. For real-time updates, a global state or more complex effect deps would be needed.
 
 
   useEffect(() => {
@@ -45,23 +44,16 @@ export default function DueSalesPage() {
   }, [user, router, toast]);
 
   const handleMarkAsPaid = (saleId: string) => {
-    // This would involve finding the sale in mockSales, updating its amountDue to 0,
-    // cashPaid or digitalPaid accordingly, and then re-setting currentDueSales or relying on reactivity.
-    // For now, just a toast.
-    const sale = mockSales.find(s => s.id === saleId);
-    if (sale) {
-        // Simulate payment: assume remaining due is paid by cash for simplicity
-        sale.cashPaid += sale.amountDue;
-        sale.amountDue = 0;
-        sale.status = 'Paid'; // Update status
+    const saleIndex = mockSales.findIndex(s => s.id === saleId);
+    if (saleIndex !== -1) {
+        mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; // Assume remaining is paid by cash
+        mockSales[saleIndex].amountDue = 0;
+        mockSales[saleIndex].status = 'Paid'; 
         
-        // Update the state to reflect the change
+        // Update the local state to reflect the change by filtering out the paid sale
         setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleId));
         
-        toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid. Remaining NRP ${sale.totalAmount - sale.cashPaid - sale.digitalPaid} was assumed paid by cash.` });
-
-        // Potentially add to log:
-        // addLog("Due Sale Cleared", `Sale ID ${sale.id.substring(0,8)}... for ${sale.customerName} marked as fully paid.`);
+        toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid.` });
     } else {
       toast({ title: "Error", description: "Sale not found.", variant: "destructive" });
     }
@@ -101,7 +93,23 @@ export default function DueSalesPage() {
               {currentDueSales.map((sale) => (
                 <TableRow key={sale.id}>
                   <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell>
-                  <TableCell>{sale.customerName}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {sale.customerName}
+                      {sale.isFlagged && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{sale.flaggedComment || "Flagged for review"}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {sale.customerContact ? (
                       <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary">
@@ -136,3 +144,4 @@ export default function DueSalesPage() {
     </div>
   );
 }
+

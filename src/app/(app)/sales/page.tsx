@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Trash2, Phone } from "lucide-react";
+import { Edit, Eye, Trash2, Phone, Flag } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useMemo }  from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
@@ -155,9 +156,23 @@ export default function SalesPage() {
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>{getPaymentSummary(sale)}</TableCell>
                       <TableCell>
-                        <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
-                          {sale.status}
-                        </Badge>
+                        <div className="flex items-center">
+                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                            {sale.status}
+                          </Badge>
+                          {sale.isFlagged && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Flag className="h-4 w-4 text-destructive ml-2 cursor-pointer" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                       <TableCell>{sale.createdBy}</TableCell>
@@ -200,3 +215,4 @@ export default function SalesPage() {
     </div>
   );
 }
+
