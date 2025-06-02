@@ -19,8 +19,22 @@ export default function DueSalesPage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const dueSales = useMemo(() => mockSales.filter(sale => sale.status === 'Due'), []);
-  const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSales);
+  // Filter sales that have an amountDue > 0
+  const dueSalesList = useMemo(() => mockSales.filter(sale => sale.amountDue > 0)
+    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()), 
+    [mockSales] // Assuming mockSales itself might be reactive or re-fetched in a real app
+  );
+  
+  // This local state holds the sales to be displayed. It's initialized from dueSalesList.
+  // If mockSales could change from outside, this setup might need adjustments
+  // or rely on dueSalesList directly if its re-computation is efficient enough.
+  const [currentDueSales, setCurrentDueSales] = useState<Sale[]>(dueSalesList);
+
+  useEffect(() => {
+    // Update currentDueSales if the underlying mockSales data changes that affects dueSalesList
+     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
+    .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }, []); // Re-calculate on mount, and if mockSales was a prop, it would be a dependency
 
 
   useEffect(() => {
@@ -31,7 +45,26 @@ export default function DueSalesPage() {
   }, [user, router, toast]);
 
   const handleMarkAsPaid = (saleId: string) => {
-    toast({ title: "Action Required", description: `Marking sale ${saleId} as Paid - (Not Implemented)` });
+    // This would involve finding the sale in mockSales, updating its amountDue to 0,
+    // cashPaid or digitalPaid accordingly, and then re-setting currentDueSales or relying on reactivity.
+    // For now, just a toast.
+    const sale = mockSales.find(s => s.id === saleId);
+    if (sale) {
+        // Simulate payment: assume remaining due is paid by cash for simplicity
+        sale.cashPaid += sale.amountDue;
+        sale.amountDue = 0;
+        sale.status = 'Paid'; // Update status
+        
+        // Update the state to reflect the change
+        setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleId));
+        
+        toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid. Remaining NRP ${sale.totalAmount - sale.cashPaid - sale.digitalPaid} was assumed paid by cash.` });
+
+        // Potentially add to log:
+        // addLog("Due Sale Cleared", `Sale ID ${sale.id.substring(0,8)}... for ${sale.customerName} marked as fully paid.`);
+    } else {
+      toast({ title: "Error", description: "Sale not found.", variant: "destructive" });
+    }
   };
 
   const handleAdjustSale = (saleId: string) => {
@@ -48,7 +81,7 @@ export default function DueSalesPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Outstanding Payments</CardTitle>
-          <CardDescription>List of all sales transactions marked as 'Due'.</CardDescription>
+          <CardDescription>List of all sales transactions with an outstanding due amount.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -57,6 +90,7 @@ export default function DueSalesPage() {
                 <TableHead>ID</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Contact</TableHead>
+                <TableHead>Total Amount</TableHead>
                 <TableHead>Amount Due</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Recorded By</TableHead>
@@ -76,6 +110,7 @@ export default function DueSalesPage() {
                     ) : 'N/A'}
                   </TableCell>
                   <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                  <TableCell className="font-semibold text-destructive">NRP {sale.amountDue.toFixed(2)}</TableCell>
                   <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{sale.createdBy}</TableCell>
                   <TableCell className="text-right space-x-2">

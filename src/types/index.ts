@@ -22,9 +22,17 @@ export interface Sale {
   customerContact?: string; // Optional contact number
   items: SaleItem[];
   totalAmount: number;
-  paymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due';
+  
+  // New detailed payment fields
+  cashPaid: number;
+  digitalPaid: number;
+  amountDue: number;
+  
+  // Stores the primary method selected in the form (Cash, Credit Card, Debit Card, Due, Hybrid)
+  formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+
   date: string; // ISO string format
-  status: 'Paid' | 'Due';
+  status: 'Paid' | 'Due'; // Derived: if amountDue > 0, then 'Due', else 'Paid'
   createdBy: string; // User name or ID
 }
 

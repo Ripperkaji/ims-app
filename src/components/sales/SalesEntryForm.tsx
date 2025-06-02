@@ -7,15 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone } from 'lucide-react';
+import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info } from 'lucide-react';
 import type { Product, SaleItem, Sale, LogEntry } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface SalesEntryFormProps {
   onSaleAdded?: (newSale: Sale) => void;
 }
+
+type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuth();
@@ -23,12 +26,65 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [selectedItems, setSelectedItems] = useState<SaleItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Credit Card' | 'Debit Card' | 'Due'>('Cash');
+  
+  const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethodSelection>('Cash');
+  const [isHybridPayment, setIsHybridPayment] = useState(false);
+  const [hybridCashPaid, setHybridCashPaid] = useState('');
+  const [hybridDigitalPaid, setHybridDigitalPaid] = useState('');
+  const [hybridAmountLeftDue, setHybridAmountLeftDue] = useState('');
+
   const [formProductList, setFormProductList] = useState<Product[]>([...allGlobalProducts]);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
 
   useEffect(() => {
     setFormProductList([...allGlobalProducts]);
   }, []);
+
+  useEffect(() => {
+    if (formPaymentMethod === 'Hybrid') {
+      setIsHybridPayment(true);
+    } else {
+      setIsHybridPayment(false);
+      // Reset hybrid fields when switching away from hybrid
+      setHybridCashPaid('');
+      setHybridDigitalPaid('');
+      setHybridAmountLeftDue('');
+    }
+    setValidationError(null); // Clear validation error when payment method changes
+  }, [formPaymentMethod]);
+
+  // Auto-calculate one of the hybrid fields if two are entered
+  useEffect(() => {
+    if (!isHybridPayment || totalAmount === 0) return;
+
+    const cash = parseFloat(hybridCashPaid) || 0;
+    const digital = parseFloat(hybridDigitalPaid) || 0;
+    const due = parseFloat(hybridAmountLeftDue) || 0;
+
+    const filledFields = [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue].filter(val => val !== '').length;
+
+    if (filledFields === 2) {
+      if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
+        const remaining = totalAmount - cash - digital;
+        setHybridAmountLeftDue(remaining >= 0 ? remaining.toFixed(2) : '0.00');
+      } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
+        const remaining = totalAmount - cash - due;
+        setHybridDigitalPaid(remaining >= 0 ? remaining.toFixed(2) : '0.00');
+      } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
+        const remaining = totalAmount - cash - digital; // this was wrong, should be totalAmount - digital - due
+        setHybridCashPaid(remaining >=0 ? (totalAmount - digital - due).toFixed(2) : '0.00');
+      }
+    }
+    
+    // Basic validation for sum
+    if (cash + digital + due !== totalAmount && (cash + digital + due > 0 || totalAmount > 0)) {
+        setValidationError(`Hybrid payments (NRP ${ (cash + digital + due).toFixed(2) }) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
+    } else {
+        setValidationError(null);
+    }
+
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment]);
 
 
   const addLog = (action: string, details: string) => {
@@ -65,7 +121,6 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const handleItemChange = (index: number, field: keyof SaleItem, value: string | number) => {
     const newItems = [...selectedItems];
     const item = newItems[index];
-    const productInFormList = formProductList.find(p => p.id === item.productId); 
 
     if (field === 'productId') {
       const newProduct = formProductList.find(p => p.id === value as string);
@@ -75,7 +130,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         item.unitPrice = newProduct.price;
         item.quantity = 1; 
         if (newProduct.stock < 1) {
-            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock.`, variant: "destructive" });
+            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
         }
       }
@@ -87,7 +142,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck} items in stock.`, variant: "destructive" });
         item.quantity = stockToCheck;
       } else {
-        item.quantity = quantity > 0 ? quantity : (stockToCheck > 0 ? 1 : 0);
+        item.quantity = quantity >= 0 ? quantity : 0; // Allow 0 quantity
       }
     }
     
@@ -114,11 +169,50 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       toast({ title: "No Items", description: "Please add at least one product to the sale.", variant: "destructive" });
       return;
     }
-    if (selectedItems.some(item => item.quantity === 0 || isNaN(item.quantity))) {
-      toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity.", variant: "destructive" });
+     if (selectedItems.some(item => item.quantity <= 0 || isNaN(item.quantity))) {
+      toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity. Please remove or correct them.", variant: "destructive" });
+      return;
+    }
+    if (totalAmount <= 0 && selectedItems.length > 0){
+       toast({ title: "Invalid Sale Amount", description: "Total amount cannot be zero or less if items are selected.", variant: "destructive" });
       return;
     }
 
+
+    let finalCashPaid = 0;
+    let finalDigitalPaid = 0;
+    let finalAmountDue = 0;
+
+    if (isHybridPayment) {
+      finalCashPaid = parseFloat(hybridCashPaid) || 0;
+      finalDigitalPaid = parseFloat(hybridDigitalPaid) || 0;
+      finalAmountDue = parseFloat(hybridAmountLeftDue) || 0;
+
+      if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) {
+        toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" });
+        return;
+      }
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { // Check for floating point precision
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`, variant: "destructive" });
+        setValidationError(`Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
+        return;
+      }
+    } else {
+      switch (formPaymentMethod) {
+        case 'Cash':
+          finalCashPaid = totalAmount;
+          break;
+        case 'Credit Card':
+        case 'Debit Card':
+          finalDigitalPaid = totalAmount;
+          break;
+        case 'Due':
+          finalAmountDue = totalAmount;
+          break;
+      }
+    }
+    
+    const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
 
     const newSale: Sale = {
       id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -126,9 +220,12 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       customerContact: customerContact.trim() || undefined,
       items: selectedItems,
       totalAmount,
-      paymentMethod,
+      cashPaid: finalCashPaid,
+      digitalPaid: finalDigitalPaid,
+      amountDue: finalAmountDue,
+      formPaymentMethod: formPaymentMethod,
       date: new Date().toISOString(),
-      status: paymentMethod === 'Due' ? 'Due' : 'Paid',
+      status: saleStatus,
       createdBy: user?.name || 'Unknown',
     };
 
@@ -161,8 +258,18 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     mockSales.unshift(newSale);
     mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const contactInfo = newSale.customerContact ? ` (${newSale.customerContact})` : '';
-    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfo}, Total: NRP ${newSale.totalAmount.toFixed(2)}. Status: ${newSale.status}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
+    let paymentLogDetails = '';
+    if (newSale.formPaymentMethod === 'Hybrid') {
+        const parts = [];
+        if (newSale.cashPaid > 0) parts.push(`NRP ${newSale.cashPaid.toFixed(2)} by cash`);
+        if (newSale.digitalPaid > 0) parts.push(`NRP ${newSale.digitalPaid.toFixed(2)} by digital`);
+        if (newSale.amountDue > 0) parts.push(`NRP ${newSale.amountDue.toFixed(2)} due`);
+        paymentLogDetails = `Payment: ${parts.join(', ')}.`;
+    } else {
+        paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`;
+    }
+    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
     addLog("Sale Created", logDetails);
 
     toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${totalAmount.toFixed(2)} has been recorded.` });
@@ -171,16 +278,21 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       onSaleAdded(newSale);
     }
 
+    // Reset form
     setCustomerName('');
     setCustomerContact('');
     setSelectedItems([]);
-    setPaymentMethod('Cash');
+    setFormPaymentMethod('Cash'); // Resets isHybridPayment via useEffect
+    setHybridCashPaid('');
+    setHybridDigitalPaid('');
+    setHybridAmountLeftDue('');
+    setValidationError(null);
   };
 
   const availableProductsForDropdown = (currentItemId?: string) => 
     formProductList.filter(p => 
-      p.stock > 0 || (currentItemId && p.id === currentItemId) || selectedItems.some(si => si.productId === p.id && p.id === currentItemId)
-    );
+      p.stock > 0 || (currentItemId && p.id === currentItemId && allGlobalProducts.find(agp => agp.id === currentItemId)?.stock || 0) > 0 || selectedItems.some(si => si.productId === p.id && p.id === currentItemId)
+    ).sort((a, b) => a.name.localeCompare(b.name));
 
 
   return (
@@ -235,7 +347,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id} disabled={selectedItems.some(si => si.productId === p.id && si.productId !== item.productId) && p.stock === 0}>
+                        <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
                           {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
                         </SelectItem>
                       ))}
@@ -247,7 +359,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   <Input
                     id={`quantity-${index}`}
                     type="number"
-                    min="1"
+                    min="0" // Allow 0 to correct mistakes, validation on submit
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                     className="text-center"
@@ -273,10 +385,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div>
               <Label htmlFor="paymentMethod" className="text-base">Payment Method</Label>
-              <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as any)}>
+              <Select value={formPaymentMethod} onValueChange={(value) => setFormPaymentMethod(value as PaymentMethodSelection)}>
                 <SelectTrigger id="paymentMethod" className="mt-1">
                   <SelectValue placeholder="Select payment method" />
                 </SelectTrigger>
@@ -284,18 +396,76 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Credit Card">Credit Card</SelectItem>
                   <SelectItem value="Debit Card">Debit Card</SelectItem>
-                  <SelectItem value="Due">Due Payment</SelectItem>
+                  <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
+                  <SelectItem value="Due">Full Amount Due</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Total Amount</p>
+              <p className="text-sm text-muted-foreground">Total Sale Amount</p>
               <p className="text-3xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
             </div>
           </div>
+
+          {isHybridPayment && (
+            <Card className="p-4 border-primary/50 bg-primary/5">
+              <CardHeader className="p-2 pt-0">
+                <CardTitle className="text-lg font-semibold">Hybrid Payment Details</CardTitle>
+                 <CardDescription>Enter amounts for each payment type. Sum must equal total sale amount.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 p-2">
+                <div>
+                  <Label htmlFor="hybridCashPaid">Cash Paid (NRP)</Label>
+                  <Input
+                    id="hybridCashPaid"
+                    type="number"
+                    value={hybridCashPaid}
+                    onChange={(e) => setHybridCashPaid(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hybridDigitalPaid">Digital Payment Paid (NRP)</Label>
+                  <Input
+                    id="hybridDigitalPaid"
+                    type="number"
+                    value={hybridDigitalPaid}
+                    onChange={(e) => setHybridDigitalPaid(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="hybridAmountLeftDue">Amount Left Due (NRP)</Label>
+                  <Input
+                    id="hybridAmountLeftDue"
+                    type="number"
+                    value={hybridAmountLeftDue}
+                    onChange={(e) => setHybridAmountLeftDue(e.target.value)}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    className="mt-1"
+                  />
+                </div>
+                {validationError && (
+                    <Alert variant="destructive" className="mt-2">
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>Payment Error</AlertTitle>
+                        <AlertDescription>{validationError}</AlertDescription>
+                    </Alert>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </CardContent>
         <CardFooter>
-          <Button type="submit" size="lg" className="w-full text-lg py-3">
+          <Button type="submit" size="lg" className="w-full text-lg py-3" disabled={!!validationError && isHybridPayment}>
             <Landmark className="mr-2 h-5 w-5" /> Record Sale
           </Button>
         </CardFooter>

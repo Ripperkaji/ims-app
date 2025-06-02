@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const totalSalesAmount = mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
   const totalExpensesAmount = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netProfit = totalSalesAmount - totalExpensesAmount;
-  const dueSalesCount = mockSales.filter(sale => sale.status === 'Due').length;
+  const dueSalesCount = mockSales.filter(sale => sale.status === 'Due').length; // status is now derived from amountDue
   const totalProducts = mockProducts.length;
   const lowStockProducts = mockProducts.filter(p => p.stock < 10).length;
 
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   });
   const salesTrendData = Object.entries(salesByDay)
     .map(([date, sales]) => ({ date, sales }))
-    .slice(-7);
+    .slice(-7); // show last 7 entries for trend
 
   const recentSales = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
 
@@ -55,7 +55,7 @@ export default function DashboardPage() {
           <>
             <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
             <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
-            <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales pending payment" />
+            <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales with pending payment" />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />

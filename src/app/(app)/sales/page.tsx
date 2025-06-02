@@ -25,6 +25,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect }  from 'react';
 
+const getPaymentSummary = (sale: Sale): string => {
+  if (sale.formPaymentMethod === 'Hybrid') {
+    const parts = [];
+    if (sale.cashPaid > 0) parts.push(`Cash: ${sale.cashPaid.toFixed(2)}`);
+    if (sale.digitalPaid > 0) parts.push(`Digital: ${sale.digitalPaid.toFixed(2)}`);
+    // amountDue is already covered by status, but can be included if needed for more detail
+    // if (sale.amountDue > 0) parts.push(`Due: ${sale.amountDue.toFixed(2)}`);
+    return parts.length > 0 ? `Hybrid (${parts.join(', ')})` : 'Hybrid (N/A)';
+  }
+  return sale.formPaymentMethod;
+};
+
 
 export default function SalesPage() {
   const { user } = useAuth();
@@ -35,8 +47,10 @@ export default function SalesPage() {
   );
 
   useEffect(() => {
+    // This effect ensures that if mockSales is updated elsewhere (e.g. by SalesEntryForm),
+    // this component re-renders with the latest sorted data.
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []);
+  }, []); // Re-run if mockSales reference changes (it won't if mutated directly, so onSaleAdded is key)
 
 
   const handleAdjustSale = (saleId: string) => {
@@ -49,20 +63,25 @@ export default function SalesPage() {
 
   const handleSaleAddedByAdmin = (newSale: Sale) => {
     setSalesData(prevSales => 
-      [newSale, ...prevSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      // Add newSale and re-sort. Note: SalesEntryForm now directly updates mockSales
+      // so this primarily re-triggers render with the sorted list.
+      [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     );
   };
 
   if (!user) return null;
 
   if (user.role === 'staff') {
+    // Staff will also need onSaleAdded if they have a sales list on their view,
+    // but currently they only see the form.
     return (
       <div>
-        <SalesEntryForm />
+        <SalesEntryForm /> 
       </div>
     );
   }
 
+  // Admin View
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
@@ -84,7 +103,7 @@ export default function SalesPage() {
                 <TableHead>Customer</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Total Amount</TableHead>
-                <TableHead>Payment</TableHead>
+                <TableHead>Payment Details</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Recorded By</TableHead>
@@ -98,7 +117,7 @@ export default function SalesPage() {
                   <TableCell>{sale.customerName}</TableCell>
                   <TableCell>{sale.customerContact || 'N/A'}</TableCell>
                   <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell>{sale.paymentMethod}</TableCell>
+                  <TableCell>{getPaymentSummary(sale)}</TableCell>
                   <TableCell>
                     <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
                       {sale.status}
