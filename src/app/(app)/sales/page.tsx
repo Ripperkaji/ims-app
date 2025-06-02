@@ -3,7 +3,8 @@
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockSales, mockProducts } from "@/lib/data"; // For admin view
+import { mockSales } from "@/lib/data"; 
+import type { Sale } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -22,23 +23,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useState }  from 'react';
+import { useState, useEffect }  from 'react';
 
 
 export default function SalesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [salesData, setSalesData] = useState(mockSales); // For admin view, mutable for demo
+  
+  // Ensure salesData is sorted for admin view
+  const [salesData, setSalesData] = useState<Sale[]>(
+    [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  );
+
+  useEffect(() => {
+    // If mockSales itself could be updated by other components and this component needs to reflect it,
+    // you might need a more robust state management or a way to listen to changes in mockSales.
+    // For now, we sort on init and when a new sale is added via the form on this page.
+    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }, []);
+
 
   const handleAdjustSale = (saleId: string) => {
     toast({ title: "Action Required", description: `Adjusting sale ${saleId} - (Not Implemented)` });
-    // Placeholder for adjust functionality
   };
   
   const handleDeleteSale = (saleId: string) => {
-    // Simulate deletion
-    // setSalesData(salesData.filter(sale => sale.id !== saleId));
+    // setSalesData(salesData.filter(sale => sale.id !== saleId)); // Placeholder for actual deletion
     toast({ title: "Action Required", description: `Deleting sale ${saleId} - (Not Implemented)` });
+  };
+
+  const handleSaleAddedByAdmin = (newSale: Sale) => {
+    setSalesData(prevSales => 
+      [newSale, ...prevSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    );
+    // mockSales is already updated by SalesEntryForm
   };
 
   if (!user) return null;
@@ -46,15 +64,22 @@ export default function SalesPage() {
   if (user.role === 'staff') {
     return (
       <div>
-        <SalesEntryForm />
+        <SalesEntryForm /> {/* Staff does not need onSaleAdded as they don't see the table here */}
       </div>
     );
   }
 
   // Admin View
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
+      
+      {/* Sales Entry Form for Admin */}
+      <div>
+        <SalesEntryForm onSaleAdded={handleSaleAddedByAdmin} />
+      </div>
+      
+      {/* All Sales Records Table */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>All Sales Records</CardTitle>
@@ -130,3 +155,4 @@ export default function SalesPage() {
     </div>
   );
 }
+

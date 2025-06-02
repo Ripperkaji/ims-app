@@ -7,22 +7,47 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, ShoppingCart, Landmark } from 'lucide-react'; // Changed DollarSign to Landmark
-import type { Product, SaleItem } from '@/types';
+import { PlusCircle, Trash2, ShoppingCart, Landmark } from 'lucide-react';
+import type { Product, SaleItem, Sale, LogEntry } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { mockProducts as initialProducts } from '@/lib/data'; // Simulating data source
+import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
 
-export default function SalesEntryForm() {
+interface SalesEntryFormProps {
+  onSaleAdded?: (newSale: Sale) => void;
+}
+
+export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [customerName, setCustomerName] = useState('');
   const [selectedItems, setSelectedItems] = useState<SaleItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Credit Card' | 'Debit Card' | 'Due'>('Cash');
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Local copy for form's product list, reflecting current stock for selection
+  const [formProductList, setFormProductList] = useState<Product[]>([...allGlobalProducts]);
+
+  useEffect(() => {
+    // Refresh formProductList if allGlobalProducts change from elsewhere (e.g. products page updates)
+    // This is a simple way for mock data. In a real app, this would be driven by a proper state management or data fetching library.
+    setFormProductList([...allGlobalProducts]);
+  }, []);
+
+
+  const addLog = (action: string, details: string) => {
+    if (!user) return;
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: user.name,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog);
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
 
   const handleAddItem = () => {
-    const firstAvailableProduct = products.find(p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id));
+    const firstAvailableProduct = formProductList.find(p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id));
     if (firstAvailableProduct) {
       setSelectedItems([
         ...selectedItems,
@@ -42,22 +67,32 @@ export default function SalesEntryForm() {
   const handleItemChange = (index: number, field: keyof SaleItem, value: string | number) => {
     const newItems = [...selectedItems];
     const item = newItems[index];
-    const product = products.find(p => p.id === item.productId);
+    // Use formProductList to check stock, as it's the source for dropdowns
+    const productInFormList = formProductList.find(p => p.id === item.productId); 
 
     if (field === 'productId') {
-      const newProduct = products.find(p => p.id === value as string);
+      const newProduct = formProductList.find(p => p.id === value as string);
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
         item.unitPrice = newProduct.price;
+        // Reset quantity to 1 when product changes, check stock for new product
+        item.quantity = 1; 
+        if (newProduct.stock < 1) {
+            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock.`, variant: "destructive" });
+            item.quantity = 0; // Or handle differently
+        }
       }
     } else if (field === 'quantity') {
       const quantity = Number(value);
-      if (product && quantity > product.stock) {
-        toast({ title: "Stock limit", description: `${product.name} has only ${product.stock} items in stock.`, variant: "destructive" });
-        item.quantity = product.stock;
+      // productInFormList reflects current available stock for this item IF productId hasn't changed in this event
+      const stockToCheck = allGlobalProducts.find(p => p.id === item.productId)?.stock || 0;
+
+      if (quantity > stockToCheck) {
+        toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck} items in stock.`, variant: "destructive" });
+        item.quantity = stockToCheck;
       } else {
-        item.quantity = quantity > 0 ? quantity : 1;
+        item.quantity = quantity > 0 ? quantity : (stockToCheck > 0 ? 1 : 0);
       }
     }
     
@@ -84,35 +119,77 @@ export default function SalesEntryForm() {
       toast({ title: "No Items", description: "Please add at least one product to the sale.", variant: "destructive" });
       return;
     }
+    if (selectedItems.some(item => item.quantity === 0 || isNaN(item.quantity))) {
+      toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity.", variant: "destructive" });
+      return;
+    }
 
-    const newSale = {
-      id: `sale-${Date.now()}`,
+
+    const newSale: Sale = {
+      id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       customerName,
       items: selectedItems,
       totalAmount,
       paymentMethod,
       date: new Date().toISOString(),
       status: paymentMethod === 'Due' ? 'Due' : 'Paid',
-      createdBy: user?.name || 'Unknown Staff',
+      createdBy: user?.name || 'Unknown',
     };
 
-    const updatedProducts = [...products];
+    // Update global mockProducts stock
+    const updatedGlobalProducts = [...allGlobalProducts];
+    let successfulStockUpdate = true;
     selectedItems.forEach(item => {
-      const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+      const productIndex = updatedGlobalProducts.findIndex(p => p.id === item.productId);
       if (productIndex !== -1) {
-        updatedProducts[productIndex].stock -= item.quantity;
+        if (updatedGlobalProducts[productIndex].stock >= item.quantity) {
+          updatedGlobalProducts[productIndex].stock -= item.quantity;
+        } else {
+          toast({ title: "Stock Error", description: `Not enough stock for ${item.productName} during final processing.`, variant: "destructive" });
+          successfulStockUpdate = false;
+        }
+      } else {
+        toast({ title: "Product Error", description: `Product ${item.productName} not found during final processing.`, variant: "destructive" });
+        successfulStockUpdate = false;
       }
     });
-    setProducts(updatedProducts); 
+
+    if (!successfulStockUpdate) {
+      return; // Stop if stock validation failed
+    }
+    
+    // Commit changes to global mockProducts
+    allGlobalProducts.length = 0; // Clear and push to maintain reference for other components if needed
+    allGlobalProducts.push(...updatedGlobalProducts);
+    
+    // Update form's product list to reflect new stock
+    setFormProductList([...allGlobalProducts]); 
+
+    // Add to global mockSales and sort
+    mockSales.unshift(newSale);
+    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Log the sale
+    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}, Total: NRP ${newSale.totalAmount.toFixed(2)}. Status: ${newSale.status}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    addLog("Sale Created", logDetails);
 
     toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${totalAmount.toFixed(2)} has been recorded.` });
+
+    if (onSaleAdded) {
+      onSaleAdded(newSale);
+    }
 
     setCustomerName('');
     setSelectedItems([]);
     setPaymentMethod('Cash');
   };
 
-  const availableProductsForDropdown = products.filter(p => p.stock > 0);
+  // Products available for selection in dropdowns (stock > 0 or already selected)
+  const availableProductsForDropdown = (currentItemId?: string) => 
+    formProductList.filter(p => 
+      p.stock > 0 || (currentItemId && p.id === currentItemId) || selectedItems.some(si => si.productId === p.id && p.id === currentItemId)
+    );
+
 
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
@@ -148,16 +225,11 @@ export default function SalesEntryForm() {
                       <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableProductsForDropdown.map((p) => (
-                        <SelectItem key={p.id} value={p.id} disabled={selectedItems.some(si => si.productId === p.id && si.productId !== item.productId)}>
-                          {p.name} (Stock: {p.stock}, Price: NRP {p.price.toFixed(2)})
+                      {availableProductsForDropdown(item.productId).map((p) => (
+                        <SelectItem key={p.id} value={p.id} disabled={selectedItems.some(si => si.productId === p.id && si.productId !== item.productId) && p.stock === 0}>
+                          {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
                         </SelectItem>
                       ))}
-                       {products.find(p=>p.id === item.productId) && !availableProductsForDropdown.find(p=>p.id === item.productId) && (
-                         <SelectItem key={item.productId} value={item.productId}>
-                          {item.productName} (Stock: {products.find(p=>p.id === item.productId)?.stock || 0}, Price: NRP {item.unitPrice.toFixed(2)})
-                        </SelectItem>
-                       )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -166,7 +238,7 @@ export default function SalesEntryForm() {
                   <Input
                     id={`quantity-${index}`}
                     type="number"
-                    min="1"
+                    min="1" // Or 0 if allowing to set to 0 before removing
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                     className="text-center"
@@ -222,3 +294,4 @@ export default function SalesEntryForm() {
     </Card>
   );
 }
+
