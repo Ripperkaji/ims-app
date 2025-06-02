@@ -5,15 +5,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { mockSales } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, CheckCircle2, Phone } from "lucide-react"; // Removed Flag
+import { Edit, CheckCircle2, Phone } from "lucide-react"; // Flag icon import removed
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
 import type { Sale } from '@/types';
 import { useRouter } from "next/navigation";
-// Removed Tooltip imports as Flag icon is removed from this page
+// Tooltip imports related to Flag icon are also removed
 
 export default function DueSalesPage() {
   const { user } = useAuth();
@@ -48,6 +47,13 @@ export default function DueSalesPage() {
         mockSales[saleIndex].amountDue = 0;
         mockSales[saleIndex].status = 'Paid'; 
         
+        // Also update the mockSales entry in the global data to reflect it's paid
+        const globalSaleIndex = mockSales.findIndex(s => s.id === saleId);
+        if (globalSaleIndex !== -1) {
+            mockSales[globalSaleIndex].amountDue = 0;
+            mockSales[globalSaleIndex].status = 'Paid';
+        }
+
         setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleId));
         
         toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid.` });
@@ -92,14 +98,14 @@ export default function DueSalesPage() {
                   <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell>
                   <TableCell>
                     {sale.customerName}
-                    {/* Flag icon and tooltip removed from here */}
+                    {/* Flag icon and related tooltips are definitively removed from here and other cells */}
                   </TableCell>
                   <TableCell>
                     {sale.customerContact ? (
                       <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary">
                         <Phone className="h-3 w-3" /> {sale.customerContact}
                       </a>
-                    ) : 'N/A'}
+                    ) : <span className="text-xs">N/A</span>}
                   </TableCell>
                   <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                   <TableCell className="font-semibold text-destructive">NRP {sale.amountDue.toFixed(2)}</TableCell>
@@ -128,4 +134,3 @@ export default function DueSalesPage() {
     </div>
   );
 }
-
