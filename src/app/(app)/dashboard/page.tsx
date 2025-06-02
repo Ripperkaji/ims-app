@@ -3,7 +3,7 @@
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +13,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from "recharts"
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
+import type { Sale } from '@/types';
+import React, { useMemo } from 'react';
 
 const chartConfig = {
   sales: { label: "Sales", color: "hsl(var(--primary))" },
@@ -27,7 +29,7 @@ export default function DashboardPage() {
   const totalSalesAmount = mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
   const totalExpensesAmount = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const netProfit = totalSalesAmount - totalExpensesAmount;
-  const dueSalesCount = mockSales.filter(sale => sale.status === 'Due').length; // status is now derived from amountDue
+  const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
   const lowStockProducts = mockProducts.filter(p => p.stock < 10).length;
 
@@ -38,9 +40,19 @@ export default function DashboardPage() {
   });
   const salesTrendData = Object.entries(salesByDay)
     .map(([date, sales]) => ({ date, sales }))
-    .slice(-7); // show last 7 entries for trend
+    .slice(-7); 
 
-  const recentSales = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
+  const recentSalesForAdmin = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
+
+  const recentStaffSales = useMemo(() => {
+    if (user?.role === 'staff') {
+      const sevenDaysAgo = subDays(new Date(), 7);
+      return mockSales
+        .filter(sale => sale.createdBy === user.name && new Date(sale.date) >= sevenDaysAgo)
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    return [];
+  }, [user, mockSales]);
 
 
   if (!user) return null;
@@ -101,7 +113,7 @@ export default function DashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentSales.map(sale => (
+                  {recentSalesForAdmin.map(sale => (
                     <TableRow key={sale.id}>
                       <TableCell>{sale.customerName}</TableCell>
                        <TableCell>
@@ -128,7 +140,8 @@ export default function DashboardPage() {
       )}
       
       {user.role === 'staff' && (
-         <Card>
+        <>
+          <Card>
             <CardHeader>
               <CardTitle className="font-headline">Quick Links</CardTitle>
             </CardHeader>
@@ -153,6 +166,44 @@ export default function DashboardPage() {
               </Link>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center gap-2"><Briefcase /> Your Recent Sales (Last 7 Days)</CardTitle>
+              <CardDescription>Sales you recorded in the past week.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentStaffSales.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentStaffSales.map(sale => (
+                      <TableRow key={sale.id}>
+                        <TableCell>{sale.customerName}</TableCell>
+                        <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                            {sale.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-center py-4">You have not recorded any sales in the last 7 days.</p>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
 
     </div>
