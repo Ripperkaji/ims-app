@@ -26,6 +26,8 @@ export const mockSales: Sale[] = [
     date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'Paid',
     createdBy: 'Staff Alice',
+    isFlagged: false,
+    flaggedComment: '',
   },
   {
     id: 'sale2',
@@ -42,6 +44,8 @@ export const mockSales: Sale[] = [
     date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'Due',
     createdBy: 'Staff Bob',
+    isFlagged: true,
+    flaggedComment: 'Customer claims price was different for one item.',
   },
   {
     id: 'sale3',
@@ -57,6 +61,8 @@ export const mockSales: Sale[] = [
     date: new Date().toISOString(),
     status: 'Paid',
     createdBy: 'Staff Alice',
+    isFlagged: false,
+    flaggedComment: '',
   },
    {
     id: 'sale4-hybrid',
@@ -74,6 +80,8 @@ export const mockSales: Sale[] = [
     date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
     status: 'Due',
     createdBy: 'Admin Eve',
+    isFlagged: false,
+    flaggedComment: '',
   }
 ];
 
@@ -120,6 +128,13 @@ export const mockLogEntries: LogEntry[] = [
     details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Credit Card. Status: Paid.' 
   },
   { 
+    id: 'log1b', 
+    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 2*60*1000).toISOString(), 
+    user: 'Staff Bob', 
+    action: 'Sale Flagged', 
+    details: 'Sale ID sale2 for Jane Smith flagged by Staff Bob. Comment: Customer claims price was different for one item.' 
+  },
+  { 
     id: 'log2', 
     timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3*60*1000).toISOString(), 
     user: 'Staff Bob', 
@@ -133,4 +148,21 @@ export const mockLogEntries: LogEntry[] = [
     action: 'Expense Added', 
     details: 'Expense ID exp3, Category: Food, Amount: NRP 45.50' 
   },
-];
+  {
+    id: 'log4',
+    timestamp: new Date(Date.now() - 20*60*1000).toISOString(),
+    user: 'Admin Eve',
+    action: 'Product Added',
+    details: "Product 'Vape Pen Kit - Starter' (ID: prod5...) added with price NRP 29.99 and stock 30."
+  }
+].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+// Initialize isFlagged and flaggedComment for existing sales if not present
+mockSales.forEach(sale => {
+  if (sale.isFlagged === undefined) {
+    sale.isFlagged = false;
+  }
+  if (sale.flaggedComment === undefined) {
+    sale.flaggedComment = '';
+  }
+});

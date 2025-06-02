@@ -2,8 +2,8 @@
 "use client";
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase } from "lucide-react";
+import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase, Flag, AlertCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,8 +14,10 @@ import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, LineChart, Line } from "recharts"
 import { format, subDays } from 'date-fns';
-import type { Sale } from '@/types';
-import React, { useMemo } from 'react';
+import type { Sale, LogEntry } from '@/types';
+import React, { useMemo, useState } from 'react';
+import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
+import { useToast } from "@/hooks/use-toast";
 
 const chartConfig = {
   sales: { label: "Sales", color: "hsl(var(--primary))" },
@@ -25,6 +27,7 @@ const chartConfig = {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const totalSalesAmount = mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
   const totalExpensesAmount = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -32,6 +35,7 @@ export default function DashboardPage() {
   const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
   const lowStockProducts = mockProducts.filter(p => p.stock < 10).length;
+  const flaggedSalesCount = mockSales.filter(sale => sale.isFlagged).length;
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -44,6 +48,10 @@ export default function DashboardPage() {
 
   const recentSalesForAdmin = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
 
+  const [saleToFlag, setSaleToFlag] = useState<Sale | null>(null);
+  const [triggerRefresh, setTriggerRefresh] = useState(0);
+
+
   const recentStaffSales = useMemo(() => {
     if (user?.role === 'staff') {
       const sevenDaysAgo = subDays(new Date(), 7);
@@ -52,7 +60,40 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
     return [];
-  }, [user, mockSales]);
+  }, [user, triggerRefresh]); // mockSales is mutated directly, so triggerRefresh helps
+
+  const handleOpenFlagDialog = (sale: Sale) => {
+    setSaleToFlag(sale);
+  };
+
+  const handleCloseFlagDialog = () => {
+    setSaleToFlag(null);
+  };
+  
+  const addLogEntry = (action: string, details: string, userName: string) => {
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: userName,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog);
+     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
+
+
+  const handleSaleFlagged = (flaggedSaleId: string, comment: string) => {
+    const saleIndex = mockSales.findIndex(s => s.id === flaggedSaleId);
+    if (saleIndex !== -1 && user) {
+      mockSales[saleIndex].isFlagged = true;
+      mockSales[saleIndex].flaggedComment = comment;
+      addLogEntry("Sale Flagged", `Sale ID ${flaggedSaleId.substring(0,8)}... flagged by ${user.name}. Comment: ${comment}`, user.name);
+      toast({ title: "Sale Flagged", description: `Sale ${flaggedSaleId.substring(0,8)}... has been flagged for admin review.`});
+    }
+    setSaleToFlag(null); 
+    setTriggerRefresh(prev => prev + 1); 
+  };
 
 
   if (!user) return null;
@@ -68,6 +109,7 @@ export default function DashboardPage() {
             <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
             <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
             <AnalyticsCard title="Due Payments" value={dueSalesCount} icon={AlertTriangle} description="Number of sales with pending payment" />
+            <AnalyticsCard title="Flagged Sales" value={flaggedSalesCount} icon={AlertCircle} description="Sales marked by staff for review" />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
@@ -125,9 +167,12 @@ export default function DashboardPage() {
                       </TableCell>
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
-                        <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
-                          {sale.status}
-                        </Badge>
+                        <div className="flex items-center">
+                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                            {sale.status}
+                          </Badge>
+                          {sale.isFlagged && <Flag className="h-4 w-4 text-destructive ml-2" title={sale.flaggedComment || "Flagged for review"} />}
+                        </div>
                       </TableCell>
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
                     </TableRow>
@@ -170,7 +215,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2"><Briefcase /> Your Recent Sales (Last 7 Days)</CardTitle>
-              <CardDescription>Sales you recorded in the past week.</CardDescription>
+              <CardDescription>Sales you recorded in the past week. You can flag sales with issues for admin review.</CardDescription>
             </CardHeader>
             <CardContent>
               {recentStaffSales.length > 0 ? (
@@ -181,6 +226,7 @@ export default function DashboardPage() {
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -194,6 +240,17 @@ export default function DashboardPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                        <TableCell>
+                          {sale.isFlagged ? (
+                            <div className="flex items-center text-sm text-destructive">
+                              <Flag className="h-4 w-4 mr-1" /> Flagged
+                            </div>
+                          ) : (
+                            <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
+                              <Flag className="h-4 w-4 mr-1" /> Flag
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -205,7 +262,14 @@ export default function DashboardPage() {
           </Card>
         </>
       )}
-
+      {saleToFlag && (
+        <FlagSaleDialog
+          sale={saleToFlag}
+          isOpen={!!saleToFlag}
+          onClose={handleCloseFlagDialog}
+          onSaleFlagged={handleSaleFlagged}
+        />
+      )}
     </div>
   );
 }
