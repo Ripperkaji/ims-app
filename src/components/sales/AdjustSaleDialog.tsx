@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card'; 
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
@@ -23,13 +23,13 @@ import { useToast } from '@/hooks/use-toast';
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
-interface AdjustSaleDialogProps { // Renamed from ResolveFlagDialogProps
+interface AdjustSaleDialogProps {
   sale: Sale;
   isOpen: boolean;
   onClose: () => void;
-  onSaleAdjusted: ( // Renamed from onFlagResolved
-    originalSaleId: string, 
-    updatedSaleData: Partial<Sale> & { 
+  onSaleAdjusted: (
+    originalSaleId: string,
+    updatedSaleData: Partial<Sale> & {
         customerName: string;
         customerContact?: string;
         items: SaleItem[];
@@ -38,14 +38,14 @@ interface AdjustSaleDialogProps { // Renamed from ResolveFlagDialogProps
         cashPaid: number;
         digitalPaid: number;
         amountDue: number;
-    }, 
-    adjustmentComment: string // Was resolutionComment
+    },
+    adjustmentComment: string
   ) => void;
-  allGlobalProducts: Product[]; 
-  isInitiallyFlagged: boolean; // New prop
+  allGlobalProducts: Product[];
+  isInitiallyFlagged: boolean;
 }
 
-// Rename imported components to avoid conflicts
+// Rename imported components to avoid conflicts if this file also uses these names for its own elements.
 const DialogCardTitle = DialogCardTitleImport;
 const DialogCardDescription = DialogCardDescriptionImport;
 
@@ -54,7 +54,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
   const [editedCustomerContact, setEditedCustomerContact] = useState(sale.customerContact || '');
-  const [editedItems, setEditedItems] = useState<SaleItem[]>(() => JSON.parse(JSON.stringify(sale.items))); 
+  const [editedItems, setEditedItems] = useState<SaleItem[]>(() => JSON.parse(JSON.stringify(sale.items)));
 
   const [editedFormPaymentMethod, setEditedFormPaymentMethod] = useState<PaymentMethodSelection>(sale.formPaymentMethod);
   const [isHybridPayment, setIsHybridPayment] = useState(sale.formPaymentMethod === 'Hybrid');
@@ -62,7 +62,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   const [hybridDigitalPaid, setHybridDigitalPaid] = useState(sale.digitalPaid.toString());
   const [hybridAmountLeftDue, setHybridAmountLeftDue] = useState(sale.amountDue.toString());
   
-  const [adjustmentComment, setAdjustmentComment] = useState<string>(''); // Was resolutionComment
+  const [adjustmentComment, setAdjustmentComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const dialogTotalAmount = useMemo(() => {
@@ -73,7 +73,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     if (isOpen) {
       setEditedCustomerName(sale.customerName);
       setEditedCustomerContact(sale.customerContact || '');
-      setEditedItems(JSON.parse(JSON.stringify(sale.items))); 
+      setEditedItems(JSON.parse(JSON.stringify(sale.items)));
       setEditedFormPaymentMethod(sale.formPaymentMethod);
       setIsHybridPayment(sale.formPaymentMethod === 'Hybrid');
       setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
@@ -171,7 +171,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         item.productId = newProduct.id;
         item.productName = newProduct.name;
         item.unitPrice = newProduct.price;
-        item.quantity = 1; 
+        item.quantity = 1;
         if (newProduct.stock < 1) {
             toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
@@ -184,11 +184,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       const originalItem = sale.items.find(i => i.productId === item.productId);
       const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
 
-      if (quantity > (stockToCheck + quantityAlreadyInSale)) { 
+      if (quantity > (stockToCheck + quantityAlreadyInSale)) {
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck + quantityAlreadyInSale} items available for this adjustment.`, variant: "destructive" });
         item.quantity = stockToCheck + quantityAlreadyInSale;
       } else {
-        item.quantity = quantity >= 0 ? quantity : 0; 
+        item.quantity = quantity >= 0 ? quantity : 0;
       }
     }
     
@@ -201,7 +201,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setEditedItems(editedItems.filter((_, i) => i !== index));
   };
 
-  const handleConfirmChanges = () => { // Renamed from handleConfirmResolution
+  const handleConfirmChanges = () => {
     if (isInitiallyFlagged && !adjustmentComment.trim()) {
       toast({ title: "Comment Required", description: "Please provide a resolution comment for the flagged sale.", variant: "destructive"});
       return;
@@ -264,8 +264,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         amountDue: finalAmountDue,
     };
 
-    onSaleAdjusted(sale.id, updatedSalePortion, adjustmentComment); // Pass adjustmentComment
-    onClose(); 
+    onSaleAdjusted(sale.id, updatedSalePortion, adjustmentComment);
+    onClose();
   };
 
   const handleDialogClose = () => {
@@ -283,12 +283,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   if (!isOpen) return null;
 
-  const availableProductsForDropdown = (currentItemId?: string) => 
-    allGlobalProducts.filter(p => 
-      (p.stock + (editedItems.find(si => si.productId === p.id)?.quantity || 0) > 0) || 
-      (currentItemId && p.id === currentItemId) 
+  const availableProductsForDropdown = (currentItemId?: string) =>
+    allGlobalProducts.filter(p =>
+      (p.stock + (editedItems.find(si => si.productId === p.id)?.quantity || 0) > 0) ||
+      (currentItemId && p.id === currentItemId)
     ).sort((a, b) => a.name.localeCompare(b.name));
-
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
@@ -330,8 +329,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     </SelectTrigger>
                     <SelectContent>
                     {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id} 
-                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) } 
+                        <SelectItem key={p.id} value={p.id}
+                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) }
                         >
                         {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
                         </SelectItem>
@@ -344,7 +343,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 <Input
                     id={`quantity-${index}-edit`}
                     type="number"
-                    min="0" 
+                    min="0"
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
                     className="text-center"
@@ -433,9 +432,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         
         <DialogFooter className="pt-4 border-t">
           <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
-          <Button 
-            type="button" 
-            onClick={handleConfirmChanges} 
+          <Button
+            type="button"
+            onClick={handleConfirmChanges}
             disabled={ (isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError) || editedItems.some(item => item.quantity <=0 && item.totalPrice > 0) || (editedItems.length > 0 && dialogTotalAmount <= 0) }
             className={((isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError)) ? "bg-primary/50" : "bg-primary hover:bg-primary/90"}
           >
