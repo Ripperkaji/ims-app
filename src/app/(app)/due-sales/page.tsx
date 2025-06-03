@@ -2,31 +2,21 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { mockSales, mockProducts, mockLogEntries } from "@/lib/data"; // Added mockProducts and mockLogEntries
+import { mockSales, mockLogEntries, mockProducts } from "@/lib/data"; // Added mockProducts
+import type { Sale, Product, LogEntry, SaleItem } from '@/types'; // Added Product, SaleItem
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Added Input
-import { Label } from "@/components/ui/label"; // Added Label
-import { Edit3, CheckCircle2, Phone, Edit } from "lucide-react"; // Using Edit3 for consistency
+import { Edit3, CheckCircle2, Phone, Flag } from "lucide-react"; // Using Edit3 for consistency
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from 'react';
-import type { Sale, Product, LogEntry, SaleItem } from '@/types'; // Added Product, LogEntry, SaleItem
+import { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
-import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; // Added AdjustSaleDialog
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Added AlertDialog components
-
-type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Added Tooltip
+// Note: ResolveFlagDialog might be renamed or a new AdjustSaleDialog created if functionality differs significantly
+// For now, assuming ResolveFlagDialog might be adapted or a similar dialog would be used for adjustments.
+// If ResolveFlagDialog is specific to *flagged* sales, a new dialog for general adjustment would be needed.
+// For this step, we'll treat "Adjust Sale" as a placeholder.
 
 export default function DueSalesPage() {
   const { user } = useAuth();
@@ -34,15 +24,12 @@ export default function DueSalesPage() {
   const { toast } = useToast();
   
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>([]);
-  const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
-  const [saleToMarkAsPaid, setSaleToMarkAsPaid] = useState<Sale | null>(null);
-  const [markAsPaidConfirmationInput, setMarkAsPaidConfirmationInput] = useState<string>("");
 
   useEffect(() => {
      const updatedDueSales = mockSales.filter(sale => sale.amountDue > 0)
-        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort by date descending
      setCurrentDueSales(updatedDueSales);
-  }, []); 
+  }, []); // Re-evaluate if mockSales changes externally
 
 
   useEffect(() => {
@@ -65,136 +52,42 @@ export default function DueSalesPage() {
     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
-  const handleOpenAdjustDialog = (saleId: string) => {
-    const sale = currentDueSales.find(s => s.id === saleId);
-    if (sale) {
-      setSaleToAdjust(sale);
-    } else {
-      toast({ title: "Error", description: "Sale not found for adjustment.", variant: "destructive" });
-    }
-  };
-
-  const handleSaleAdjusted = (
-    originalSaleId: string,
-    updatedSaleDataFromDialog: Partial<Sale> & {
-        customerName: string;
-        customerContact?: string;
-        items: SaleItem[];
-        totalAmount: number;
-        formPaymentMethod: PaymentMethodSelection;
-        cashPaid: number;
-        digitalPaid: number;
-        amountDue: number;
-    },
-    adjustmentComment: string
-  ) => {
-    const originalSaleIndex = mockSales.findIndex(s => s.id === originalSaleId);
-    if (originalSaleIndex === -1 || !user) {
-      toast({ title: "Error", description: "Original sale not found or user not available.", variant: "destructive"});
-      return;
-    }
-    const originalSale = mockSales[originalSaleIndex];
-    const wasInitiallyFlagged = originalSale.isFlagged;
-
-    originalSale.items.forEach(originalItem => {
-      const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
-      if (productIndex !== -1) {
-        mockProducts[productIndex].stock += originalItem.quantity;
-      }
-    });
-
-    let stockSufficient = true;
-    for (const newItem of updatedSaleDataFromDialog.items) {
-      const productIndex = mockProducts.findIndex(p => p.id === newItem.productId);
-      if (productIndex !== -1) {
-        if (mockProducts[productIndex].stock >= newItem.quantity) {
-          mockProducts[productIndex].stock -= newItem.quantity;
-        } else {
-          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName}.`, variant: "destructive"});
-          stockSufficient = false; // Revert stock changes made so far in this adjustment attempt.
-           updatedSaleDataFromDialog.items.slice(0, updatedSaleDataFromDialog.items.indexOf(newItem)).forEach(revertedItem => {
-            const revertedProductIndex = mockProducts.findIndex(p => p.id === revertedItem.productId);
-            if (revertedProductIndex !== -1) mockProducts[revertedProductIndex].stock += revertedItem.quantity;
-          });
-          originalSale.items.forEach(originalItem => { // Add back original items stock
-            const productIndexRevert = mockProducts.findIndex(p => p.id === originalItem.productId);
-            if (productIndexRevert !== -1) mockProducts[productIndexRevert].stock -= originalItem.quantity;
-          });
-          break;
-        }
-      }
-    }
-
-    if (!stockSufficient) {
-      setSaleToAdjust(null);
-      return;
-    }
-
-    let finalFlaggedComment = originalSale.flaggedComment || "";
-    if (wasInitiallyFlagged) { // This sale was flagged and is now being resolved via adjustment
-        finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
-    } else if (adjustmentComment) { // This sale was not flagged, just adjusted with a comment
-        finalFlaggedComment = `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
-    }
-    
-    const finalUpdatedSale: Sale = {
-      ...originalSale,
-      customerName: updatedSaleDataFromDialog.customerName,
-      customerContact: updatedSaleDataFromDialog.customerContact,
-      items: updatedSaleDataFromDialog.items,
-      totalAmount: updatedSaleDataFromDialog.totalAmount,
-      cashPaid: updatedSaleDataFromDialog.cashPaid,
-      digitalPaid: updatedSaleDataFromDialog.digitalPaid,
-      amountDue: updatedSaleDataFromDialog.amountDue,
-      formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
-      isFlagged: updatedSaleDataFromDialog.amountDue > 0 ? originalSale.isFlagged : false, // Clear flag if paid off by adjustment
-      flaggedComment: finalFlaggedComment,
-      status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
-    };
-    
-    mockSales[originalSaleIndex] = finalUpdatedSale;
-    
-    const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
-    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. Comment: ${adjustmentComment || "N/A"}`);
-    
-    setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    toast({ title: logAction, description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
-    setSaleToAdjust(null);
-  };
-
-
-  const openMarkAsPaidDialog = (saleId: string) => {
-    const sale = currentDueSales.find(s => s.id === saleId);
-    if (sale) {
-      setSaleToMarkAsPaid(sale);
-      setMarkAsPaidConfirmationInput("");
-    }
-  };
-
-  const confirmAndMarkAsPaid = () => {
-    if (!saleToMarkAsPaid || !user) return;
-
-    const saleIndex = mockSales.findIndex(s => s.id === saleToMarkAsPaid.id);
+  const handleMarkAsPaid = (saleId: string) => {
+    if (!user) return;
+    const saleIndex = mockSales.findIndex(s => s.id === saleId);
     if (saleIndex !== -1) {
-        // Assume due amount is paid in cash. This could be made more flexible.
-        mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
-        const paidAmount = mockSales[saleIndex].amountDue;
-        mockSales[saleIndex].amountDue = 0;
-        mockSales[saleIndex].status = 'Paid'; 
-        
-        addLog("Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${saleToMarkAsPaid.customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${paidAmount.toFixed(2)}.`);
-        setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleToMarkAsPaid.id));
-        toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id.substring(0,8)}... marked as Paid.` });
+      // Assume the due amount is paid entirely in cash for simplicity here.
+      // A more complex form could allow specifying how the due amount was paid.
+      mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
+      const paidAmount = mockSales[saleIndex].amountDue;
+      mockSales[saleIndex].amountDue = 0;
+      mockSales[saleIndex].status = 'Paid'; 
+      
+      addLog("Sale Marked as Paid", `Sale ID ${saleId.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${paidAmount.toFixed(2)}.`);
+      setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleId));
+      toast({ title: "Sale Updated", description: `Sale ${saleId.substring(0,8)}... marked as Paid.` });
     } else {
       toast({ title: "Error", description: "Sale not found.", variant: "destructive" });
     }
-    setSaleToMarkAsPaid(null);
-    setMarkAsPaidConfirmationInput("");
+  };
+
+  const handleAdjustSale = (saleId: string) => {
+    // This is a placeholder. Full adjustment would require a dialog similar to ResolveFlagDialog
+    // but generalized for any sale adjustment (items, quantities, payment etc.)
+    // It would also need to handle stock updates carefully.
+    toast({ 
+      title: "Feature Placeholder", 
+      description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet.`,
+      variant: "default"
+    });
+    // Example Log:
+    // addLog("Sale Adjustment Attempted (Due Sales)", `Admin ${user?.name} attempted to adjust due sale ${saleId.substring(0,8)}...`);
   };
 
 
   if (!user || user.role !== 'admin') {
-    return null;
+    // This will be handled by redirect, but good to have a fallback UI or null.
+    return null; 
   }
 
   return (
@@ -214,6 +107,7 @@ export default function DueSalesPage() {
                 <TableHead>Contact</TableHead>
                 <TableHead>Total Amount</TableHead>
                 <TableHead>Amount Due</TableHead>
+                <TableHead>Flagged</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Recorded By</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -233,13 +127,29 @@ export default function DueSalesPage() {
                   </TableCell>
                   <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                   <TableCell className="font-semibold text-destructive">NRP {sale.amountDue.toFixed(2)}</TableCell>
+                  <TableCell>
+                    {sale.isFlagged ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Flag className="h-4 w-4 text-destructive cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span>No</span>
+                    )}
+                  </TableCell>
                   <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>{sale.createdBy}</TableCell>
                   <TableCell className="text-right space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => openMarkAsPaidDialog(sale.id)}>
+                    <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(sale.id)}>
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title="Adjust Sale">
+                    <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title="Adjust Sale">
                       <Edit3 className="h-4 w-4" />
                       <span className="sr-only">Adjust Sale</span>
                     </Button>
@@ -255,50 +165,8 @@ export default function DueSalesPage() {
           )}
         </CardContent>
       </Card>
-
-      {saleToAdjust && (
-        <AdjustSaleDialog
-          sale={saleToAdjust}
-          isOpen={!!saleToAdjust}
-          onClose={() => setSaleToAdjust(null)}
-          onSaleAdjusted={handleSaleAdjusted}
-          allGlobalProducts={mockProducts}
-          isInitiallyFlagged={saleToAdjust.isFlagged || false}
-        />
-      )}
-
-      {saleToMarkAsPaid && (
-        <AlertDialog open={!!saleToMarkAsPaid} onOpenChange={(isOpen) => { if (!isOpen) setSaleToMarkAsPaid(null); }}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
-              <AlertDialogDescription>
-                To mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {saleToMarkAsPaid.amountDue.toFixed(2)}) as fully paid, please type "YES" in the box below.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="py-4 space-y-2">
-              <Label htmlFor="confirmMarkAsPaidInput">Type YES to confirm</Label>
-              <Input
-                id="confirmMarkAsPaidInput"
-                value={markAsPaidConfirmationInput}
-                onChange={(e) => setMarkAsPaidConfirmationInput(e.target.value)}
-                placeholder='Type "YES" here'
-              />
-            </div>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setSaleToMarkAsPaid(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={confirmAndMarkAsPaid}
-                disabled={markAsPaidConfirmationInput.trim().toLowerCase() !== 'yes'}
-              >
-                Confirm Payment
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+      {/* Placeholder for AdjustSaleDialog if implemented for this page */}
+      {/* {saleToAdjust && <AdjustSaleDialog sale={saleToAdjust} ... />} */}
     </div>
   );
 }
-
-    

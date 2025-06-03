@@ -1,12 +1,12 @@
 
-import type { Product, Sale, Expense, LogEntry, ProductType } from '@/types';
+import type { Product, Sale, Expense, LogEntry } from '@/types';
 
 export const mockProducts: Product[] = [
-  { id: 'prod1', name: 'Vape Juice - Mango Tango', price: 15.99, stock: 48, type: 'E-liquid Free Base' },
-  { id: 'prod2', name: 'Vape Mod - Smok X', price: 49.99, stock: 24, type: 'POD/MOD Devices' },
-  { id: 'prod3', name: 'Coils - Pack of 5', price: 9.99, stock: 99, type: 'Coils' },
-  { id: 'prod4', name: 'Disposable Vape - Blueberry Ice', price: 7.50, stock: 70, type: 'Disposables' },
-  { id: 'prod5', name: 'Vape Pen Kit - Starter', price: 29.99, stock: 29, type: 'POD/MOD Devices' },
+  { id: 'prod1', name: 'Vape Juice - Mango Tango', price: 15.99, stock: 50 },
+  { id: 'prod2', name: 'Vape Mod - Smok X', price: 49.99, stock: 25 },
+  { id: 'prod3', name: 'Coils - Pack of 5', price: 9.99, stock: 100 },
+  { id: 'prod4', name: 'Disposable Vape - Blueberry Ice', price: 7.50, stock: 75 },
+  { id: 'prod5', name: 'Vape Pen Kit - Starter', price: 29.99, stock: 30 },
 ];
 
 export const mockSales: Sale[] = [
@@ -166,4 +166,3 @@ mockSales.forEach(sale => {
     sale.flaggedComment = '';
   }
 });
-

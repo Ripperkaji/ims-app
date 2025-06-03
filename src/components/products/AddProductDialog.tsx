@@ -14,22 +14,20 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PackagePlus, Tag, DollarSignIcon, Archive, Layers } from 'lucide-react'; 
+import { PackagePlus, Tag, DollarSignIcon, Archive } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
-import { ALL_PRODUCT_TYPES, type ProductType } from '@/types';
+import type { Product } from '@/types';
 
 interface AddProductDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmAddProduct: (newProductData: { name: string; price: number; stock: number; type: ProductType }) => void;
+  onConfirmAddProduct: (newProductData: { name: string; price: number; stock: number }) => void;
 }
 
 export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct }: AddProductDialogProps) {
   const [name, setName] = useState<string>('');
   const [price, setPrice] = useState<string>('');
   const [stock, setStock] = useState<string>('');
-  const [productType, setProductType] = useState<ProductType | undefined>(undefined);
   const { toast } = useToast();
 
   const handleConfirm = () => {
@@ -48,17 +46,12 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
       toast({ title: "Invalid Stock", description: "Please enter a valid non-negative stock quantity.", variant: "destructive" });
       return;
     }
-    if (!productType) {
-      toast({ title: "Product Type Required", description: "Please select a product type.", variant: "destructive" });
-      return;
-    }
 
-    onConfirmAddProduct({ name, price: numPrice, stock: numStock, type: productType });
+    onConfirmAddProduct({ name, price: numPrice, stock: numStock });
     // Reset fields after successful confirmation
     setName('');
     setPrice('');
     setStock('');
-    setProductType(undefined);
     onClose(); // Close the dialog
   };
 
@@ -67,7 +60,6 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
     setName('');
     setPrice('');
     setStock('');
-    setProductType(undefined);
     onClose();
   };
 
@@ -96,21 +88,6 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
               className="col-span-3"
               placeholder="E.g., Premium Vape Juice"
             />
-          </div>
-           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="productType" className="text-right col-span-1">
-              <Layers className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Type
-            </Label>
-            <Select value={productType} onValueChange={(value) => setProductType(value as ProductType)}>
-              <SelectTrigger id="productType" className="col-span-3">
-                <SelectValue placeholder="Select product type" />
-              </SelectTrigger>
-              <SelectContent>
-                {ALL_PRODUCT_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="productPrice" className="text-right col-span-1">

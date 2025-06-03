@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Edit, PlusCircle, PackagePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType } from '@/types';
+import type { Product, LogEntry } from '@/types';
 import AddStockDialog from "@/components/products/AddStockDialog";
 import AddProductDialog from "@/components/products/AddProductDialog"; 
 
@@ -43,13 +43,12 @@ export default function ProductsPage() {
     setIsAddProductDialogOpen(true);
   };
 
-  const handleConfirmAddProduct = (newProductData: { name: string; price: number; stock: number; type: ProductType }) => {
+  const handleConfirmAddProduct = (newProductData: { name: string; price: number; stock: number; }) => {
     const newProduct: Product = {
       id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: newProductData.name,
       price: newProductData.price,
       stock: newProductData.stock,
-      type: newProductData.type,
     };
     // Update local state for this page's table
     setCurrentProducts(prevProducts => [newProduct, ...prevProducts].sort((a,b) => a.name.localeCompare(b.name)));
@@ -58,7 +57,7 @@ export default function ProductsPage() {
     mockProducts.push(newProduct);
     mockProducts.sort((a,b) => a.name.localeCompare(b.name)); // Keep global array sorted
 
-    addLog("Product Added", `Product '${newProduct.name}' (Type: ${newProduct.type}, ID: ${newProduct.id.substring(0,8)}...) added with price NRP ${newProduct.price.toFixed(2)} and stock ${newProduct.stock}.`);
+    addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added with price NRP ${newProduct.price.toFixed(2)} and stock ${newProduct.stock}.`);
     toast({
       title: "Product Added",
       description: `${newProduct.name} has been successfully added to the inventory.`,
@@ -159,7 +158,6 @@ export default function ProductsPage() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Status</TableHead>
@@ -171,7 +169,6 @@ export default function ProductsPage() {
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.id.substring(0,8)}...</TableCell>
                   <TableCell>{product.name}</TableCell>
-                  <TableCell>{product.type || 'N/A'}</TableCell>
                   <TableCell>NRP {product.price.toFixed(2)}</TableCell>
                   <TableCell>
                     {user.role === 'admin' ? (
@@ -236,4 +233,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

@@ -1,31 +1,11 @@
 
 export type UserRole = 'admin' | 'staff';
 
-export type ProductType = 
-  | "Disposables"
-  | "E-liquid Nic Salt"
-  | "E-liquid Free Base"
-  | "Coils"
-  | "POD/MOD Devices"
-  | "Cotton"
-  | "Coil Build & Maintenance";
-
-export const ALL_PRODUCT_TYPES: ProductType[] = [
-  "Disposables",
-  "E-liquid Nic Salt",
-  "E-liquid Free Base",
-  "Coils",
-  "POD/MOD Devices",
-  "Cotton",
-  "Coil Build & Maintenance",
-];
-
 export interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
-  type?: ProductType;
 }
 
 export interface SaleItem {
@@ -74,4 +54,3 @@ export interface LogEntry {
   action: string; // e.g., "Sale Created", "Expense Added", "Sale Modified"
   details: string; // Description of the change or event
 }
-

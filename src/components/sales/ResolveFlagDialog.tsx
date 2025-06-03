@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card'; 
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
@@ -23,11 +23,11 @@ import { useToast } from '@/hooks/use-toast';
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
-interface AdjustSaleDialogProps { // Renamed from ResolveFlagDialogProps
+interface ResolveFlagDialogProps {
   sale: Sale;
   isOpen: boolean;
   onClose: () => void;
-  onSaleAdjusted: ( // Renamed from onFlagResolved
+  onFlagResolved: (
     originalSaleId: string, 
     updatedSaleData: Partial<Sale> & { 
         customerName: string;
@@ -39,17 +39,13 @@ interface AdjustSaleDialogProps { // Renamed from ResolveFlagDialogProps
         digitalPaid: number;
         amountDue: number;
     }, 
-    adjustmentComment: string // Was resolutionComment
+    resolutionComment: string
   ) => void;
   allGlobalProducts: Product[]; 
-  isInitiallyFlagged: boolean; // New prop
 }
 
-// Rename imported components to avoid conflicts
-const DialogCardTitle = DialogCardTitleImport;
-const DialogCardDescription = DialogCardDescriptionImport;
 
-export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted, allGlobalProducts, isInitiallyFlagged }: AdjustSaleDialogProps) {
+export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolved, allGlobalProducts }: ResolveFlagDialogProps) {
   const { toast } = useToast();
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
@@ -62,10 +58,10 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   const [hybridDigitalPaid, setHybridDigitalPaid] = useState(sale.digitalPaid.toString());
   const [hybridAmountLeftDue, setHybridAmountLeftDue] = useState(sale.amountDue.toString());
   
-  const [adjustmentComment, setAdjustmentComment] = useState<string>(''); // Was resolutionComment
+  const [resolutionComment, setResolutionComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  const dialogTotalAmount = useMemo(() => {
+  const currentTotalAmount = useMemo(() => {
     return editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [editedItems]);
 
@@ -79,7 +75,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
       setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
       setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
-      setAdjustmentComment('');
+      setResolutionComment('');
       setValidationError(null);
     }
   }, [sale, isOpen]);
@@ -100,7 +96,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       }
       return;
     }
-    if (dialogTotalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
+    if (currentTotalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
         setValidationError(null);
         return;
     }
@@ -110,19 +106,19 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const due = parseFloat(hybridAmountLeftDue) || 0;
     const filledFields = [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue].filter(val => val && val !== '').length;
 
-    if (filledFields === 2 && dialogTotalAmount > 0) {
+    if (filledFields === 2 && currentTotalAmount > 0) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
-        const remainingForDue = dialogTotalAmount - cash - digital;
+        const remainingForDue = currentTotalAmount - cash - digital;
          if (parseFloat(hybridAmountLeftDue || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
             setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
          }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
-        const remainingForDigital = dialogTotalAmount - cash - due;
+        const remainingForDigital = currentTotalAmount - cash - due;
          if (parseFloat(hybridDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
             setHybridDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
          }
       } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
-        const calculatedCash = dialogTotalAmount - digital - due;
+        const calculatedCash = currentTotalAmount - digital - due;
         if (parseFloat(hybridCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
             setHybridCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
         }
@@ -134,13 +130,13 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const currentDueForValidation = parseFloat(hybridAmountLeftDue) || 0;
     const sumOfPayments = currentCashForValidation + currentDigitalForValidation + currentDueForValidation;
 
-    if (Math.abs(sumOfPayments - dialogTotalAmount) > 0.001 && (sumOfPayments > 0 || dialogTotalAmount > 0)) {
-        setValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`);
+    if (Math.abs(sumOfPayments - currentTotalAmount) > 0.001 && (sumOfPayments > 0 || currentTotalAmount > 0)) {
+        setValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`);
     } else {
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, dialogTotalAmount, isHybridPayment, validationError]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, currentTotalAmount, isHybridPayment, validationError]);
 
 
   const handleAddItem = () => {
@@ -181,6 +177,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       const quantity = Number(value);
       const productDetails = allGlobalProducts.find(p => p.id === item.productId);
       const stockToCheck = productDetails?.stock || 0;
+      
+      // For adjustments, we consider stock *plus* what was originally in the sale
       const originalItem = sale.items.find(i => i.productId === item.productId);
       const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
 
@@ -201,9 +199,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setEditedItems(editedItems.filter((_, i) => i !== index));
   };
 
-  const handleConfirmChanges = () => { // Renamed from handleConfirmResolution
-    if (isInitiallyFlagged && !adjustmentComment.trim()) {
-      toast({ title: "Comment Required", description: "Please provide a resolution comment for the flagged sale.", variant: "destructive"});
+  const handleConfirmResolution = () => {
+    if (!resolutionComment.trim()) {
+      toast({ title: "Resolution Comment Required", description: "Please provide a comment explaining the resolution.", variant: "destructive"});
       return;
     }
     if (!editedCustomerName.trim()) {
@@ -218,7 +216,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity.", variant: "destructive" });
       return;
     }
-    if (dialogTotalAmount <= 0 && editedItems.length > 0){
+    if (currentTotalAmount <= 0 && editedItems.length > 0){
        toast({ title: "Invalid Sale Amount", description: "Total amount must be positive if items are selected.", variant: "destructive" });
       return;
     }
@@ -236,16 +234,16 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" });
         return;
       }
-      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - dialogTotalAmount) > 0.001) {
-        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`);
-        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`, variant: "destructive" });
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - currentTotalAmount) > 0.001) {
+        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`);
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`, variant: "destructive" });
         return;
       }
     } else {
       switch (editedFormPaymentMethod) {
-        case 'Cash': finalCashPaid = dialogTotalAmount; break;
-        case 'Credit Card': case 'Debit Card': finalDigitalPaid = dialogTotalAmount; break;
-        case 'Due': finalAmountDue = dialogTotalAmount; break;
+        case 'Cash': finalCashPaid = currentTotalAmount; break;
+        case 'Credit Card': case 'Debit Card': finalDigitalPaid = currentTotalAmount; break;
+        case 'Due': finalAmountDue = currentTotalAmount; break;
       }
     }
      if (validationError && isHybridPayment) {
@@ -257,18 +255,19 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         customerName: editedCustomerName,
         customerContact: editedCustomerContact.trim() || undefined,
         items: editedItems,
-        totalAmount: dialogTotalAmount,
+        totalAmount: currentTotalAmount,
         formPaymentMethod: editedFormPaymentMethod,
         cashPaid: finalCashPaid,
         digitalPaid: finalDigitalPaid,
         amountDue: finalAmountDue,
     };
 
-    onSaleAdjusted(sale.id, updatedSalePortion, adjustmentComment); // Pass adjustmentComment
+    onFlagResolved(sale.id, updatedSalePortion, resolutionComment);
     onClose(); 
   };
 
   const handleDialogClose = () => {
+    // Reset state to original sale values when dialog is closed without saving
     setEditedCustomerName(sale.customerName);
     setEditedCustomerContact(sale.customerContact || '');
     setEditedItems(JSON.parse(JSON.stringify(sale.items)));
@@ -276,7 +275,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
     setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
     setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
-    setAdjustmentComment('');
+    setResolutionComment('');
     setValidationError(null);
     onClose();
   }
@@ -285,8 +284,10 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   const availableProductsForDropdown = (currentItemId?: string) => 
     allGlobalProducts.filter(p => 
-      (p.stock + (editedItems.find(si => si.productId === p.id)?.quantity || 0) > 0) || 
-      (currentItemId && p.id === currentItemId) 
+      // Product has stock OR it's the item currently selected in this row OR it was part of the original sale
+      (p.stock > 0) || 
+      (currentItemId && p.id === currentItemId) || 
+      (sale.items.find(si => si.productId === p.id)) 
     ).sort((a, b) => a.name.localeCompare(b.name));
 
 
@@ -295,16 +296,16 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {isInitiallyFlagged ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <Edit3 className="h-5 w-5 text-primary" />}
-            {isInitiallyFlagged ? "Resolve & Adjust Sale" : "Adjust Sale Details"}
+            <ShieldCheck className="h-5 w-5 text-green-600" /> Resolve Flag & Adjust Sale
           </DialogTitle>
           <DialogDescription>
-            Reviewing sale <strong>{sale.id.substring(0,8)}...</strong>. Adjust details as necessary.
-            {isInitiallyFlagged && " Provide a resolution comment."}
+            Reviewing flagged sale <strong>{sale.id.substring(0,8)}...</strong>. Make necessary adjustments and provide a resolution comment.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow overflow-y-auto space-y-4 p-1 pr-3">
+        {/* Scrollable content area */}
+        <div className="flex-grow overflow-y-auto space-y-4 p-1 pr-3"> {/* Added p-1 and pr-3 for scrollbar space */}
+            {/* Customer Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                 <Label htmlFor="editedCustomerName">Customer Name</Label>
@@ -316,6 +317,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
             </div>
 
+            {/* Items Section */}
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
             <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
@@ -331,7 +333,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     <SelectContent>
                     {availableProductsForDropdown(item.productId).map((p) => (
                         <SelectItem key={p.id} value={p.id} 
-                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) } 
+                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) } // Disable if no stock unless it's current or was in original
                         >
                         {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
                         </SelectItem>
@@ -363,6 +365,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
             <PlusCircle className="mr-2 h-4 w-4" /> Add Item
             </Button>
 
+            {/* Payment & Total Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-2">
                 <div>
                 <Label htmlFor="editedPaymentMethod">Payment Method</Label>
@@ -381,16 +384,17 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
                 <div className="text-right">
                 <p className="text-sm text-muted-foreground">New Total Sale Amount</p>
-                <p className="text-3xl font-bold">NRP {dialogTotalAmount.toFixed(2)}</p>
+                <p className="text-3xl font-bold">NRP {currentTotalAmount.toFixed(2)}</p>
                 </div>
             </div>
 
+            {/* Hybrid Payment Details */}
             {isHybridPayment && (
-                <Card className="p-4 border-primary/50 bg-primary/5">
-                <CardHeader className="p-2 pt-0">
+                <DialogCard className="p-4 border-primary/50 bg-primary/5">
+                <DialogCardHeader className="p-2 pt-0">
                     <DialogCardTitle className="text-lg font-semibold">Hybrid Payment Details</DialogCardTitle>
                     <DialogCardDescription>Amounts must sum to new total.</DialogCardDescription>
-                </CardHeader>
+                </DialogCardHeader>
                 <CardContent className="space-y-3 p-2">
                     <div>
                     <Label htmlFor="hybridCashPaid-edit">Cash Paid (NRP)</Label>
@@ -406,45 +410,42 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     </div>
                     {validationError && (<Alert variant="destructive" className="mt-2"><Info className="h-4 w-4" /><AlertTitle>Payment Error</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>)}
                 </CardContent>
-                </Card>
+                </DialogCard>
             )}
 
-            {isInitiallyFlagged && (
-              <div className="pt-2">
-                  <Label htmlFor="originalFlagComment">Original Flag Comment:</Label>
-                  <p id="originalFlagComment" className="text-sm p-2 bg-muted rounded-md border min-h-[40px] whitespace-pre-wrap">
-                  {sale.flaggedComment || "No original comment provided."}
-                  </p>
-              </div>
-            )}
+            {/* Original Flag Comment */}
+            <div className="pt-2">
+                <Label htmlFor="originalFlagComment">Original Flag Comment:</Label>
+                <p id="originalFlagComment" className="text-sm p-2 bg-muted rounded-md border min-h-[40px] whitespace-pre-wrap">
+                {sale.flaggedComment || "No original comment provided."}
+                </p>
+            </div>
+
+            {/* Resolution Comment */}
             <div>
-                <Label htmlFor="adjustmentComment">
-                  {isInitiallyFlagged ? "Resolution Comment (Required)" : "Adjustment Comment (Optional)"}
-                </Label>
+                <Label htmlFor="resolutionComment">Resolution Comment (Required)</Label>
                 <Textarea
-                id="adjustmentComment"
-                value={adjustmentComment}
-                onChange={(e) => setAdjustmentComment(e.target.value)}
-                placeholder={isInitiallyFlagged ? "Explain the resolution or action taken..." : "Reason for adjustment (e.g., customer request, error correction)..."}
+                id="resolutionComment"
+                value={resolutionComment}
+                onChange={(e) => setResolutionComment(e.target.value)}
+                placeholder="Explain the resolution or action taken..."
                 rows={3}
                 />
             </div>
         </div>
         
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="pt-4 border-t"> {/* Added border-t for separation */}
           <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           <Button 
             type="button" 
-            onClick={handleConfirmChanges} 
-            disabled={ (isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError) || editedItems.some(item => item.quantity <=0 && item.totalPrice > 0) || (editedItems.length > 0 && dialogTotalAmount <= 0) }
-            className={((isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError)) ? "bg-primary/50" : "bg-primary hover:bg-primary/90"}
+            onClick={handleConfirmResolution} 
+            disabled={!resolutionComment.trim() || (isHybridPayment && !!validationError) || editedItems.some(item => item.quantity <=0 && item.totalPrice > 0) || (editedItems.length > 0 && currentTotalAmount <= 0) }
+            className={(!resolutionComment.trim() || (isHybridPayment && !!validationError)) ? "bg-primary/50" : "bg-primary hover:bg-primary/90"}
           >
-            <Landmark className="mr-2 h-5 w-5" /> Confirm Changes & Save
+            <Landmark className="mr-2 h-5 w-5" /> Confirm & Resolve
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    

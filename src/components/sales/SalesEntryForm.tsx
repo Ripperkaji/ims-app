@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info } from 'lucide-react';
-import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types';
-import { ALL_PRODUCT_TYPES } from '@/types';
+import type { Product, SaleItem, Sale, LogEntry } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
@@ -35,7 +34,6 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const [hybridAmountLeftDue, setHybridAmountLeftDue] = useState('');
 
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [selectedProductTypeFilter, setSelectedProductTypeFilter] = useState<ProductType | 'all'>('all');
 
 
   const totalAmount = useMemo(() => {
@@ -115,7 +113,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment, validationError]);
 
 
   const addLog = (action: string, details: string) => {
@@ -132,14 +130,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    let productsToConsider: Product[];
-    if (selectedProductTypeFilter === 'all') {
-      productsToConsider = allGlobalProducts;
-    } else {
-      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    }
-
-    const firstAvailableProduct = productsToConsider.find(
+    const firstAvailableProduct = allGlobalProducts.find(
       p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id)
     );
 
@@ -155,26 +146,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         },
       ]);
     } else {
-      if (selectedProductTypeFilter !== 'all' && productsToConsider.length > 0 && productsToConsider.every(p => p.stock <= 0 || selectedItems.find(si => si.productId === p.id))) {
-         toast({
-          title: "No More Products of Selected Type",
-          description: `All available '${selectedProductTypeFilter}' products are either out of stock or already added. Try clearing the filter or checking stock.`,
-          variant: "destructive"
-        });
-      } else if (selectedProductTypeFilter !== 'all' && productsToConsider.length === 0) {
-         toast({
-          title: "No Products of Selected Type",
-          description: `There are no products of type '${selectedProductTypeFilter}'. Try clearing the filter.`,
-          variant: "destructive"
-        });
-      }
-      else {
-        toast({
-          title: "No More Products",
-          description: "All available products matching the current filter are either out of stock or already added to this sale.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "No More Products",
+        description: "All available products are either out of stock or already added to this sale.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -337,28 +313,16 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setCustomerContact('');
     setSelectedItems([]);
     setFormPaymentMethod('Cash'); 
-    setSelectedProductTypeFilter('all');
     setHybridCashPaid('');
     setHybridDigitalPaid('');
     setHybridAmountLeftDue('');
     setValidationError(null);
   };
 
-  const availableProductsForDropdown = (currentItemId?: string) => {
-    let baseProducts = allGlobalProducts;
-    if (selectedProductTypeFilter !== 'all') {
-      baseProducts = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    }
-
-    return baseProducts.filter(p => {
-      const isCurrentItem = p.id === currentItemId;
-      const alreadySelectedInOtherRows = selectedItems.some(si => si.productId === p.id && si.productId !== currentItemId);
-      
-      if (isCurrentItem) return true; 
-      if (alreadySelectedInOtherRows) return false; 
-      return p.stock > 0; 
-    }).sort((a, b) => a.name.localeCompare(b.name));
-  };
+  const availableProductsForDropdown = (currentItemId?: string) => 
+    allGlobalProducts.filter(p => 
+      p.stock > 0 || (currentItemId && p.id === currentItemId)
+    ).sort((a, b) => a.name.localeCompare(b.name));
 
 
   return (
@@ -397,23 +361,6 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
             </div>
           </div>
 
-          <div className="mb-4">
-            <Label htmlFor="productTypeFilter" className="text-base">Filter by Product Type</Label>
-            <Select value={selectedProductTypeFilter} onValueChange={(value) => {
-              setSelectedProductTypeFilter(value as ProductType | 'all');
-            }}>
-              <SelectTrigger id="productTypeFilter" className="mt-1">
-                <SelectValue placeholder="Select product type to filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {ALL_PRODUCT_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-4">
             <Label className="text-base">Selected Items</Label>
             {selectedItems.map((item, index) => (
@@ -428,14 +375,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableProductsForDropdown(item.productId).map((p) => {
-                        const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
-                        return (
-                          <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
-                            {p.name} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
-                          </SelectItem>
-                        );
-                      })}
+                      {availableProductsForDropdown(item.productId).map((p) => (
+                        <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
+                          {p.name} - Stock: {p.stock}, Price: NRP {p.price.toFixed(2)}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -558,5 +502,3 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
-
-    
