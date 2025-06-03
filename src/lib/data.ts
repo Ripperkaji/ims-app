@@ -28,6 +28,7 @@ export const mockSales: Sale[] = [
     createdBy: 'Staff Alice',
     isFlagged: false,
     flaggedComment: '',
+    saleOrigin: 'store',
   },
   {
     id: 'sale2',
@@ -46,6 +47,7 @@ export const mockSales: Sale[] = [
     createdBy: 'Staff Bob',
     isFlagged: true,
     flaggedComment: 'Customer claims price was different for one item. Resolved by Admin Eve on Oct 10, 2023 10:30: Adjusted item price and confirmed with customer.',
+    saleOrigin: 'store',
   },
   {
     id: 'sale3',
@@ -63,6 +65,7 @@ export const mockSales: Sale[] = [
     createdBy: 'Staff Alice',
     isFlagged: false,
     flaggedComment: '',
+    saleOrigin: 'online',
   },
    {
     id: 'sale4-hybrid',
@@ -82,6 +85,7 @@ export const mockSales: Sale[] = [
     createdBy: 'Admin Eve',
     isFlagged: false,
     flaggedComment: '',
+    saleOrigin: 'store',
   }
 ];
 
@@ -118,14 +122,14 @@ export const mockLogEntries: LogEntry[] = [
     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 10*60*1000).toISOString(), 
     user: 'Admin Eve', 
     action: 'Sale Created', 
-    details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 45.98. Paid NRP 20.00 by cash, NRP 15.98 by digital, NRP 10.00 due. Status: Due.' 
+    details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 45.98. Paid NRP 20.00 by cash, NRP 15.98 by digital, NRP 10.00 due. Status: Due. Origin: store.' 
   },
   { 
     id: 'log1', 
     timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5*60*1000).toISOString(), 
     user: 'Staff Alice', 
     action: 'Sale Created', 
-    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Credit Card. Status: Paid.' 
+    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Credit Card. Status: Paid. Origin: store.' 
   },
   { 
     id: 'log1b', 
@@ -139,7 +143,7 @@ export const mockLogEntries: LogEntry[] = [
     timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 3*60*1000).toISOString(), 
     user: 'Staff Bob', 
     action: 'Sale Created', 
-    details: 'Sale ID sale2 for Jane Smith (97YYYYYYYY), Total: NRP 37.50. Payment: Due. Status: Due.' 
+    details: 'Sale ID sale2 for Jane Smith (97YYYYYYYY), Total: NRP 37.50. Payment: Due. Status: Due. Origin: store.' 
   },
   { 
     id: 'log3', 
@@ -165,4 +169,8 @@ mockSales.forEach(sale => {
   if (sale.flaggedComment === undefined) {
     sale.flaggedComment = '';
   }
+  if (sale.saleOrigin === undefined) { // Should not happen with new data but good for safety
+    sale.saleOrigin = 'store';
+  }
 });
+

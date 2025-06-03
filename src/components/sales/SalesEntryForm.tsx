@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe } from 'lucide-react';
 import type { Product, SaleItem, Sale, LogEntry } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +24,7 @@ type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'H
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [saleOrigin, setSaleOrigin] = useState<'store' | 'online' | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [selectedItems, setSelectedItems] = useState<SaleItem[]>([]);
@@ -194,6 +196,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!saleOrigin) {
+      toast({ title: "Missing Information", description: "Please select a Sale Origin (Store Visit or Online).", variant: "destructive" });
+      return;
+    }
     if (!customerName.trim()) {
       toast({ title: "Missing Information", description: "Please enter customer name.", variant: "destructive" });
       return;
@@ -260,6 +266,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       date: new Date().toISOString(),
       status: saleStatus,
       createdBy: user?.name || 'Unknown',
+      saleOrigin: saleOrigin,
     };
 
     const updatedGlobalProducts = [...allGlobalProducts];
@@ -300,7 +307,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     } else {
         paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`;
     }
-    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
     addLog("Sale Created", logDetails);
 
     toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${totalAmount.toFixed(2)} has been recorded.` });
@@ -308,7 +315,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     if (onSaleAdded) {
       onSaleAdded(newSale);
     }
-
+    setSaleOrigin(null);
     setCustomerName('');
     setCustomerContact('');
     setSelectedItems([]);
@@ -333,168 +340,195 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="customerName" className="text-base">Customer Name</Label>
-              <Input
-                id="customerName"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="E.g., John Doe"
-                className="mt-1"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="customerContact" className="text-base">Contact Number (Optional)</Label>
-              <div className="relative mt-1">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Sale Origin (Required)</Label>
+            <RadioGroup
+              value={saleOrigin ?? ""}
+              onValueChange={(value) => setSaleOrigin(value as 'store' | 'online')}
+              className="flex items-center space-x-6 pt-1"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="store" id="storeVisit" />
+                <Label htmlFor="storeVisit" className="font-normal flex items-center gap-2 text-sm">
+                  <Store className="h-4 w-4 text-primary" /> Store Visit
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="online" id="onlineSale" />
+                <Label htmlFor="onlineSale" className="font-normal flex items-center gap-2 text-sm">
+                  <Globe className="h-4 w-4 text-primary" /> Online
+                </Label>
+              </div>
+            </RadioGroup>
+            {!saleOrigin && (
+                <p className="text-xs text-destructive pt-1">Please select a sale origin to continue.</p>
+            )}
+          </div>
+          
+          <fieldset disabled={!saleOrigin} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="customerName" className="text-base">Customer Name</Label>
                 <Input
-                  id="customerContact"
-                  type="tel"
-                  value={customerContact}
-                  onChange={(e) => setCustomerContact(e.target.value)}
-                  placeholder="E.g., 98XXXXXXXX"
-                  className="pl-10"
+                  id="customerName"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="E.g., John Doe"
+                  className="mt-1"
+                  required
                 />
               </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Label className="text-base">Selected Items</Label>
-            {selectedItems.map((item, index) => (
-              <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor={`product-${index}`}>Product</Label>
-                  <Select
-                    value={item.productId}
-                    onValueChange={(value) => handleItemChange(index, 'productId', value)}
-                  >
-                    <SelectTrigger id={`product-${index}`}>
-                      <SelectValue placeholder="Select product" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
-                          {p.name} - Stock: {p.stock}, Price: NRP {p.price.toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-24 space-y-2">
-                  <Label htmlFor={`quantity-${index}`}>Quantity</Label>
+              <div>
+                <Label htmlFor="customerContact" className="text-base">Contact Number (Optional)</Label>
+                <div className="relative mt-1">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    id={`quantity-${index}`}
-                    type="number"
-                    min="0" 
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
-                    className="text-center"
+                    id="customerContact"
+                    type="tel"
+                    value={customerContact}
+                    onChange={(e) => setCustomerContact(e.target.value)}
+                    placeholder="E.g., 98XXXXXXXX"
+                    className="pl-10"
                   />
                 </div>
-                <div className="text-right w-28 space-y-2">
-                    <Label>Subtotal</Label>
-                    <p className="font-semibold text-lg h-10 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => handleRemoveItem(index)}
-                  className="shrink-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
-            ))}
-            <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div>
-              <Label htmlFor="paymentMethod" className="text-base">Payment Method</Label>
-              <Select value={formPaymentMethod} onValueChange={(value) => setFormPaymentMethod(value as PaymentMethodSelection)}>
-                <SelectTrigger id="paymentMethod" className="mt-1">
-                  <SelectValue placeholder="Select payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Credit Card">Credit Card</SelectItem>
-                  <SelectItem value="Debit Card">Debit Card</SelectItem>
-                  <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
-                  <SelectItem value="Due">Full Amount Due</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Total Sale Amount</p>
-              <p className="text-3xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
-            </div>
-          </div>
 
-          {isHybridPayment && (
-            <Card className="p-4 border-primary/50 bg-primary/5">
-              <CardHeader className="p-2 pt-0">
-                <CardTitle className="text-lg font-semibold">Hybrid Payment Details</CardTitle>
-                 <CardDescription>Enter amounts for each payment type. Sum must equal total sale amount.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 p-2">
-                <div>
-                  <Label htmlFor="hybridCashPaid">Cash Paid (NRP)</Label>
-                  <Input
-                    id="hybridCashPaid"
-                    type="number"
-                    value={hybridCashPaid}
-                    onChange={(e) => setHybridCashPaid(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="mt-1"
-                  />
+            <div className="space-y-4">
+              <Label className="text-base">Selected Items</Label>
+              {selectedItems.map((item, index) => (
+                <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor={`product-${index}`}>Product</Label>
+                    <Select
+                      value={item.productId}
+                      onValueChange={(value) => handleItemChange(index, 'productId', value)}
+                    >
+                      <SelectTrigger id={`product-${index}`}>
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableProductsForDropdown(item.productId).map((p) => (
+                          <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
+                            {p.name} - Stock: {p.stock}, Price: NRP {p.price.toFixed(2)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-24 space-y-2">
+                    <Label htmlFor={`quantity-${index}`}>Quantity</Label>
+                    <Input
+                      id={`quantity-${index}`}
+                      type="number"
+                      min="0" 
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                      className="text-center"
+                    />
+                  </div>
+                  <div className="text-right w-28 space-y-2">
+                      <Label>Subtotal</Label>
+                      <p className="font-semibold text-lg h-10 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleRemoveItem(index)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor="hybridDigitalPaid">Digital Payment Paid (NRP)</Label>
-                  <Input
-                    id="hybridDigitalPaid"
-                    type="number"
-                    value={hybridDigitalPaid}
-                    onChange={(e) => setHybridDigitalPaid(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="hybridAmountLeftDue">Amount Left Due (NRP)</Label>
-                  <Input
-                    id="hybridAmountLeftDue"
-                    type="number"
-                    value={hybridAmountLeftDue}
-                    onChange={(e) => setHybridAmountLeftDue(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="mt-1"
-                  />
-                </div>
-                {validationError && (
-                    <Alert variant="destructive" className="mt-2">
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>Payment Error</AlertTitle>
-                        <AlertDescription>{validationError}</AlertDescription>
-                    </Alert>
-                )}
-              </CardContent>
-            </Card>
-          )}
+              ))}
+              <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <div>
+                <Label htmlFor="paymentMethod" className="text-base">Payment Method</Label>
+                <Select value={formPaymentMethod} onValueChange={(value) => setFormPaymentMethod(value as PaymentMethodSelection)}>
+                  <SelectTrigger id="paymentMethod" className="mt-1">
+                    <SelectValue placeholder="Select payment method" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Credit Card">Credit Card</SelectItem>
+                    <SelectItem value="Debit Card">Debit Card</SelectItem>
+                    <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
+                    <SelectItem value="Due">Full Amount Due</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Total Sale Amount</p>
+                <p className="text-3xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {isHybridPayment && (
+              <Card className="p-4 border-primary/50 bg-primary/5">
+                <CardHeader className="p-2 pt-0">
+                  <CardTitle className="text-lg font-semibold">Hybrid Payment Details</CardTitle>
+                   <CardDescription>Enter amounts for each payment type. Sum must equal total sale amount.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 p-2">
+                  <div>
+                    <Label htmlFor="hybridCashPaid">Cash Paid (NRP)</Label>
+                    <Input
+                      id="hybridCashPaid"
+                      type="number"
+                      value={hybridCashPaid}
+                      onChange={(e) => setHybridCashPaid(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="hybridDigitalPaid">Digital Payment Paid (NRP)</Label>
+                    <Input
+                      id="hybridDigitalPaid"
+                      type="number"
+                      value={hybridDigitalPaid}
+                      onChange={(e) => setHybridDigitalPaid(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="hybridAmountLeftDue">Amount Left Due (NRP)</Label>
+                    <Input
+                      id="hybridAmountLeftDue"
+                      type="number"
+                      value={hybridAmountLeftDue}
+                      onChange={(e) => setHybridAmountLeftDue(e.target.value)}
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                      className="mt-1"
+                    />
+                  </div>
+                  {validationError && (
+                      <Alert variant="destructive" className="mt-2">
+                          <Info className="h-4 w-4" />
+                          <AlertTitle>Payment Error</AlertTitle>
+                          <AlertDescription>{validationError}</AlertDescription>
+                      </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </fieldset>
         </CardContent>
         <CardFooter>
-          <Button type="submit" size="lg" className="w-full text-lg py-3" disabled={!!validationError && isHybridPayment}>
+          <Button type="submit" size="lg" className="w-full text-lg py-3" disabled={!saleOrigin || (!!validationError && isHybridPayment)}>
             <Landmark className="mr-2 h-5 w-5" /> Record Sale
           </Button>
         </CardFooter>
@@ -502,3 +536,4 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
+

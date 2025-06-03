@@ -47,6 +47,7 @@ export interface Sale {
   createdBy: string; // User name or ID
   isFlagged?: boolean;
   flaggedComment?: string;
+  saleOrigin: 'store' | 'online'; // Added this field
 }
 
 export interface Expense {
@@ -65,3 +66,4 @@ export interface LogEntry {
   action: string; // e.g., "Sale Created", "Expense Added", "Sale Modified"
   details: string; // Description of the change or event
 }
+
