@@ -34,7 +34,8 @@ export default function DashboardPage() {
   const netProfit = totalSalesAmount - totalExpensesAmount;
   const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
-  const lowStockProducts = mockProducts.filter(p => p.stock < 10).length;
+  const criticalStockCount = mockProducts.filter(p => p.stock === 1).length;
+  const outOfStockCount = mockProducts.filter(p => p.stock === 0).length;
   const flaggedSalesCount = mockSales.filter(sale => sale.isFlagged).length;
 
   const salesByDay: { [key: string]: number } = {};
@@ -112,20 +113,33 @@ export default function DashboardPage() {
               title="Due Payments" 
               value={dueSalesCount} 
               icon={AlertTriangle} 
-              description="Number of sales with pending payment" 
+              description="Sales with pending payment" 
               iconClassName={dueSalesCount > 0 ? "text-destructive" : "text-green-500"}
             />
             <AnalyticsCard 
               title="Flagged Sales" 
               value={flaggedSalesCount} 
               icon={Flag} 
-              description="Sales marked by staff for review" 
+              description="Sales marked for review" 
               iconClassName={flaggedSalesCount > 0 ? "text-destructive" : "text-green-500"}
+            />
+             <AnalyticsCard 
+              title="Critical Stock (Qty 1)" 
+              value={criticalStockCount} 
+              icon={AlertTriangle} 
+              description="Products with only 1 unit left"
+              iconClassName={criticalStockCount > 0 ? "text-orange-500" : ""}
+            />
+            <AnalyticsCard 
+              title="Out of Stock Items" 
+              value={outOfStockCount} 
+              icon={AlertCircle} 
+              description="Products with no units left" 
+              iconClassName={outOfStockCount > 0 ? "text-destructive" : ""}
             />
           </>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
-        <AnalyticsCard title="Low Stock Items" value={lowStockProducts} icon={Users} description="Products needing restocking" />
       </div>
 
       {user.role === 'admin' && (
