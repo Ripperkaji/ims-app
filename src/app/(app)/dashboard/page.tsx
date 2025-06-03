@@ -128,14 +128,14 @@ export default function DashboardPage() {
               value={criticalStockCount} 
               icon={AlertTriangle} 
               description="Products with only 1 unit left"
-              iconClassName={criticalStockCount > 0 ? "text-orange-500" : ""}
+              iconClassName={criticalStockCount > 0 ? "text-orange-500" : "text-green-500"}
             />
             <AnalyticsCard 
               title="Out of Stock Items" 
               value={outOfStockCount} 
               icon={AlertCircle} 
               description="Products with no units left" 
-              iconClassName={outOfStockCount > 0 ? "text-destructive" : ""}
+              iconClassName={outOfStockCount > 0 ? "text-destructive" : "text-green-500"}
             />
           </>
         )}
@@ -354,4 +354,3 @@ function PlaceholderChart() {
     </div>
   )
 }
-

@@ -18,7 +18,7 @@ export default function AnalyticsCard({ title, value, icon: Icon, description, t
 
   if (typeof value === 'number') {
     // Titles for counts that should not have currency prefix
-    const countTitles = ["due payments", "total products", "low stock items", "flagged sales"];
+    const countTitles = ["due payments", "total products", "flagged sales", "critical stock (qty 1)", "out of stock items"];
     if (countTitles.includes(title.toLowerCase())) {
       displayValue = value.toString();
     } else {
@@ -46,4 +46,3 @@ export default function AnalyticsCard({ title, value, icon: Icon, description, t
     </Card>
   );
 }
-
