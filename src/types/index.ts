@@ -1,11 +1,24 @@
 
 export type UserRole = 'admin' | 'staff';
 
+export const ALL_PRODUCT_TYPES = [
+  "Disposables",
+  "E-liquid Nic Salt",
+  "E-liquid Free Base",
+  "Coils",
+  "POD/MOD Devices",
+  "Cotton",
+  "Coil Build & Maintenance"
+] as const;
+
+export type ProductType = typeof ALL_PRODUCT_TYPES[number];
+
 export interface Product {
   id: string;
   name: string;
   price: number;
   stock: number;
+  type?: ProductType; // Added product type
 }
 
 export interface SaleItem {
@@ -23,12 +36,10 @@ export interface Sale {
   items: SaleItem[];
   totalAmount: number;
   
-  // New detailed payment fields
   cashPaid: number;
   digitalPaid: number;
   amountDue: number;
   
-  // Stores the primary method selected in the form (Cash, Credit Card, Debit Card, Due, Hybrid)
   formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
   date: string; // ISO string format

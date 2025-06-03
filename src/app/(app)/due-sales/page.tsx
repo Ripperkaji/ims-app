@@ -33,7 +33,7 @@ type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'H
 export default function DueSalesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { toast } } = useToast();
+  const { toast } = useToast();
   
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>([]);
   const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
