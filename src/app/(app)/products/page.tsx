@@ -50,7 +50,7 @@ export default function ProductsPage() {
       });
     });
     return salesMap;
-  }, []); // mockSales is not in component state, so this recalculates only on initial render or if mockSales itself changes externally
+  }, [mockSales]); // Added mockSales to dependency array
 
   const displayedProducts = useMemo(() => {
     return currentProducts
@@ -135,75 +135,73 @@ export default function ProductsPage() {
       description: `${newProduct.name} has been successfully added to the inventory.`,
     });
   };
-
-  const handleStockChange = (productId: string, value: number | string) => { 
-    const productBeforeChange = currentProducts.find(p => p.id === productId);
-    if (!productBeforeChange) return;
-
-    let stockToSet: number;
-    if (value === "") { 
-        stockToSet = 0;
-    } else if (typeof value === 'number' && !isNaN(value)) {
-        stockToSet = Math.max(0, value); 
-    } else {
-        const parsedValue = parseInt(String(value), 10);
-        if (!isNaN(parsedValue)) {
-            stockToSet = Math.max(0, parsedValue);
-        } else {
-            toast({ title: "Invalid Stock", description: "Please enter a valid number.", variant: "destructive" });
-            return;
-        }
-    }
-    
-    if (productBeforeChange.stock !== stockToSet) {
-        setCurrentProducts(prevProducts => 
-            prevProducts.map(p => p.id === productId ? { ...p, stock: stockToSet } : p)
-        );
-        const globalProductIndex = mockProducts.findIndex(p => p.id === productId);
-        if (globalProductIndex !== -1) {
-            mockProducts[globalProductIndex].stock = stockToSet;
-        }
-        addLog("Product Remaining Stock Set", `Remaining stock for '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) set from ${productBeforeChange.stock} to ${stockToSet}.`);
-        toast({
-            title: "Remaining Stock Updated",
-            description: `Remaining stock for ${productBeforeChange.name} set to ${stockToSet}.`,
-        });
-    }
-  };
   
   const handleDamageChange = (productId: string, value: number | string) => {
-    const productBeforeChange = currentProducts.find(p => p.id === productId);
-    if (!productBeforeChange) return;
+    const productIndexGlobal = mockProducts.findIndex(p => p.id === productId);
+    if (productIndexGlobal === -1 || !user) {
+        toast({ title: "Error", description: "Product not found or user not available.", variant: "destructive" });
+        return;
+    }
+
+    const productBeforeChange = { ...mockProducts[productIndexGlobal] }; // Important: shallow copy for comparison
 
     let damageToSet: number;
-    if (value === "") { 
+    if (value === "") {
         damageToSet = 0;
     } else if (typeof value === 'number' && !isNaN(value)) {
-        damageToSet = Math.max(0, value); 
+        damageToSet = Math.max(0, value);
     } else {
         const parsedValue = parseInt(String(value), 10);
         if (!isNaN(parsedValue)) {
             damageToSet = Math.max(0, parsedValue);
         } else {
             toast({ title: "Invalid Damage Qty", description: "Please enter a valid number for damage.", variant: "destructive" });
+            // Potentially revert UI input to productBeforeChange.damagedQuantity if input is controlled directly
             return;
         }
     }
-    
-    if (productBeforeChange.damagedQuantity !== damageToSet) {
-        setCurrentProducts(prevProducts => 
-            prevProducts.map(p => p.id === productId ? { ...p, damagedQuantity: damageToSet } : p)
-        );
-        const globalProductIndex = mockProducts.findIndex(p => p.id === productId);
-        if (globalProductIndex !== -1) {
-            mockProducts[globalProductIndex].damagedQuantity = damageToSet;
-        }
-        addLog("Product Damage Quantity Set", `Damage quantity for '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) set from ${productBeforeChange.damagedQuantity} to ${damageToSet}.`);
-        toast({
-            title: "Damage Quantity Updated",
-            description: `Damage quantity for ${productBeforeChange.name} set to ${damageToSet}.`,
-        });
+
+    if (productBeforeChange.damagedQuantity === damageToSet) {
+        // No actual change in damage quantity
+        return;
     }
+
+    const damageDifference = damageToSet - productBeforeChange.damagedQuantity;
+    const newStockLevel = productBeforeChange.stock - damageDifference;
+
+    if (newStockLevel < 0) {
+        toast({
+            title: "Stock Error",
+            description: `Setting damage to ${damageToSet} would result in negative stock (${newStockLevel}). Current stock is ${productBeforeChange.stock}, current damage ${productBeforeChange.damagedQuantity}. Max possible new damage is ${productBeforeChange.damagedQuantity + productBeforeChange.stock}.`,
+            variant: "destructive",
+            duration: 7000
+        });
+        // Revert the input field value to the original if it's a controlled component.
+        // This requires the input to reflect currentProducts state rather than local component state.
+        // For simplicity, we'll just block the update here. The UI might be out of sync until refresh or manual correction by user.
+        // A more robust solution would involve making the input directly reflect `currentProducts[...].damagedQuantity`.
+        return;
+    }
+    
+    // Update mockProducts (source of truth)
+    mockProducts[productIndexGlobal].damagedQuantity = damageToSet;
+    mockProducts[productIndexGlobal].stock = newStockLevel;
+
+    // Update currentProducts state to reflect changes in UI
+    setCurrentProducts(prevProducts =>
+        prevProducts.map(p =>
+            p.id === productId ? { ...mockProducts[productIndexGlobal] } : p
+        ).sort((a, b) => a.name.localeCompare(b.name)) // Keep sorting
+    );
+    
+    addLog(
+        "Product Damage & Stock Update", 
+        `Damage for '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) changed from ${productBeforeChange.damagedQuantity} to ${damageToSet}. Stock changed from ${productBeforeChange.stock} to ${newStockLevel}. By ${user.name}.`
+    );
+    toast({
+        title: "Damage & Stock Updated",
+        description: `Damage for ${productBeforeChange.name} set to ${damageToSet}. Remaining stock is now ${newStockLevel}.`,
+    });
   };
 
 
@@ -212,22 +210,24 @@ export default function ProductsPage() {
   };
 
   const handleConfirmAddStock = (productId: string, quantityToAdd: number) => {
-    const product = currentProducts.find(p => p.id === productId);
-    if (!product) return;
+    const productIndexGlobal = mockProducts.findIndex(p => p.id === productId);
+    if (productIndexGlobal === -1) {
+        toast({ title: "Error", description: "Product not found to add stock.", variant: "destructive" });
+        return;
+    }
 
+    const product = mockProducts[productIndexGlobal];
     const newStockLevel = product.stock + quantityToAdd;
     const newTotalAcquiredStock = product.totalAcquiredStock + quantityToAdd;
 
+    mockProducts[productIndexGlobal].stock = newStockLevel;
+    mockProducts[productIndexGlobal].totalAcquiredStock = newTotalAcquiredStock;
+    
     setCurrentProducts(prevProducts => 
       prevProducts.map(p => 
         p.id === productId ? { ...p, stock: newStockLevel, totalAcquiredStock: newTotalAcquiredStock } : p
-      )
+      ).sort((a, b) => a.name.localeCompare(b.name))
     );
-    const globalProductIndex = mockProducts.findIndex(p => p.id === productId);
-    if (globalProductIndex !== -1) {
-        mockProducts[globalProductIndex].stock = newStockLevel;
-        mockProducts[globalProductIndex].totalAcquiredStock = newTotalAcquiredStock;
-    }
     
     addLog("Product Stock Added", `${quantityToAdd} units of stock added to product '${product.name}' (ID: ${productId.substring(0,8)}...). New Remaining Stock: ${newStockLevel}, New Total Acquired: ${newTotalAcquiredStock}.`);
     toast({
@@ -307,8 +307,9 @@ export default function ProductsPage() {
                       {user.role === 'admin' ? (
                         <Input
                           type="number"
-                          value={product.damagedQuantity}
-                          onChange={(e) => handleDamageChange(product.id, e.target.value === "" ? "" : e.target.valueAsNumber)}
+                          defaultValue={product.damagedQuantity} // Use defaultValue for less direct control, or value for controlled
+                          onBlur={(e) => handleDamageChange(product.id, e.target.value === "" ? "" : e.target.valueAsNumber)}
+                          // Consider using onChange with debounce if frequent updates are an issue, or onBlur as implemented.
                           className="w-20 h-9"
                           min="0"
                         />
@@ -317,17 +318,7 @@ export default function ProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {user.role === 'admin' ? (
-                        <Input
-                          type="number"
-                          value={product.stock}
-                          onChange={(e) => handleStockChange(product.id, e.target.value === "" ? "" : e.target.valueAsNumber)}
-                          className="w-20 h-9"
-                          min="0"
-                        />
-                      ) : (
-                        product.stock
-                      )}
+                      {product.stock}
                     </TableCell>
                     <TableCell>
                       <Badge variant={product.stock > 10 ? 'default' : (product.stock > 0 ? 'secondary' : 'destructive')}
@@ -385,3 +376,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+
