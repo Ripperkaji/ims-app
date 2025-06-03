@@ -124,8 +124,8 @@ export default function DueSalesPage() {
       return;
     }
     const originalSale = mockSales[originalSaleIndex];
-    const wasInitiallyFlagged = originalSale.isFlagged;
 
+    // Revert stock for original items
     originalSale.items.forEach(originalItem => {
       const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
       if (productIndex !== -1) {
@@ -133,6 +133,7 @@ export default function DueSalesPage() {
       }
     });
 
+    // Deduct stock for new/adjusted items and validate
     let stockSufficient = true;
     const stockChangesToRollback: { productId: string, quantity: number }[] = [];
 
@@ -144,19 +145,22 @@ export default function DueSalesPage() {
           stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity });
         } else {
           toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available. Adjustment cancelled.`, variant: "destructive"});
+          // Rollback stock changes made so far in this attempt
           stockChangesToRollback.forEach(change => {
-            const prodIdx = mockProducts.findIndex(p => p.id === change.productId);
-            if (prodIdx !== -1) mockProducts[prodIdx].stock += change.quantity;
+            const prodIdxToRollback = mockProducts.findIndex(p => p.id === change.productId);
+            if (prodIdxToRollback !== -1) mockProducts[prodIdxToRollback].stock += change.quantity;
           });
+          // Re-deduct original items stock as the adjustment failed
           originalSale.items.forEach(origItem => {
-            const prodIdx = mockProducts.findIndex(p => p.id === origItem.productId);
-            if (prodIdx !== -1) mockProducts[prodIdx].stock -= origItem.quantity;
+            const prodIdxReDeduct = mockProducts.findIndex(p => p.id === origItem.productId);
+            if (prodIdxReDeduct !== -1) mockProducts[prodIdxReDeduct].stock -= origItem.quantity;
           });
           stockSufficient = false;
           break;
         }
       } else {
          toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment. Adjustment cancelled.`, variant: "destructive"});
+         // Rollback any stock changes if product not found (similar to above)
          stockSufficient = false; 
          break; 
       }
@@ -168,14 +172,13 @@ export default function DueSalesPage() {
     }
     
     let finalFlaggedComment = originalSale.flaggedComment || "";
-    if (wasInitiallyFlagged) {
-        finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
-    } else if (adjustmentComment.trim()) {
-        finalFlaggedComment = `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
+    if (adjustmentComment.trim()) {
+        finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + 
+                              `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
     }
     
     const finalUpdatedSale: Sale = {
-      ...originalSale,
+      ...originalSale, // Retains original flag status and other non-adjusted fields
       customerName: updatedSaleDataFromDialog.customerName,
       customerContact: updatedSaleDataFromDialog.customerContact,
       items: updatedSaleDataFromDialog.items,
@@ -184,21 +187,22 @@ export default function DueSalesPage() {
       digitalPaid: updatedSaleDataFromDialog.digitalPaid,
       amountDue: updatedSaleDataFromDialog.amountDue,
       formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
-      isFlagged: wasInitiallyFlagged ? false : originalSale.isFlagged,
-      flaggedComment: finalFlaggedComment,
+      flaggedComment: finalFlaggedComment, // Appends adjustment comment
       status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
+      // isFlagged status remains originalSale.isFlagged
     };
     
     mockSales[originalSaleIndex] = finalUpdatedSale;
     
-    const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
+    const logAction = "Sale Adjusted";
     const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
     addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
     
+    // Refresh the list of due sales
     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
-    toast({ title: logAction.replace(" &", " and"), description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
     
     setSaleToAdjust(null);
   };
@@ -267,9 +271,9 @@ export default function DueSalesPage() {
                     <Button variant="outline" size="sm" onClick={() => openMarkAsPaidDialog(sale)}>
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
+                    <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale)} title="Adjust Sale">
                       <Edit3 className="h-4 w-4" />
-                      <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
+                      <span className="sr-only">Adjust Sale</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -328,13 +332,13 @@ export default function DueSalesPage() {
           onClose={() => setSaleToAdjust(null)}
           onSaleAdjusted={handleSaleAdjusted}
           allGlobalProducts={mockProducts}
-          isInitiallyFlagged={saleToAdjust.isFlagged || false}
+          isInitiallyFlagged={false} // Explicitly pass false for "Due Sales" page adjustments
         />
       )}
     </div>
   );
 }
-
     
 
     
+
