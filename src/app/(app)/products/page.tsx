@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Product, LogEntry, ProductType } from '@/types';
 import AddStockDialog from "@/components/products/AddStockDialog";
 import AddProductDialog from "@/components/products/AddProductDialog"; 
+import EditProductDialog from "@/components/products/EditProductDialog";
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -21,6 +22,8 @@ export default function ProductsPage() {
   const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts.sort((a,b) => a.name.localeCompare(b.name)));
   const [productToRestock, setProductToRestock] = useState<Product | null>(null);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<Product | null>(null);
+  const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -43,11 +46,53 @@ export default function ProductsPage() {
       });
     });
     return salesMap;
-  }, []); // Assuming mockSales is relatively stable or page re-renders for other updates
+  }, [mockSales]); // mockSales dependency
 
-  const handleEditProduct = (productId: string) => {
-    toast({ title: "Action Required", description: `Editing product ${productId} details - (Not Implemented)` });
+  const handleOpenEditProductDialog = (productId: string) => {
+    const product = currentProducts.find(p => p.id === productId);
+    if (product) {
+      setProductToEdit(product);
+      setIsEditProductDialogOpen(true);
+    } else {
+      toast({ title: "Error", description: "Product not found.", variant: "destructive" });
+    }
   };
+
+  const handleConfirmEditProduct = (updatedDetails: {
+    id: string;
+    name: string;
+    category: ProductType;
+    sellingPrice: number;
+    costPrice: number;
+  }) => {
+    const productIndexGlobal = mockProducts.findIndex(p => p.id === updatedDetails.id);
+    if (productIndexGlobal !== -1) {
+      const originalProduct = mockProducts[productIndexGlobal];
+      const updatedProduct = {
+        ...originalProduct, // Preserve existing stock, totalAcquired, damage
+        name: updatedDetails.name,
+        category: updatedDetails.category,
+        sellingPrice: updatedDetails.sellingPrice,
+        costPrice: updatedDetails.costPrice,
+      };
+      mockProducts[productIndexGlobal] = updatedProduct;
+      
+      setCurrentProducts(prev => 
+        prev.map(p => p.id === updatedDetails.id ? updatedProduct : p).sort((a,b) => a.name.localeCompare(b.name))
+      );
+
+      addLog("Product Details Updated", `Details for product '${updatedProduct.name}' (ID: ${updatedProduct.id.substring(0,8)}...) updated. Name: ${updatedProduct.name}, Category: ${updatedProduct.category}, Cost: ${updatedProduct.costPrice.toFixed(2)}, Selling: ${updatedProduct.sellingPrice.toFixed(2)}.`);
+      toast({
+        title: "Product Updated",
+        description: `Details for ${updatedProduct.name} have been successfully updated.`,
+      });
+    } else {
+      toast({ title: "Error", description: "Could not find product to update.", variant: "destructive"});
+    }
+    setIsEditProductDialogOpen(false);
+    setProductToEdit(null);
+  };
+
 
   const handleAddNewProductClick = () => {
     setIsAddProductDialogOpen(true);
@@ -67,13 +112,12 @@ export default function ProductsPage() {
       sellingPrice: newProductData.sellingPrice,
       costPrice: newProductData.costPrice,
       totalAcquiredStock: newProductData.totalAcquiredStock,
-      stock: newProductData.totalAcquiredStock, // Initial remaining stock equals total acquired
+      stock: newProductData.totalAcquiredStock, 
       damagedQuantity: 0,
     };
     
-    setCurrentProducts(prevProducts => [newProduct, ...prevProducts].sort((a,b) => a.name.localeCompare(b.name)));
-    mockProducts.push(newProduct);
-    mockProducts.sort((a,b) => a.name.localeCompare(b.name));
+    mockProducts.push(newProduct); // Add to global source first
+    setCurrentProducts(prevProducts => [...prevProducts, newProduct].sort((a,b) => a.name.localeCompare(b.name)));
 
     addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added. Category: ${newProduct.category}, Cost: NRP ${newProduct.costPrice.toFixed(2)}, Selling Price: NRP ${newProduct.sellingPrice.toFixed(2)}, Initial Stock: ${newProduct.totalAcquiredStock}.`);
     toast({
@@ -82,7 +126,7 @@ export default function ProductsPage() {
     });
   };
 
-  const handleStockChange = (productId: string, value: number | string) => { // Updates Remaining Stock
+  const handleStockChange = (productId: string, value: number | string) => { 
     const productBeforeChange = currentProducts.find(p => p.id === productId);
     if (!productBeforeChange) return;
 
@@ -267,7 +311,7 @@ export default function ProductsPage() {
                           <PackagePlus className="h-4 w-4" />
                           <span className="sr-only">Add Stock</span>
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleEditProduct(product.id)} title="Edit Product">
+                        <Button variant="outline" size="icon" onClick={() => handleOpenEditProductDialog(product.id)} title="Edit Product">
                           <Edit className="h-4 w-4" />
                           <span className="sr-only">Edit Product</span>
                         </Button>
@@ -298,6 +342,14 @@ export default function ProductsPage() {
           isOpen={isAddProductDialogOpen}
           onClose={() => setIsAddProductDialogOpen(false)}
           onConfirmAddProduct={handleConfirmAddProduct}
+        />
+      )}
+      {productToEdit && isEditProductDialogOpen && (
+        <EditProductDialog
+          product={productToEdit}
+          isOpen={isEditProductDialogOpen}
+          onClose={() => { setIsEditProductDialogOpen(false); setProductToEdit(null); }}
+          onConfirmEditProduct={handleConfirmEditProduct}
         />
       )}
     </div>
