@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe } from 'lucide-react';
-import type { Product, SaleItem, Sale, LogEntry } from '@/types';
+import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types'; // Import ALL_PRODUCT_TYPES
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
@@ -21,13 +22,23 @@ interface SalesEntryFormProps {
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
+interface LocalSaleItemInForm {
+  tempId: string; 
+  selectedCategory: ProductType | '';
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [saleOrigin, setSaleOrigin] = useState<'store' | 'online' | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
-  const [selectedItems, setSelectedItems] = useState<SaleItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<LocalSaleItemInForm[]>([]);
   
   const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethodSelection>('Cash');
   const [isHybridPayment, setIsHybridPayment] = useState(false);
@@ -132,58 +143,67 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    const firstAvailableProduct = allGlobalProducts.find(
-      p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id)
-    );
+    setSelectedItems([
+      ...selectedItems,
+      {
+        tempId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        selectedCategory: '',
+        productId: '',
+        productName: '',
+        quantity: 0,
+        unitPrice: 0,
+        totalPrice: 0,
+      },
+    ]);
+  };
 
-    if (firstAvailableProduct) {
-      setSelectedItems([
-        ...selectedItems,
-        {
-          productId: firstAvailableProduct.id,
-          productName: firstAvailableProduct.name,
-          quantity: 1,
-          unitPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
-          totalPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
-        },
-      ]);
-    } else {
-      toast({
-        title: "No More Products",
-        description: "All available products are either out of stock or already added to this sale.",
-        variant: "destructive"
-      });
+  const handleItemCategoryChange = (index: number, category: ProductType | '') => {
+    const newItems = [...selectedItems];
+    newItems[index].selectedCategory = category;
+    newItems[index].productId = '';
+    newItems[index].productName = '';
+    newItems[index].quantity = 0;
+    newItems[index].unitPrice = 0;
+    newItems[index].totalPrice = 0;
+    setSelectedItems(newItems);
+  };
+
+  const handleItemProductChange = (index: number, productId: string) => {
+    const newItems = [...selectedItems];
+    const item = newItems[index];
+    const product = allGlobalProducts.find(p => p.id === productId);
+
+    if (product) {
+      item.productId = product.id;
+      item.productName = product.name;
+      item.unitPrice = product.sellingPrice;
+      item.quantity = 1; 
+      if (product.stock < 1) {
+        toast({ title: "Out of Stock", description: `${product.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
+        item.quantity = 0;
+      }
+      item.totalPrice = item.quantity * item.unitPrice;
+      newItems[index] = item;
+      setSelectedItems(newItems);
     }
   };
 
-  const handleItemChange = (index: number, field: keyof SaleItem, value: string | number) => {
+  const handleItemQuantityChange = (index: number, quantityStr: string) => {
     const newItems = [...selectedItems];
     const item = newItems[index];
+    const quantity = parseInt(quantityStr, 10);
 
-    if (field === 'productId') {
-      const newProduct = allGlobalProducts.find(p => p.id === value as string);
-      if (newProduct) {
-        item.productId = newProduct.id;
-        item.productName = newProduct.name;
-        item.unitPrice = newProduct.sellingPrice; // Use sellingPrice
-        item.quantity = 1; 
-        if (newProduct.stock < 1) {
-            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
-            item.quantity = 0;
-        }
-      }
-    } else if (field === 'quantity') {
-      const quantity = Number(value);
+    if (isNaN(quantity) || quantity < 0) {
+      item.quantity = 0;
+    } else {
       const stockToCheck = allGlobalProducts.find(p => p.id === item.productId)?.stock || 0;
-
       if (quantity > stockToCheck) {
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck} items in stock.`, variant: "destructive" });
         item.quantity = stockToCheck;
       } else {
-        item.quantity = quantity >= 0 ? quantity : 0; 
+        item.quantity = quantity;
       }
     }
-    
     item.totalPrice = item.quantity * item.unitPrice;
     newItems[index] = item;
     setSelectedItems(newItems);
@@ -208,8 +228,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       toast({ title: "No Items", description: "Please add at least one product to the sale.", variant: "destructive" });
       return;
     }
-     if (selectedItems.some(item => item.quantity <= 0 || isNaN(item.quantity))) {
-      toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity. Please remove or correct them.", variant: "destructive" });
+     if (selectedItems.some(item => item.productId === '' || item.quantity <= 0 || isNaN(item.quantity))) {
+      toast({ title: "Invalid Item", description: "One or more items are incomplete or have zero/invalid quantity. Please select a product and set a valid quantity.", variant: "destructive" });
       return;
     }
     if (totalAmount <= 0 && selectedItems.length > 0){
@@ -253,11 +273,19 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
 
+    const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({
+      productId: item.productId,
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      totalPrice: item.totalPrice,
+    }));
+
     const newSale: Sale = {
       id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       customerName,
       customerContact: customerContact.trim() || undefined,
-      items: selectedItems,
+      items: saleItemsToSave,
       totalAmount,
       cashPaid: finalCashPaid,
       digitalPaid: finalDigitalPaid,
@@ -271,7 +299,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
     const updatedGlobalProducts = [...allGlobalProducts];
     let successfulStockUpdate = true;
-    selectedItems.forEach(item => {
+    newSale.items.forEach(item => {
       const productIndex = updatedGlobalProducts.findIndex(p => p.id === item.productId);
       if (productIndex !== -1) {
         if (updatedGlobalProducts[productIndex].stock >= item.quantity) {
@@ -294,7 +322,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     allGlobalProducts.push(...updatedGlobalProducts);
     
     mockSales.unshift(newSale);
-    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.timestamp).getTime());
+    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
@@ -325,11 +354,6 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setHybridAmountLeftDue('');
     setValidationError(null);
   };
-
-  const availableProductsForDropdown = (currentItemId?: string) => 
-    allGlobalProducts.filter(p => 
-      p.stock > 0 || (currentItemId && p.id === currentItemId)
-    ).sort((a, b) => a.name.localeCompare(b.name));
 
 
   return (
@@ -397,46 +421,74 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
             <div className="space-y-4">
               <Label className="text-base">Selected Items</Label>
               {selectedItems.map((item, index) => (
-                <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`product-${index}`}>Product</Label>
+                <div key={item.tempId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,2fr)_auto_auto_auto] items-end gap-3 p-3 border rounded-lg bg-card">
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor={`category-${index}`}>Category</Label>
                     <Select
-                      value={item.productId}
-                      onValueChange={(value) => handleItemChange(index, 'productId', value)}
+                      value={item.selectedCategory}
+                      onValueChange={(value) => handleItemCategoryChange(index, value as ProductType | '')}
                     >
-                      <SelectTrigger id={`product-${index}`}>
-                        <SelectValue placeholder="Select product" />
+                      <SelectTrigger id={`category-${index}`}>
+                        <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableProductsForDropdown(item.productId).map((p) => (
-                          <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
-                            {p.name} ({p.category}) - Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)}
-                          </SelectItem>
+                        {ALL_PRODUCT_TYPES.map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="w-24 space-y-2">
+
+                  <div className="space-y-1">
+                    <Label htmlFor={`product-${index}`}>Product</Label>
+                    <Select
+                      value={item.productId}
+                      onValueChange={(value) => handleItemProductChange(index, value)}
+                      disabled={!item.selectedCategory}
+                    >
+                      <SelectTrigger id={`product-${index}`} disabled={!item.selectedCategory}>
+                        <SelectValue placeholder="Select product" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {item.selectedCategory && allGlobalProducts
+                          .filter(p => p.category === item.selectedCategory)
+                          .filter(p => p.stock > 0 || (item.productId && p.id === item.productId))
+                          .sort((a,b) => a.name.localeCompare(b.name))
+                          .map(p => (
+                            <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
+                              {p.name} ({p.category}) - Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="w-24 space-y-1">
                     <Label htmlFor={`quantity-${index}`}>Quantity</Label>
                     <Input
                       id={`quantity-${index}`}
                       type="number"
                       min="0" 
                       value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                      onChange={(e) => handleItemQuantityChange(index, e.target.value)}
                       className="text-center"
+                      disabled={!item.productId}
                     />
                   </div>
-                  <div className="text-right w-28 space-y-2">
+
+                  <div className="text-right w-28 space-y-1">
                       <Label>Subtotal</Label>
                       <p className="font-semibold text-lg h-10 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
                   </div>
+
                   <Button
                     type="button"
                     variant="destructive"
                     size="icon"
                     onClick={() => handleRemoveItem(index)}
-                    className="shrink-0"
+                    className="shrink-0 self-center"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -536,5 +588,4 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
-
     
