@@ -136,8 +136,6 @@ export default function ProductsPage() {
         }
     }
     
-    // Potentially re-calculate remaining stock if damage changes, though current setup has Remaining Stock as directly editable
-    // For now, just update damagedQuantity
     if (productBeforeChange.damagedQuantity !== damageToSet) {
         setCurrentProducts(prevProducts => 
             prevProducts.map(p => p.id === productId ? { ...p, damagedQuantity: damageToSet } : p)
@@ -212,6 +210,7 @@ export default function ProductsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead>Total Stock</TableHead>
                 <TableHead>Cost Price/Unit</TableHead>
+                <TableHead>MRP/Unit</TableHead>
                 <TableHead>Sold</TableHead>
                 <TableHead>Damage</TableHead>
                 <TableHead>Remaining Stock</TableHead>
@@ -228,6 +227,7 @@ export default function ProductsPage() {
                     <TableCell>{product.category}</TableCell>
                     <TableCell>{product.totalAcquiredStock}</TableCell>
                     <TableCell>NRP {product.costPrice.toFixed(2)}</TableCell>
+                    <TableCell>NRP {product.sellingPrice.toFixed(2)}</TableCell>
                     <TableCell>{soldQty}</TableCell>
                     <TableCell>
                       {user.role === 'admin' ? (
