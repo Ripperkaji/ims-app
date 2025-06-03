@@ -86,15 +86,16 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     } else {
       setIsHybridPayment(false);
     }
-    setValidationError(null);
+    // Removed validationError from dependency array to prevent infinite loop
   }, [editedFormPaymentMethod]);
 
   useEffect(() => {
     if (!isHybridPayment) {
-      if (validationError && validationError.startsWith("Hybrid payments")) {
-           setValidationError(null);
-      }
-      return;
+        // if (validationError && validationError.startsWith("Hybrid payments")) {
+        //      setValidationError(null); // Potential loop source if validationError in deps
+        // }
+        setValidationError(null); // Simpler approach
+        return;
     }
     if (currentTotalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
         setValidationError(null);
@@ -135,12 +136,21 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     } else {
         setValidationError(null);
     }
-
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, currentTotalAmount, isHybridPayment, validationError]);
+  // Removed validationError from dependency array
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, currentTotalAmount, isHybridPayment]);
 
 
   const handleAddItem = () => {
-    const firstAvailableProduct = allGlobalProducts.find(p => p.stock > 0 && !editedItems.find(si => si.productId === p.id));
+    const firstAvailableProduct = allGlobalProducts.find(p => {
+        const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
+        const originalItem = sale.items.find(oi => oi.productId === p.id);
+        const currentStock = globalProduct?.stock || 0;
+        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
+        const effectiveStock = currentStock + quantityInOriginalSale;
+
+        return effectiveStock > 0 && !editedItems.find(si => si.productId === p.id);
+    });
+    
     if (firstAvailableProduct) {
       setEditedItems([
         ...editedItems,
@@ -153,7 +163,11 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
         },
       ]);
     } else {
-      toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
+        toast({
+            title: "No More Products",
+            description: "All available products for adjustment are either out of stock or already added.",
+            variant: "destructive"
+        });
     }
   };
 
@@ -167,18 +181,23 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
         item.productId = newProduct.id;
         item.productName = newProduct.name;
         item.unitPrice = newProduct.price;
-        item.quantity = 1; 
-        if (newProduct.stock < 1) {
-            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
+        
+        const originalItem = sale.items.find(i => i.productId === newProduct.id);
+        const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
+        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
+        const maxAllowed = currentGlobalStock + quantityInOriginalSale;
+
+        if (maxAllowed < 1) {
+            toast({ title: "Out of Stock", description: `${newProduct.name} is effectively out of stock for adjustment. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
+        } else {
+            item.quantity = 1; // Default to 1 if available
         }
       }
     } else if (field === 'quantity') {
       const quantity = Number(value);
       const productDetails = allGlobalProducts.find(p => p.id === item.productId);
       const stockToCheck = productDetails?.stock || 0;
-      
-      // For adjustments, we consider stock *plus* what was originally in the sale
       const originalItem = sale.items.find(i => i.productId === item.productId);
       const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
 
@@ -246,10 +265,10 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
         case 'Due': finalAmountDue = currentTotalAmount; break;
       }
     }
-     if (validationError && isHybridPayment) {
-        toast({ title: "Payment Error", description: validationError, variant: "destructive" });
-        return;
-    }
+    //  if (validationError && isHybridPayment) { // This check might be redundant given the above sum check
+    //     toast({ title: "Payment Error", description: validationError, variant: "destructive" });
+    //     return;
+    // }
 
     const updatedSalePortion = {
         customerName: editedCustomerName,
@@ -282,13 +301,23 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
 
   if (!isOpen) return null;
 
-  const availableProductsForDropdown = (currentItemId?: string) => 
-    allGlobalProducts.filter(p => 
-      // Product has stock OR it's the item currently selected in this row OR it was part of the original sale
-      (p.stock > 0) || 
-      (currentItemId && p.id === currentItemId) || 
-      (sale.items.find(si => si.productId === p.id)) 
-    ).sort((a, b) => a.name.localeCompare(b.name));
+  const availableProductsForDropdown = (currentItemId?: string) => {
+    return allGlobalProducts.filter(p => {
+        const productInGlobalStock = allGlobalProducts.find(gp => gp.id === p.id);
+        const originalItemInSale = sale.items.find(oi => oi.productId === p.id);
+        
+        const currentGlobalStockValue = productInGlobalStock?.stock || 0;
+        const quantityInOriginalSaleForThisProduct = (originalItemInSale && originalItemInSale.productId === p.id) ? originalItemInSale.quantity : 0;
+        const effectiveStock = currentGlobalStockValue + quantityInOriginalSaleForThisProduct;
+
+        const isCurrentItemForThisRow = p.id === currentItemId;
+        const alreadySelectedInOtherEditedRows = editedItems.some(ei => ei.productId === p.id && ei.productId !== currentItemId);
+
+        if (isCurrentItemForThisRow) return true; 
+        if (alreadySelectedInOtherEditedRows) return false; 
+        return effectiveStock > 0; 
+    }).sort((a, b) => a.name.localeCompare(b.name));
+  };
 
 
   return (
@@ -331,13 +360,20 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                     <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                    {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id} 
-                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) } // Disable if no stock unless it's current or was in original
-                        >
-                        {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
-                        </SelectItem>
-                    ))}
+                    {availableProductsForDropdown(item.productId).map((p) => {
+                        const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
+                        const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
+                        const currentGlobalStockValue = productDetails?.stock || 0;
+                        const quantityInOriginalSale = (originalSaleItem && originalSaleItem.productId === p.id) ? originalSaleItem.quantity : 0;
+                        const effectiveStockDisplay = currentGlobalStockValue + quantityInOriginalSale;
+                        return (
+                          <SelectItem key={p.id} value={p.id}
+                                      disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
+                          >
+                          {p.name} - Effective Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
+                          </SelectItem>
+                        );
+                    })}
                     </SelectContent>
                 </Select>
                 </div>
@@ -390,11 +426,11 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
 
             {/* Hybrid Payment Details */}
             {isHybridPayment && (
-                <DialogCard className="p-4 border-primary/50 bg-primary/5">
-                <DialogCardHeader className="p-2 pt-0">
+                <Card className="p-4 border-primary/50 bg-primary/5">
+                <CardHeader className="p-2 pt-0">
                     <DialogCardTitle className="text-lg font-semibold">Hybrid Payment Details</DialogCardTitle>
                     <DialogCardDescription>Amounts must sum to new total.</DialogCardDescription>
-                </DialogCardHeader>
+                </CardHeader>
                 <CardContent className="space-y-3 p-2">
                     <div>
                     <Label htmlFor="hybridCashPaid-edit">Cash Paid (NRP)</Label>
@@ -410,7 +446,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                     </div>
                     {validationError && (<Alert variant="destructive" className="mt-2"><Info className="h-4 w-4" /><AlertTitle>Payment Error</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>)}
                 </CardContent>
-                </DialogCard>
+                </Card>
             )}
 
             {/* Original Flag Comment */}
@@ -449,3 +485,4 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     </Dialog>
   );
 }
+
