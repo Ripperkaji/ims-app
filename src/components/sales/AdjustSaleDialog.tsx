@@ -17,7 +17,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Sale, SaleItem, Product } from '@/types';
+import type { Sale, SaleItem, Product, ProductType } from '@/types'; // Added ProductType
+import { ALL_PRODUCT_TYPES } from '@/types'; // Import ALL_PRODUCT_TYPES
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,7 +46,6 @@ interface AdjustSaleDialogProps {
   isInitiallyFlagged: boolean;
 }
 
-// Rename imported components to avoid conflicts if this file also uses these names for its own elements.
 const DialogCardTitle = DialogCardTitleImport;
 const DialogCardDescription = DialogCardDescriptionImport;
 
@@ -64,6 +64,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   
   const [adjustmentComment, setAdjustmentComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [selectedProductTypeFilter, setSelectedProductTypeFilter] = useState<ProductType | 'all'>('all');
+
 
   const dialogTotalAmount = useMemo(() => {
     return editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -81,6 +83,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
       setAdjustmentComment('');
       setValidationError(null);
+      setSelectedProductTypeFilter('all'); // Reset filter on open
     }
   }, [sale, isOpen]);
 
@@ -144,7 +147,12 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    const firstAvailableProduct = allGlobalProducts.find(p => p.stock > 0 && !editedItems.find(si => si.productId === p.id));
+    let productsPool = allGlobalProducts;
+    if (selectedProductTypeFilter !== 'all') {
+        productsPool = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    }
+    const firstAvailableProduct = productsPool.find(p => p.stock > 0 && !editedItems.find(si => si.productId === p.id));
+
     if (firstAvailableProduct) {
       setEditedItems([
         ...editedItems,
@@ -157,7 +165,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         },
       ]);
     } else {
-      toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
+     if (selectedProductTypeFilter !== 'all') {
+        toast({ title: "No more products of selected type", description: `No more ${selectedProductTypeFilter} products available for adjustment or they are out of stock. Clear filter to see all.`, variant: "destructive" });
+      } else {
+        toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
+      }
     }
   };
 
@@ -278,16 +290,23 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
     setAdjustmentComment('');
     setValidationError(null);
+    setSelectedProductTypeFilter('all'); // Reset filter on close
     onClose();
   }
 
   if (!isOpen) return null;
 
-  const availableProductsForDropdown = (currentItemId?: string) =>
-    allGlobalProducts.filter(p =>
+  const availableProductsForDropdown = (currentItemId?: string) => {
+    let productsToFilter = [...allGlobalProducts];
+    if (selectedProductTypeFilter !== 'all') {
+      productsToFilter = productsToFilter.filter(p => p.type === selectedProductTypeFilter);
+    }
+    return productsToFilter.filter(p =>
       (p.stock + (editedItems.find(si => si.productId === p.id)?.quantity || 0) > 0) ||
       (currentItemId && p.id === currentItemId)
     ).sort((a, b) => a.name.localeCompare(b.name));
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
@@ -315,6 +334,23 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
             </div>
 
+            <div className="mb-4">
+                <Label htmlFor="productTypeFilterDialog" className="text-base">Filter by Product Type</Label>
+                <Select value={selectedProductTypeFilter} onValueChange={(value) => {
+                    setSelectedProductTypeFilter(value as ProductType | 'all');
+                }}>
+                <SelectTrigger id="productTypeFilterDialog" className="mt-1">
+                    <SelectValue placeholder="Select product type to filter" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {ALL_PRODUCT_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+            </div>
+
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
             <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
@@ -334,7 +370,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                           <SelectItem key={p.id} value={p.id}
                                       disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) }
                           >
-                          {p.name} {productDetails?.type ? `(${productDetails.type})` : ''} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
                           </SelectItem>
                         );
                     })}
@@ -448,4 +484,3 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
-
