@@ -155,7 +155,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       const newProduct = allGlobalProducts.find(p => p.id === value as string);
       if (newProduct) {
         item.productId = newProduct.id;
-        item.productName = newProduct.name;
+        item.productName = newProduct.name; // Keep productName, productType is displayed dynamically
         item.unitPrice = newProduct.price;
         item.quantity = 1; 
         if (newProduct.stock < 1) {
@@ -370,11 +370,14 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
-                          {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
-                        </SelectItem>
-                      ))}
+                      {availableProductsForDropdown(item.productId).map((p) => {
+                        const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
+                        return (
+                          <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
+                            {p.name} {productDetails?.type ? `(${productDetails.type})` : ''} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

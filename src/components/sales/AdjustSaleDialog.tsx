@@ -328,13 +328,16 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                    {availableProductsForDropdown(item.productId).map((p) => (
-                        <SelectItem key={p.id} value={p.id}
-                                    disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) }
-                        >
-                        {p.name} (Stock: {allGlobalProducts.find(agp => agp.id === p.id)?.stock || 0}, Price: NRP {p.price.toFixed(2)})
-                        </SelectItem>
-                    ))}
+                    {availableProductsForDropdown(item.productId).map((p) => {
+                        const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
+                        return (
+                          <SelectItem key={p.id} value={p.id}
+                                      disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) }
+                          >
+                          {p.name} {productDetails?.type ? `(${productDetails.type})` : ''} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
+                          </SelectItem>
+                        );
+                    })}
                     </SelectContent>
                 </Select>
                 </div>
@@ -446,4 +449,3 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   );
 }
 
-    
