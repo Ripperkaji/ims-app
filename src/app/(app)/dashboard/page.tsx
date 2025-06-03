@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
-import type { Sale, LogEntry } from '@/types';
+import type { Sale, LogEntry, Product } from '@/types';
 import React, { useMemo, useState } from 'react';
 import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -36,7 +36,8 @@ export default function DashboardPage() {
   const totalProducts = mockProducts.length;
   const criticalStockCount = mockProducts.filter(p => p.stock === 1).length;
   const outOfStockCount = mockProducts.filter(p => p.stock === 0).length;
-  const flaggedSalesCount = mockSales.filter(sale => sale.isFlagged).length;
+  
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales, user]); // Re-calculate when mockSales might change
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -84,14 +85,49 @@ export default function DashboardPage() {
   };
 
 
-  const handleSaleFlagged = (flaggedSaleId: string, comment: string) => {
+  const handleSaleFlagged = (flaggedSaleId: string, comment: string, isDamageExchanged: boolean) => {
     const saleIndex = mockSales.findIndex(s => s.id === flaggedSaleId);
-    if (saleIndex !== -1 && user) {
-      mockSales[saleIndex].isFlagged = true;
-      mockSales[saleIndex].flaggedComment = comment;
-      addLogEntry("Sale Flagged", `Sale ID ${flaggedSaleId.substring(0,8)}... flagged by ${user.name}. Comment: ${comment}`, user.name);
-      toast({ title: "Sale Flagged", description: `Sale ${flaggedSaleId.substring(0,8)}... has been flagged for admin review.`});
+    if (saleIndex === -1 || !user) {
+      toast({ title: "Error", description: "Sale not found or user not available.", variant: "destructive"});
+      return;
     }
+    
+    const flaggedSale = mockSales[saleIndex];
+    flaggedSale.isFlagged = true;
+    flaggedSale.flaggedComment = comment;
+
+    addLogEntry("Sale Flagged", `Sale ID ${flaggedSaleId.substring(0,8)}... flagged by ${user.name}. Comment: ${comment}`, user.name);
+    toast({ title: "Sale Flagged", description: `Sale ${flaggedSaleId.substring(0,8)}... has been flagged for admin review.`});
+    
+    if (isDamageExchanged) {
+      let allDamageExchangeLogs = "";
+      flaggedSale.items.forEach(saleItem => {
+        const productIndex = mockProducts.findIndex(p => p.id === saleItem.productId);
+        if (productIndex !== -1) {
+          const product = mockProducts[productIndex];
+          const originalStock = product.stock;
+          const originalDamage = product.damagedQuantity;
+
+          product.damagedQuantity += saleItem.quantity;
+          product.stock -= saleItem.quantity; // Reduce stock for the exchanged item
+
+          if (product.stock < 0) { // Prevent negative stock if not desired, though for mock data it might be illustrative
+             // console.warn(`Stock for ${product.name} went negative during damage exchange.`);
+             // product.stock = 0; // Optionally cap at 0
+          }
+          const damageLogDetails = `Damage Exchange for Sale ID ${flaggedSaleId.substring(0,8)}...: Product '${saleItem.productName}' (Qty: ${saleItem.quantity}) marked damaged & exchanged. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. By ${user.name}.`;
+          addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetails, user.name);
+          allDamageExchangeLogs += `${saleItem.productName} (Qty: ${saleItem.quantity}) damaged & exchanged. `;
+
+        } else {
+          addLogEntry("Damage Exchange Error", `Product ID ${saleItem.productId} from Sale ID ${flaggedSaleId.substring(0,8)}... not found during damage exchange processing.`, user.name);
+        }
+      });
+      if (allDamageExchangeLogs) {
+        toast({ title: "Damage Exchanged", description: `Items from sale ${flaggedSaleId.substring(0,8)}... processed for damage exchange: ${allDamageExchangeLogs}`});
+      }
+    }
+
     setSaleToFlag(null); 
     setTriggerRefresh(prev => prev + 1); 
   };
@@ -313,7 +349,7 @@ export default function DashboardPage() {
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                    <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -354,3 +390,4 @@ function PlaceholderChart() {
     </div>
   )
 }
+

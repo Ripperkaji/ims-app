@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -22,11 +23,12 @@ interface FlagSaleDialogProps {
   sale: Sale;
   isOpen: boolean;
   onClose: () => void;
-  onSaleFlagged: (saleId: string, comment: string) => void;
+  onSaleFlagged: (saleId: string, comment: string, isDamageExchanged: boolean) => void;
 }
 
 export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }: FlagSaleDialogProps) {
   const [comment, setComment] = useState<string>('');
+  const [isDamageExchanged, setIsDamageExchanged] = useState<boolean>(false);
   const { toast } = useToast();
 
   const handleConfirmFlag = () => {
@@ -38,17 +40,22 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       });
       return;
     }
-    onSaleFlagged(sale.id, comment);
+    onSaleFlagged(sale.id, comment, isDamageExchanged);
     setComment(''); 
-    // The parent component (DashboardPage) is responsible for closing the dialog 
-    // by setting saleToFlag to null, which in turn sets isOpen to false.
-    // Calling onClose() here might be redundant or cause issues if parent logic isn't expecting it.
+    setIsDamageExchanged(false);
+    // Parent (DashboardPage) closes dialog by setting saleToFlag to null
   };
+  
+  const handleDialogClose = () => {
+    setComment('');
+    setIsDamageExchanged(false);
+    onClose();
+  }
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[475px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -61,7 +68,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid w-full gap-1.5">
-            <Label htmlFor="flagComment">Comment</Label>
+            <Label htmlFor="flagComment">Comment (Required)</Label>
             <Textarea
               id="flagComment"
               value={comment}
@@ -70,10 +77,20 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
               rows={3}
             />
           </div>
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="damageExchanged"
+              checked={isDamageExchanged}
+              onCheckedChange={(checked) => setIsDamageExchanged(Boolean(checked))}
+            />
+            <Label htmlFor="damageExchanged" className="text-sm font-normal">
+              Mark items as Damaged & Exchanged (updates inventory)
+            </Label>
+          </div>
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           </DialogClose>
           <Button type="button" variant="destructive" onClick={handleConfirmFlag}>
             Confirm Flag
@@ -83,3 +100,4 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     </Dialog>
   );
 }
+
