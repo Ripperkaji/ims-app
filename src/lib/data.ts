@@ -1,12 +1,57 @@
 
-import type { Product, Sale, Expense, LogEntry } from '@/types';
+import type { Product, Sale, Expense, LogEntry, ProductType } from '@/types';
 
 export const mockProducts: Product[] = [
-  { id: 'prod1', name: 'Vape Juice - Mango Tango', price: 15.99, stock: 50 },
-  { id: 'prod2', name: 'Vape Mod - Smok X', price: 49.99, stock: 25 },
-  { id: 'prod3', name: 'Coils - Pack of 5', price: 9.99, stock: 100 },
-  { id: 'prod4', name: 'Disposable Vape - Blueberry Ice', price: 7.50, stock: 75 },
-  { id: 'prod5', name: 'Vape Pen Kit - Starter', price: 29.99, stock: 30 },
+  { 
+    id: 'prod1', 
+    name: 'Vape Juice - Mango Tango', 
+    category: 'E-liquid Nic Salt',
+    sellingPrice: 15.99, 
+    costPrice: 9.50,
+    totalAcquiredStock: 70,
+    damagedQuantity: 2,
+    stock: 50  // Remaining: 70 - (sold: example 18) - 2 = 50
+  },
+  { 
+    id: 'prod2', 
+    name: 'Vape Mod - Smok X', 
+    category: 'POD/MOD Devices',
+    sellingPrice: 49.99, 
+    costPrice: 30.00,
+    totalAcquiredStock: 35,
+    damagedQuantity: 1,
+    stock: 25  // Remaining: 35 - (sold: example 9) - 1 = 25
+  },
+  { 
+    id: 'prod3', 
+    name: 'Coils - Pack of 5', 
+    category: 'Coils',
+    sellingPrice: 9.99, 
+    costPrice: 5.00,
+    totalAcquiredStock: 120,
+    damagedQuantity: 0,
+    stock: 100 // Remaining: 120 - (sold: example 20) - 0 = 100
+  },
+  { 
+    id: 'prod4', 
+    name: 'Disposable Vape - Blueberry Ice', 
+    category: 'Disposables',
+    sellingPrice: 7.50, 
+    costPrice: 3.75,
+    totalAcquiredStock: 100,
+    damagedQuantity: 5,
+    stock: 75  // Remaining: 100 - (sold: example 20) - 5 = 75
+  },
+  { 
+    id: 'prod5', 
+    name: 'Vape Pen Kit - Starter', 
+    category: 'POD/MOD Devices',
+    sellingPrice: 29.99, 
+    costPrice: 18.00,
+    totalAcquiredStock: 40,
+    damagedQuantity: 0,
+    stock: 30  // Remaining: 40 - (sold: example 10) - 0 = 30
+  },
 ];
 
 export const mockSales: Sale[] = [
@@ -161,7 +206,7 @@ export const mockLogEntries: LogEntry[] = [
   }
 ].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-// Initialize isFlagged and flaggedComment for existing sales if not present
+// Initialize new product fields for existing sales if not present
 mockSales.forEach(sale => {
   if (sale.isFlagged === undefined) {
     sale.isFlagged = false;
@@ -169,8 +214,7 @@ mockSales.forEach(sale => {
   if (sale.flaggedComment === undefined) {
     sale.flaggedComment = '';
   }
-  if (sale.saleOrigin === undefined) { // Should not happen with new data but good for safety
+  if (sale.saleOrigin === undefined) { 
     sale.saleOrigin = 'store';
   }
 });
-

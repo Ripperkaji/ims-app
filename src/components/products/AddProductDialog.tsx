@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -14,52 +15,83 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { PackagePlus, Tag, DollarSignIcon, Archive } from 'lucide-react'; 
+import { PackagePlus, Tag, DollarSignIcon, Archive, Layers, ChevronsUpDown } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
-import type { Product } from '@/types';
+import type { ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 
 interface AddProductDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmAddProduct: (newProductData: { name: string; price: number; stock: number }) => void;
+  onConfirmAddProduct: (newProductData: { 
+    name: string; 
+    category: ProductType;
+    sellingPrice: number; 
+    costPrice: number;
+    totalAcquiredStock: number;
+  }) => void;
 }
 
 export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct }: AddProductDialogProps) {
   const [name, setName] = useState<string>('');
-  const [price, setPrice] = useState<string>('');
-  const [stock, setStock] = useState<string>('');
+  const [category, setCategory] = useState<ProductType | ''>('');
+  const [sellingPrice, setSellingPrice] = useState<string>('');
+  const [costPrice, setCostPrice] = useState<string>('');
+  const [totalAcquiredStock, setTotalAcquiredStock] = useState<string>('');
   const { toast } = useToast();
 
   const handleConfirm = () => {
-    const numPrice = parseFloat(price);
-    const numStock = parseInt(stock, 10);
+    const numSellingPrice = parseFloat(sellingPrice);
+    const numCostPrice = parseFloat(costPrice);
+    const numTotalAcquiredStock = parseInt(totalAcquiredStock, 10);
 
     if (!name.trim()) {
       toast({ title: "Invalid Name", description: "Product name cannot be empty.", variant: "destructive" });
       return;
     }
-    if (isNaN(numPrice) || numPrice <= 0) {
-      toast({ title: "Invalid Price", description: "Please enter a valid positive price.", variant: "destructive" });
+    if (!category) {
+      toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" });
       return;
     }
-    if (isNaN(numStock) || numStock < 0) {
-      toast({ title: "Invalid Stock", description: "Please enter a valid non-negative stock quantity.", variant: "destructive" });
+    if (isNaN(numSellingPrice) || numSellingPrice <= 0) {
+      toast({ title: "Invalid Selling Price", description: "Please enter a valid positive selling price.", variant: "destructive" });
+      return;
+    }
+    if (isNaN(numCostPrice) || numCostPrice <= 0) {
+      toast({ title: "Invalid Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" });
+      return;
+    }
+     if (numCostPrice > numSellingPrice) {
+      toast({ title: "Logical Error", description: "Cost price cannot be greater than selling price.", variant: "destructive" });
+      return;
+    }
+    if (isNaN(numTotalAcquiredStock) || numTotalAcquiredStock < 0) {
+      toast({ title: "Invalid Stock", description: "Please enter a valid non-negative quantity for total acquired stock.", variant: "destructive" });
       return;
     }
 
-    onConfirmAddProduct({ name, price: numPrice, stock: numStock });
-    // Reset fields after successful confirmation
+    onConfirmAddProduct({ 
+      name, 
+      category, 
+      sellingPrice: numSellingPrice, 
+      costPrice: numCostPrice,
+      totalAcquiredStock: numTotalAcquiredStock 
+    });
+    
     setName('');
-    setPrice('');
-    setStock('');
-    onClose(); // Close the dialog
+    setCategory('');
+    setSellingPrice('');
+    setCostPrice('');
+    setTotalAcquiredStock('');
+    onClose(); 
   };
 
-  // Handler to also reset fields when dialog is closed via X or Cancel
   const handleCloseDialog = () => {
     setName('');
-    setPrice('');
-    setStock('');
+    setCategory('');
+    setSellingPrice('');
+    setCostPrice('');
+    setTotalAcquiredStock('');
     onClose();
   };
 
@@ -67,7 +99,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PackagePlus className="h-6 w-6 text-primary" /> Add New Product
@@ -89,32 +121,66 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
               placeholder="E.g., Premium Vape Juice"
             />
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="productPrice" className="text-right col-span-1">
-              <DollarSignIcon className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Price (NRP)
+            <Label htmlFor="productCategory" className="text-right col-span-1">
+              <Layers className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Category
+            </Label>
+            <Select value={category} onValueChange={(value) => setCategory(value as ProductType)}>
+              <SelectTrigger id="productCategory" className="col-span-3">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {ALL_PRODUCT_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="productSellingPrice" className="text-right col-span-1">
+              <DollarSignIcon className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Sell Price
             </Label>
             <Input
-              id="productPrice"
+              id="productSellingPrice"
               type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              value={sellingPrice}
+              onChange={(e) => setSellingPrice(e.target.value)}
               className="col-span-3"
-              placeholder="E.g., 25.99"
+              placeholder="NRP (e.g., 25.99)"
               min="0.01"
               step="0.01"
             />
           </div>
+
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="productStock" className="text-right col-span-1">
-              <Archive className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Stock
+            <Label htmlFor="productCostPrice" className="text-right col-span-1">
+              <DollarSignIcon className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Cost Price
             </Label>
             <Input
-              id="productStock"
+              id="productCostPrice"
               type="number"
-              value={stock}
-              onChange={(e) => setStock(e.target.value)}
+              value={costPrice}
+              onChange={(e) => setCostPrice(e.target.value)}
               className="col-span-3"
-              placeholder="E.g., 50"
+              placeholder="NRP (e.g., 15.50)"
+              min="0.01"
+              step="0.01"
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="productTotalAcquiredStock" className="text-right col-span-1">
+              <Archive className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Initial Stock
+            </Label>
+            <Input
+              id="productTotalAcquiredStock"
+              type="number"
+              value={totalAcquiredStock}
+              onChange={(e) => setTotalAcquiredStock(e.target.value)}
+              className="col-span-3"
+              placeholder="Units (e.g., 50)"
               min="0"
             />
           </div>

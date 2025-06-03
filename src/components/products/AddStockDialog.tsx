@@ -40,20 +40,26 @@ export default function AddStockDialog({ product, isOpen, onClose, onConfirmAddS
       return;
     }
     onConfirmAddStock(product.id, numQuantity);
-    setQuantityToAdd(''); // Reset for next time
+    setQuantityToAdd(''); 
+    onClose(); // Close dialog after confirmation
+  };
+
+  const handleDialogClose = () => {
+    setQuantityToAdd(''); // Reset quantity when dialog is closed
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <PackagePlus className="h-6 w-6 text-primary" /> Add Stock to {product.name}
           </DialogTitle>
           <DialogDescription>
-            Current stock: {product.stock}. Enter the quantity you want to add.
+            Current Remaining Stock: {product.stock}. Current Total Acquired: {product.totalAcquiredStock}. Enter quantity to add.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -74,7 +80,7 @@ export default function AddStockDialog({ product, isOpen, onClose, onConfirmAddS
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">Cancel</Button>
+            <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           </DialogClose>
           <Button type="button" onClick={handleConfirm}>Confirm Add Stock</Button>
         </DialogFooter>

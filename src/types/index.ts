@@ -15,24 +15,27 @@ export type ProductType = typeof ALL_PRODUCT_TYPES[number];
 
 export interface Product {
   id: string;
-  name: string;
-  price: number;
-  stock: number;
-  type?: ProductType; // Added product type
+  name: string;          // Product Name
+  category: ProductType; // Category
+  sellingPrice: number;  // Selling price to customer
+  costPrice: number;     // Cost price per unit for the business
+  totalAcquiredStock: number; // Cumulative total stock ever acquired/added
+  damagedQuantity: number;    // Quantity marked as damaged
+  stock: number;         // Current remaining stock (totalAcquiredStock - sold - damaged)
 }
 
 export interface SaleItem {
   productId: string;
   productName: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice: number; // This is sellingPrice at the time of sale
   totalPrice: number;
 }
 
 export interface Sale {
   id: string;
   customerName: string;
-  customerContact?: string; // Optional contact number
+  customerContact?: string; 
   items: SaleItem[];
   totalAmount: number;
   
@@ -42,28 +45,27 @@ export interface Sale {
   
   formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
-  date: string; // ISO string format
-  status: 'Paid' | 'Due'; // Derived: if amountDue > 0, then 'Due', else 'Paid'
-  createdBy: string; // User name or ID
+  date: string; 
+  status: 'Paid' | 'Due'; 
+  createdBy: string; 
   isFlagged?: boolean;
   flaggedComment?: string;
-  saleOrigin: 'store' | 'online'; // Added this field
+  saleOrigin: 'store' | 'online';
 }
 
 export interface Expense {
   id: string;
-  date: string; // ISO string format
+  date: string; 
   description: string;
   category: string;
   amount: number;
-  recordedBy: string; // User name or ID
+  recordedBy: string; 
 }
 
 export interface LogEntry {
   id: string;
-  timestamp: string; // ISO string format
-  user: string; // User name or ID
-  action: string; // e.g., "Sale Created", "Expense Added", "Sale Modified"
-  details: string; // Description of the change or event
+  timestamp: string; 
+  user: string; 
+  action: string; 
+  details: string; 
 }
-
