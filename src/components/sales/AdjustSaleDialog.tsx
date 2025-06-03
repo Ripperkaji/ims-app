@@ -147,16 +147,23 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    let productsToConsider: Product[];
-    if (selectedProductTypeFilter !== 'all') {
-      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    } else {
-      productsToConsider = allGlobalProducts;
-    }
-
-    const firstAvailableProduct = productsToConsider.find(
-      p => p.stock > 0 && !editedItems.find(si => si.productId === p.id)
-    );
+    const productsOfType = selectedProductTypeFilter === 'all'
+        ? allGlobalProducts
+        : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    
+    const firstAvailableProduct = productsOfType.find(p => {
+        // Check global stock first for any product
+        const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
+        if (!globalProduct || globalProduct.stock <= 0) {
+            // If product is already in original sale, it is available for adjustment up to original quantity + global stock
+            const originalItem = sale.items.find(oi => oi.productId === p.id);
+            if (!originalItem || (globalProduct?.stock || 0) + originalItem.quantity <=0) {
+                 return false;
+            }
+        }
+        // Ensure it's not already in the *editedItems* list for this dialog
+        return !editedItems.find(si => si.productId === p.id);
+    });
     
     if (firstAvailableProduct) {
       setEditedItems([
@@ -171,9 +178,17 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       ]);
     } else {
      if (selectedProductTypeFilter !== 'all') {
-        toast({ title: "No more products of selected type", description: `No more ${selectedProductTypeFilter} products available for adjustment or they are out of stock. Clear filter to see all.`, variant: "destructive" });
+        toast({
+            title: "No More Products of Selected Type",
+            description: `All available '${selectedProductTypeFilter}' products for adjustment are either out of stock or already added. Try clearing the filter.`,
+            variant: "destructive"
+        });
       } else {
-        toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
+        toast({
+            title: "No More Products",
+            description: "All available products for adjustment are either out of stock or already added.",
+            variant: "destructive"
+        });
       }
     }
   };
@@ -188,10 +203,17 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         item.productId = newProduct.id;
         item.productName = newProduct.name;
         item.unitPrice = newProduct.price;
-        item.quantity = 1;
-        if (newProduct.stock < 1) {
-            toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
+        
+        const originalItem = sale.items.find(i => i.productId === newProduct.id);
+        const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
+        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
+        const maxAllowed = currentGlobalStock + quantityInOriginalSale;
+
+        if (maxAllowed < 1) {
+            toast({ title: "Out of Stock", description: `${newProduct.name} is effectively out of stock for adjustment. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
+        } else {
+            item.quantity = 1; // Default to 1 if available
         }
       }
     } else if (field === 'quantity') {
@@ -201,11 +223,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       const originalItem = sale.items.find(i => i.productId === item.productId);
       const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
 
-      if (quantity > (stockToCheck + quantityAlreadyInSale)) {
+      if (quantity > (stockToCheck + quantityAlreadyInSale)) { 
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck + quantityAlreadyInSale} items available for this adjustment.`, variant: "destructive" });
         item.quantity = stockToCheck + quantityAlreadyInSale;
       } else {
-        item.quantity = quantity >= 0 ? quantity : 0;
+        item.quantity = quantity >= 0 ? quantity : 0; 
       }
     }
     
@@ -302,14 +324,23 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   if (!isOpen) return null;
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    let productsToFilter = [...allGlobalProducts];
-    if (selectedProductTypeFilter !== 'all') {
-      productsToFilter = productsToFilter.filter(p => p.type === selectedProductTypeFilter);
-    }
-    return productsToFilter.filter(p =>
-      (p.stock + (editedItems.find(si => si.productId === p.id)?.quantity || 0) > 0) ||
-      (currentItemId && p.id === currentItemId)
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    const baseProducts = selectedProductTypeFilter === 'all'
+      ? allGlobalProducts
+      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+      
+    return baseProducts.filter(p => {
+        const productInGlobalStock = allGlobalProducts.find(gp => gp.id === p.id);
+        const originalItemInSale = sale.items.find(oi => oi.productId === p.id);
+        // Effective stock for this dropdown is current global stock + what was in the original sale for *this specific item*
+        const effectiveStock = (productInGlobalStock?.stock || 0) + (originalItemInSale && originalItemInSale.productId === p.id ? originalItemInSale.quantity : 0);
+
+        const isCurrentItemForThisRow = p.id === currentItemId;
+        const alreadySelectedInOtherEditedRows = editedItems.some(ei => ei.productId === p.id && ei.productId !== currentItemId);
+
+        if (isCurrentItemForThisRow) return true; 
+        if (alreadySelectedInOtherEditedRows) return false; 
+        return effectiveStock > 0; 
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
 
@@ -371,11 +402,13 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     <SelectContent>
                     {availableProductsForDropdown(item.productId).map((p) => {
                         const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
+                        const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
+                        const effectiveStockDisplay = (productDetails?.stock || 0) + (originalSaleItem?.quantity || 0);
                         return (
                           <SelectItem key={p.id} value={p.id}
-                                      disabled={p.stock === 0 && p.id !== item.productId && !(sale.items.find(si => si.productId === p.id)) }
+                                      disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Stock: {productDetails?.stock || 0}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} - Effective Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
                           </SelectItem>
                         );
                     })}

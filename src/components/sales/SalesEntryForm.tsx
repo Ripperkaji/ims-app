@@ -132,14 +132,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    let productsToConsider: Product[];
-    if (selectedProductTypeFilter !== 'all') {
-      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    } else {
-      productsToConsider = allGlobalProducts;
-    }
+    const productsOfType = selectedProductTypeFilter === 'all'
+      ? allGlobalProducts
+      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
 
-    const firstAvailableProduct = productsToConsider.find(
+    const firstAvailableProduct = productsOfType.find(
       p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id)
     );
 
@@ -156,9 +153,17 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       ]);
     } else {
       if (selectedProductTypeFilter !== 'all') {
-        toast({ title: `No more products of selected type`, description: `No more ${selectedProductTypeFilter} products available or they are out of stock. Clear filter to see all.`, variant: "destructive" });
+        toast({
+          title: "No More Products of Selected Type",
+          description: `All available '${selectedProductTypeFilter}' products are either out of stock or already added to this sale. Try clearing the filter.`,
+          variant: "destructive"
+        });
       } else {
-        toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
+        toast({
+          title: "No More Products",
+          description: "All available products are either out of stock or already added to this sale.",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -330,15 +335,18 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    let productsToFilter = [...allGlobalProducts];
-    if (selectedProductTypeFilter !== 'all') {
-      productsToFilter = productsToFilter.filter(p => p.type === selectedProductTypeFilter);
-    }
-    return productsToFilter.filter(p => 
-      p.stock > 0 || 
-      (currentItemId && p.id === currentItemId && (allGlobalProducts.find(agp => agp.id === currentItemId)?.stock || 0) > 0) || 
-      selectedItems.some(si => si.productId === p.id && p.id === currentItemId)
-    ).sort((a, b) => a.name.localeCompare(b.name));
+    const baseProducts = selectedProductTypeFilter === 'all'
+      ? allGlobalProducts
+      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+
+    return baseProducts.filter(p => {
+      const isCurrentItem = p.id === currentItemId;
+      const alreadySelectedInOtherRows = selectedItems.some(si => si.productId === p.id && si.productId !== currentItemId);
+      
+      if (isCurrentItem) return true; 
+      if (alreadySelectedInOtherRows) return false; 
+      return p.stock > 0; 
+    }).sort((a, b) => a.name.localeCompare(b.name));
   };
 
 
