@@ -257,7 +257,7 @@ export const mockSales: Sale[] = [
     digitalPaid: 41.97,
     amountDue: 0,
     formPaymentMethod: 'Credit Card',
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
     status: 'Paid',
     createdBy: 'Staff Alice',
     isFlagged: false,
@@ -276,11 +276,11 @@ export const mockSales: Sale[] = [
     digitalPaid: 0,
     amountDue: 37.50,
     formPaymentMethod: 'Due',
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     status: 'Due',
     createdBy: 'Staff Bob',
-    isFlagged: true,
-    flaggedComment: 'Customer claims price was different for one item. Resolved by Admin Eve on Oct 10, 2023 10:30: Adjusted item price and confirmed with customer.',
+    isFlagged: false, // Resetting for testing
+    flaggedComment: '',
     saleOrigin: 'store',
   },
   {
@@ -294,7 +294,7 @@ export const mockSales: Sale[] = [
     digitalPaid: 0,
     amountDue: 0,
     formPaymentMethod: 'Cash',
-    date: new Date().toISOString(),
+    date: new Date().toISOString(), // Today
     status: 'Paid',
     createdBy: 'Staff Alice',
     isFlagged: false,
@@ -314,12 +314,48 @@ export const mockSales: Sale[] = [
     digitalPaid: 15.98,
     amountDue: 10.00,
     formPaymentMethod: 'Hybrid',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
     status: 'Due',
     createdBy: 'Admin Eve',
     isFlagged: false,
     flaggedComment: '',
     saleOrigin: 'store',
+  },
+  {
+    id: 'sale5-staff-alice',
+    customerName: 'Recent Alice Customer',
+    items: [ { productId: 'nicsalt1', productName: 'Nic Salt - Strawberry Kiwi', quantity: 1, unitPrice: 16.50, totalPrice: 16.50 }],
+    totalAmount: 16.50, cashPaid: 16.50, digitalPaid: 0, amountDue: 0,
+    formPaymentMethod: 'Cash',
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 10000).toISOString(), // 2 days ago + 10s
+    status: 'Paid', createdBy: 'Staff Alice', saleOrigin: 'online',
+  },
+  {
+    id: 'sale6-staff-bob',
+    customerName: 'Recent Bob Customer',
+    items: [ { productId: 'freebase1', productName: 'Freebase - Classic Tobacco', quantity: 2, unitPrice: 14.00, totalPrice: 28.00 }],
+    totalAmount: 28.00, cashPaid: 0, digitalPaid: 28.00, amountDue: 0,
+    formPaymentMethod: 'Debit Card',
+    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 20000).toISOString(), // 3 days ago + 20s
+    status: 'Paid', createdBy: 'Staff Bob', saleOrigin: 'store', isFlagged: true, flaggedComment: "Initial flag by Bob."
+  },
+  {
+    id: 'sale7-staff-alice-due',
+    customerName: 'Alice Due Customer',
+    items: [ { productId: 'disp1', productName: 'Disposable - Watermelon Chill', quantity: 3, unitPrice: 8.00, totalPrice: 24.00 }],
+    totalAmount: 24.00, cashPaid: 0, digitalPaid: 0, amountDue: 24.00,
+    formPaymentMethod: 'Due',
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    status: 'Due', createdBy: 'Staff Alice', saleOrigin: 'store',
+  },
+  {
+    id: 'sale8-staff-bob-old',
+    customerName: 'Bob Old Customer',
+    items: [ { productId: 'cotton1', productName: 'Organic Vape Cotton - Premium Strips', quantity: 1, unitPrice: 5.00, totalPrice: 5.00 }],
+    totalAmount: 5.00, cashPaid: 5.00, digitalPaid: 0, amountDue: 0,
+    formPaymentMethod: 'Cash',
+    date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
+    status: 'Paid', createdBy: 'Staff Bob', saleOrigin: 'store',
   }
 ];
 
@@ -366,11 +402,46 @@ export const mockLogEntries: LogEntry[] = [
     details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Credit Card. Status: Paid. Origin: store.'
   },
   {
+    id: 'log_sale5',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 10000).toISOString(),
+    user: 'Staff Alice',
+    action: 'Sale Created',
+    details: 'Sale ID sale5-staff-alice for Recent Alice Customer, Total: NRP 16.50. Payment: Cash. Status: Paid. Origin: online.'
+  },
+  {
+    id: 'log_sale6_flag',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 18000).toISOString(), // Before sale creation for log order
+    user: 'Staff Bob',
+    action: 'Sale Flagged',
+    details: 'Sale ID sale6-staff-bob flagged by Staff Bob. Comment: Initial flag by Bob.'
+  },
+  {
+    id: 'log_sale6',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 20000).toISOString(),
+    user: 'Staff Bob',
+    action: 'Sale Created',
+    details: 'Sale ID sale6-staff-bob for Recent Bob Customer, Total: NRP 28.00. Payment: Debit Card. Status: Paid. Origin: store.'
+  },
+  {
+    id: 'log_sale7',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'Staff Alice',
+    action: 'Sale Created',
+    details: 'Sale ID sale7-staff-alice-due for Alice Due Customer, Total: NRP 24.00. Payment: Due. Status: Due. Origin: store.'
+  },
+   {
+    id: 'log_sale8',
+    timestamp: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'Staff Bob',
+    action: 'Sale Created',
+    details: 'Sale ID sale8-staff-bob-old for Bob Old Customer, Total: NRP 5.00. Payment: Cash. Status: Paid. Origin: store.'
+  },
+  {
     id: 'log1b',
     timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000 - 2*60*1000).toISOString(),
     user: 'Staff Bob',
     action: 'Sale Flagged',
-    details: 'Sale ID sale2 for Jane Smith flagged by Staff Bob. Comment: Customer claims price was different for one item.'
+    details: 'Sale ID sale2 for Jane Smith flagged by Staff Bob. Comment: Item mismatch.'
   },
   {
     id: 'log2',
@@ -404,6 +475,6 @@ mockSales.forEach(sale => {
     sale.flaggedComment = '';
   }
   if (sale.saleOrigin === undefined) {
-    sale.saleOrigin = 'store';
+    sale.saleOrigin = 'store'; // Default to store if not specified
   }
 });
