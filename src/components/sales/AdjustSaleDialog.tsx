@@ -143,26 +143,25 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, dialogTotalAmount, isHybridPayment, validationError]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, dialogTotalAmount, isHybridPayment]);
 
 
   const handleAddItem = () => {
-    const productsOfType = selectedProductTypeFilter === 'all'
-        ? allGlobalProducts
-        : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    let productsToConsider: Product[];
+    if (selectedProductTypeFilter === 'all') {
+        productsToConsider = allGlobalProducts;
+    } else {
+        productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    }
     
-    const firstAvailableProduct = productsOfType.find(p => {
-        // Check global stock first for any product
+    const firstAvailableProduct = productsToConsider.find(p => {
         const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
-        if (!globalProduct || globalProduct.stock <= 0) {
-            // If product is already in original sale, it is available for adjustment up to original quantity + global stock
-            const originalItem = sale.items.find(oi => oi.productId === p.id);
-            if (!originalItem || (globalProduct?.stock || 0) + originalItem.quantity <=0) {
-                 return false;
-            }
-        }
-        // Ensure it's not already in the *editedItems* list for this dialog
-        return !editedItems.find(si => si.productId === p.id);
+        const originalItem = sale.items.find(oi => oi.productId === p.id);
+        const currentStock = globalProduct?.stock || 0;
+        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
+        const effectiveStock = currentStock + quantityInOriginalSale;
+
+        return effectiveStock > 0 && !editedItems.find(si => si.productId === p.id);
     });
     
     if (firstAvailableProduct) {
@@ -324,15 +323,20 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   if (!isOpen) return null;
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    const baseProducts = selectedProductTypeFilter === 'all'
-      ? allGlobalProducts
-      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    let baseProducts: Product[];
+    if (selectedProductTypeFilter === 'all') {
+      baseProducts = allGlobalProducts;
+    } else {
+      baseProducts = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    }
       
     return baseProducts.filter(p => {
         const productInGlobalStock = allGlobalProducts.find(gp => gp.id === p.id);
         const originalItemInSale = sale.items.find(oi => oi.productId === p.id);
-        // Effective stock for this dropdown is current global stock + what was in the original sale for *this specific item*
-        const effectiveStock = (productInGlobalStock?.stock || 0) + (originalItemInSale && originalItemInSale.productId === p.id ? originalItemInSale.quantity : 0);
+        
+        const currentGlobalStockValue = productInGlobalStock?.stock || 0;
+        const quantityInOriginalSaleForThisProduct = (originalItemInSale && originalItemInSale.productId === p.id) ? originalItemInSale.quantity : 0;
+        const effectiveStock = currentGlobalStockValue + quantityInOriginalSaleForThisProduct;
 
         const isCurrentItemForThisRow = p.id === currentItemId;
         const alreadySelectedInOtherEditedRows = editedItems.some(ei => ei.productId === p.id && ei.productId !== currentItemId);
@@ -403,7 +407,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     {availableProductsForDropdown(item.productId).map((p) => {
                         const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
                         const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
-                        const effectiveStockDisplay = (productDetails?.stock || 0) + (originalSaleItem?.quantity || 0);
+                        const currentGlobalStockValue = productDetails?.stock || 0;
+                        const quantityInOriginalSale = (originalSaleItem && originalSaleItem.productId === p.id) ? originalSaleItem.quantity : 0;
+                        const effectiveStockDisplay = currentGlobalStockValue + quantityInOriginalSale;
                         return (
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}

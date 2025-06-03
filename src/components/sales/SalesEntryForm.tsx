@@ -115,7 +115,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment, validationError]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, totalAmount, isHybridPayment]);
 
 
   const addLog = (action: string, details: string) => {
@@ -132,11 +132,14 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    const productsOfType = selectedProductTypeFilter === 'all'
-      ? allGlobalProducts
-      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    let productsToConsider: Product[];
+    if (selectedProductTypeFilter === 'all') {
+      productsToConsider = allGlobalProducts;
+    } else {
+      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    }
 
-    const firstAvailableProduct = productsOfType.find(
+    const firstAvailableProduct = productsToConsider.find(
       p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id)
     );
 
@@ -152,16 +155,23 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         },
       ]);
     } else {
-      if (selectedProductTypeFilter !== 'all') {
-        toast({
+      if (selectedProductTypeFilter !== 'all' && productsToConsider.length > 0 && productsToConsider.every(p => p.stock <= 0 || selectedItems.find(si => si.productId === p.id))) {
+         toast({
           title: "No More Products of Selected Type",
-          description: `All available '${selectedProductTypeFilter}' products are either out of stock or already added to this sale. Try clearing the filter.`,
+          description: `All available '${selectedProductTypeFilter}' products are either out of stock or already added. Try clearing the filter or checking stock.`,
           variant: "destructive"
         });
-      } else {
+      } else if (selectedProductTypeFilter !== 'all' && productsToConsider.length === 0) {
+         toast({
+          title: "No Products of Selected Type",
+          description: `There are no products of type '${selectedProductTypeFilter}'. Try clearing the filter.`,
+          variant: "destructive"
+        });
+      }
+      else {
         toast({
           title: "No More Products",
-          description: "All available products are either out of stock or already added to this sale.",
+          description: "All available products matching the current filter are either out of stock or already added to this sale.",
           variant: "destructive"
         });
       }
@@ -335,9 +345,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    const baseProducts = selectedProductTypeFilter === 'all'
-      ? allGlobalProducts
-      : allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    let baseProducts = allGlobalProducts;
+    if (selectedProductTypeFilter !== 'all') {
+      baseProducts = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    }
 
     return baseProducts.filter(p => {
       const isCurrentItem = p.id === currentItemId;
