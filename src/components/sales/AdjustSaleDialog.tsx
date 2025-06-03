@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
-// ALL_PRODUCT_TYPES is no longer needed here
+
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,7 +64,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   
   const [adjustmentComment, setAdjustmentComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
-  // selectedProductTypeFilter state removed
+
 
   const dialogTotalAmount = useMemo(() => {
     return editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -82,7 +82,6 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
       setAdjustmentComment('');
       setValidationError(null);
-      // No need to reset selectedProductTypeFilter
     }
   }, [sale, isOpen]);
 
@@ -147,7 +146,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    const productsToConsider = allGlobalProducts; // No type filter applied here
+    const productsToConsider = allGlobalProducts; 
     
     const firstAvailableProduct = productsToConsider.find(p => {
         const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
@@ -166,8 +165,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
           productId: firstAvailableProduct.id,
           productName: firstAvailableProduct.name,
           quantity: 1,
-          unitPrice: firstAvailableProduct.price,
-          totalPrice: firstAvailableProduct.price,
+          unitPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
+          totalPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
         },
       ]);
     } else {
@@ -188,7 +187,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
-        item.unitPrice = newProduct.price;
+        item.unitPrice = newProduct.sellingPrice; // Use sellingPrice
         
         const originalItem = sale.items.find(i => i.productId === newProduct.id);
         const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
@@ -303,14 +302,12 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
     setAdjustmentComment('');
     setValidationError(null);
-    // No need to reset selectedProductTypeFilter
     onClose();
   }
 
   if (!isOpen) return null;
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    // No selectedProductTypeFilter logic here
     const baseProducts = allGlobalProducts;
       
     return baseProducts.filter(p => {
@@ -358,7 +355,6 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
             </div>
 
-            {/* Product Type Filter Select removed from here */}
 
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
@@ -383,7 +379,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} ({p.category}) - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.sellingPrice.toFixed(2)}
                           </SelectItem>
                         );
                     })}

@@ -143,8 +143,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
           productId: firstAvailableProduct.id,
           productName: firstAvailableProduct.name,
           quantity: 1,
-          unitPrice: firstAvailableProduct.price,
-          totalPrice: firstAvailableProduct.price,
+          unitPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
+          totalPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
         },
       ]);
     } else {
@@ -165,7 +165,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
-        item.unitPrice = newProduct.price;
+        item.unitPrice = newProduct.sellingPrice; // Use sellingPrice
         item.quantity = 1; 
         if (newProduct.stock < 1) {
             toast({ title: "Out of Stock", description: `${newProduct.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
@@ -294,7 +294,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     allGlobalProducts.push(...updatedGlobalProducts);
     
     mockSales.unshift(newSale);
-    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.timestamp).getTime());
 
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
@@ -410,7 +410,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       <SelectContent>
                         {availableProductsForDropdown(item.productId).map((p) => (
                           <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
-                            {p.name} - Stock: {p.stock}, Price: NRP {p.price.toFixed(2)}
+                            {p.name} ({p.category}) - Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -537,3 +537,4 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   );
 }
 
+    
