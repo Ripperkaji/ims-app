@@ -17,8 +17,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Sale, SaleItem, Product, ProductType } from '@/types'; // Added ProductType
-import { ALL_PRODUCT_TYPES } from '@/types'; // Import ALL_PRODUCT_TYPES
+import type { Sale, SaleItem, Product, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -83,7 +83,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
       setAdjustmentComment('');
       setValidationError(null);
-      setSelectedProductTypeFilter('all'); // Reset filter on open
+      setSelectedProductTypeFilter('all');
     }
   }, [sale, isOpen]);
 
@@ -147,12 +147,17 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    let productsPool = allGlobalProducts;
+    let productsToConsider: Product[];
     if (selectedProductTypeFilter !== 'all') {
-        productsPool = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    } else {
+      productsToConsider = allGlobalProducts;
     }
-    const firstAvailableProduct = productsPool.find(p => p.stock > 0 && !editedItems.find(si => si.productId === p.id));
 
+    const firstAvailableProduct = productsToConsider.find(
+      p => p.stock > 0 && !editedItems.find(si => si.productId === p.id)
+    );
+    
     if (firstAvailableProduct) {
       setEditedItems([
         ...editedItems,
@@ -290,7 +295,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
     setAdjustmentComment('');
     setValidationError(null);
-    setSelectedProductTypeFilter('all'); // Reset filter on close
+    setSelectedProductTypeFilter('all');
     onClose();
   }
 
@@ -484,3 +489,5 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
+
+    

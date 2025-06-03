@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info } from 'lucide-react';
-import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types'; // Added ProductType
-import { ALL_PRODUCT_TYPES } from '@/types'; // Import ALL_PRODUCT_TYPES
+import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
@@ -132,12 +132,16 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   const handleAddItem = () => {
-    let productsPool = allGlobalProducts;
+    let productsToConsider: Product[];
     if (selectedProductTypeFilter !== 'all') {
-      productsPool = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+      productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
+    } else {
+      productsToConsider = allGlobalProducts;
     }
 
-    const firstAvailableProduct = productsPool.find(p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id));
+    const firstAvailableProduct = productsToConsider.find(
+      p => p.stock > 0 && !selectedItems.find(si => si.productId === p.id)
+    );
 
     if (firstAvailableProduct) {
       setSelectedItems([
@@ -152,7 +156,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       ]);
     } else {
       if (selectedProductTypeFilter !== 'all') {
-        toast({ title: "No more products of selected type", description: `No more ${selectedProductTypeFilter} products available or they are out of stock. Clear filter to see all products.`, variant: "destructive" });
+        toast({ title: `No more products of selected type`, description: `No more ${selectedProductTypeFilter} products available or they are out of stock. Clear filter to see all.`, variant: "destructive" });
       } else {
         toast({ title: "No more products", description: "All available products have been added or are out of stock.", variant: "destructive" });
       }
@@ -318,7 +322,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setCustomerContact('');
     setSelectedItems([]);
     setFormPaymentMethod('Cash'); 
-    setSelectedProductTypeFilter('all'); // Reset product type filter
+    setSelectedProductTypeFilter('all');
     setHybridCashPaid('');
     setHybridDigitalPaid('');
     setHybridAmountLeftDue('');
@@ -535,3 +539,5 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
+
+    
