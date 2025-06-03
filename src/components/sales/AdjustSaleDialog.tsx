@@ -17,8 +17,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Sale, SaleItem, Product, ProductType } from '@/types';
-import { ALL_PRODUCT_TYPES } from '@/types';
+import type { Sale, SaleItem, Product } from '@/types';
+// ALL_PRODUCT_TYPES is no longer needed here
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -64,8 +64,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   
   const [adjustmentComment, setAdjustmentComment] = useState<string>('');
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [selectedProductTypeFilter, setSelectedProductTypeFilter] = useState<ProductType | 'all'>('all');
-
+  // selectedProductTypeFilter state removed
 
   const dialogTotalAmount = useMemo(() => {
     return editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -83,7 +82,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
       setAdjustmentComment('');
       setValidationError(null);
-      setSelectedProductTypeFilter('all');
+      // No need to reset selectedProductTypeFilter
     }
   }, [sale, isOpen]);
 
@@ -148,12 +147,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    let productsToConsider: Product[];
-    if (selectedProductTypeFilter === 'all') {
-        productsToConsider = allGlobalProducts;
-    } else {
-        productsToConsider = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    }
+    const productsToConsider = allGlobalProducts; // No type filter applied here
     
     const firstAvailableProduct = productsToConsider.find(p => {
         const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
@@ -177,31 +171,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         },
       ]);
     } else {
-     if (selectedProductTypeFilter !== 'all' && productsToConsider.length > 0 && productsToConsider.every(p => {
-        const originalItem = sale.items.find(oi => oi.productId === p.id);
-        const currentStock = allGlobalProducts.find(gp => gp.id === p.id)?.stock || 0;
-        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
-        return (currentStock + quantityInOriginalSale === 0) || editedItems.find(si => si.productId === p.id);
-     })) {
-        toast({
-            title: "No More Products of Selected Type",
-            description: `All available '${selectedProductTypeFilter}' products are either out of stock for adjustment or already added. Try clearing the filter.`,
-            variant: "destructive"
-        });
-      } else if (selectedProductTypeFilter !== 'all' && productsToConsider.length === 0) {
-         toast({
-            title: "No Products of Selected Type",
-            description: `There are no products of type '${selectedProductTypeFilter}'. Try clearing the filter.`,
-            variant: "destructive"
-        });
-      }
-       else {
         toast({
             title: "No More Products",
             description: "All available products for adjustment are either out of stock or already added.",
             variant: "destructive"
         });
-      }
     }
   };
 
@@ -329,19 +303,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
     setAdjustmentComment('');
     setValidationError(null);
-    setSelectedProductTypeFilter('all');
+    // No need to reset selectedProductTypeFilter
     onClose();
   }
 
   if (!isOpen) return null;
 
   const availableProductsForDropdown = (currentItemId?: string) => {
-    let baseProducts: Product[];
-    if (selectedProductTypeFilter === 'all') {
-      baseProducts = allGlobalProducts;
-    } else {
-      baseProducts = allGlobalProducts.filter(p => p.type === selectedProductTypeFilter);
-    }
+    // No selectedProductTypeFilter logic here
+    const baseProducts = allGlobalProducts;
       
     return baseProducts.filter(p => {
         const productInGlobalStock = allGlobalProducts.find(gp => gp.id === p.id);
@@ -388,22 +358,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
             </div>
 
-            <div className="mb-4">
-                <Label htmlFor="productTypeFilterDialog" className="text-base">Filter by Product Type</Label>
-                <Select value={selectedProductTypeFilter} onValueChange={(value) => {
-                    setSelectedProductTypeFilter(value as ProductType | 'all');
-                }}>
-                <SelectTrigger id="productTypeFilterDialog" className="mt-1">
-                    <SelectValue placeholder="Select product type to filter" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {ALL_PRODUCT_TYPES.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                </SelectContent>
-                </Select>
-            </div>
+            {/* Product Type Filter Select removed from here */}
 
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
