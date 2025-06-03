@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle, CardDescription as DialogCardDescription } from '@/components/ui/card'; 
+import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
@@ -27,7 +27,7 @@ interface ResolveFlagDialogProps {
   sale: Sale;
   isOpen: boolean;
   onClose: () => void;
-  onFlagResolved: (
+  onFlagResolved: ( // Renamed to onSaleAdjusted in AdjustSaleDialog
     originalSaleId: string, 
     updatedSaleData: Partial<Sale> & { 
         customerName: string;
@@ -44,9 +44,12 @@ interface ResolveFlagDialogProps {
   allGlobalProducts: Product[]; 
 }
 
+const DialogCardTitle = DialogCardTitleImport;
+const DialogCardDescription = DialogCardDescriptionImport;
+
 
 export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolved, allGlobalProducts }: ResolveFlagDialogProps) {
-  const { toast } = useToast();
+  const { toast } } from useToast();
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
   const [editedCustomerContact, setEditedCustomerContact] = useState(sale.customerContact || '');
@@ -91,10 +94,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
 
   useEffect(() => {
     if (!isHybridPayment) {
-        // if (validationError && validationError.startsWith("Hybrid payments")) {
-        //      setValidationError(null); // Potential loop source if validationError in deps
-        // }
-        setValidationError(null); // Simpler approach
+        setValidationError(null); 
         return;
     }
     if (currentTotalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
@@ -136,7 +136,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     } else {
         setValidationError(null);
     }
-  // Removed validationError from dependency array
   }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, currentTotalAmount, isHybridPayment]);
 
 
@@ -191,7 +190,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
             toast({ title: "Out of Stock", description: `${newProduct.name} is effectively out of stock for adjustment. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
         } else {
-            item.quantity = 1; // Default to 1 if available
+            item.quantity = 1; 
         }
       }
     } else if (field === 'quantity') {
@@ -265,10 +264,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
         case 'Due': finalAmountDue = currentTotalAmount; break;
       }
     }
-    //  if (validationError && isHybridPayment) { // This check might be redundant given the above sum check
-    //     toast({ title: "Payment Error", description: validationError, variant: "destructive" });
-    //     return;
-    // }
 
     const updatedSalePortion = {
         customerName: editedCustomerName,
@@ -286,7 +281,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
   };
 
   const handleDialogClose = () => {
-    // Reset state to original sale values when dialog is closed without saving
     setEditedCustomerName(sale.customerName);
     setEditedCustomerContact(sale.customerContact || '');
     setEditedItems(JSON.parse(JSON.stringify(sale.items)));
@@ -325,16 +319,14 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
       <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-green-600" /> Resolve Flag & Adjust Sale
+             <ShieldCheck className="h-5 w-5 text-green-600" /> Resolve Flag & Adjust Sale
           </DialogTitle>
           <DialogDescription>
             Reviewing flagged sale <strong>{sale.id.substring(0,8)}...</strong>. Make necessary adjustments and provide a resolution comment.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Scrollable content area */}
-        <div className="flex-grow overflow-y-auto space-y-4 p-1 pr-3"> {/* Added p-1 and pr-3 for scrollbar space */}
-            {/* Customer Details */}
+        <div className="flex-grow overflow-y-auto space-y-4 p-1 pr-3"> 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                 <Label htmlFor="editedCustomerName">Customer Name</Label>
@@ -346,7 +338,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </div>
             </div>
 
-            {/* Items Section */}
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
             <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
@@ -370,7 +361,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Effective Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
                           </SelectItem>
                         );
                     })}
@@ -401,7 +392,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
             <PlusCircle className="mr-2 h-4 w-4" /> Add Item
             </Button>
 
-            {/* Payment & Total Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-2">
                 <div>
                 <Label htmlFor="editedPaymentMethod">Payment Method</Label>
@@ -424,7 +414,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </div>
             </div>
 
-            {/* Hybrid Payment Details */}
             {isHybridPayment && (
                 <Card className="p-4 border-primary/50 bg-primary/5">
                 <CardHeader className="p-2 pt-0">
@@ -449,7 +438,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </Card>
             )}
 
-            {/* Original Flag Comment */}
             <div className="pt-2">
                 <Label htmlFor="originalFlagComment">Original Flag Comment:</Label>
                 <p id="originalFlagComment" className="text-sm p-2 bg-muted rounded-md border min-h-[40px] whitespace-pre-wrap">
@@ -457,7 +445,6 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </p>
             </div>
 
-            {/* Resolution Comment */}
             <div>
                 <Label htmlFor="resolutionComment">Resolution Comment (Required)</Label>
                 <Textarea
@@ -470,7 +457,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
             </div>
         </div>
         
-        <DialogFooter className="pt-4 border-t"> {/* Added border-t for separation */}
+        <DialogFooter className="pt-4 border-t"> 
           <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           <Button 
             type="button" 
@@ -486,3 +473,5 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
   );
 }
 
+
+    

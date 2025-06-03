@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { mockSales, mockLogEntries, mockProducts } from "@/lib/data"; 
-import type { Sale, LogEntry, Product, SaleItem } from "@/types"; // Ensure SaleItem is imported
+import type { Sale, LogEntry, Product, SaleItem } from "@/types"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import ResolveFlagDialog from "@/components/sales/ResolveFlagDialog"; 
+import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
@@ -55,12 +56,11 @@ export default function SalesPage() {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
   const [deleteReason, setDeleteReason] = useState<string>("");
 
-  const [saleToResolveFlag, setSaleToResolveFlag] = useState<Sale | null>(null);
+  const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
 
   useEffect(() => {
-    // This will re-run if mockSales is externally modified and a re-render is triggered
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-  }, []); // Re-run when mockSales reference changes (e.g. after a sale is added/deleted)
+  }, []); 
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -75,22 +75,16 @@ export default function SalesPage() {
     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
-  const handleAdjustSale = (saleId: string) => {
+  const handleOpenAdjustDialog = (saleId: string) => {
     const sale = salesData.find(s => s.id === saleId);
-    if (sale && user) {
-      if (sale.isFlagged) {
-        setSaleToResolveFlag(sale);
-      } else {
-        toast({ title: "Action Required", description: `Adjusting sale ${saleId.substring(0,8)}... - This feature is not fully implemented yet for non-flagged sales.` });
-        // Placeholder: Log attempt if needed, or do nothing until full feature is ready
-        // addLog("Sale Adjustment Attempted (Non-Flagged)", `Admin ${user.name} attempted to adjust non-flagged sale ${saleId.substring(0,8)}...`);
-      }
+    if (sale) {
+      setSaleToAdjust(sale);
     } else {
-       toast({ title: "Error", description: "Sale not found or user not available.", variant: "destructive"});
+       toast({ title: "Error", description: "Sale not found.", variant: "destructive"});
     }
   };
 
-  const handleFlagResolved = (
+  const handleSaleAdjustedOnSalesPage = (
     originalSaleId: string, 
     updatedSaleDataFromDialog: Partial<Sale> & { 
         customerName: string;
@@ -102,7 +96,7 @@ export default function SalesPage() {
         digitalPaid: number;
         amountDue: number;
     }, 
-    resolutionComment: string
+    adjustmentComment: string
   ) => {
     const originalSaleIndex = mockSales.findIndex(s => s.id === originalSaleId);
     if (originalSaleIndex === -1 || !user) {
@@ -110,8 +104,8 @@ export default function SalesPage() {
       return;
     }
     const originalSale = mockSales[originalSaleIndex];
+    const wasInitiallyFlagged = originalSale.isFlagged;
 
-    // 1. Revert stock for original items
     originalSale.items.forEach(originalItem => {
       const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
       if (productIndex !== -1) {
@@ -119,23 +113,21 @@ export default function SalesPage() {
       }
     });
 
-    // 2. Deduct stock for new/adjusted items
     let stockSufficient = true;
+    const stockChangesToRollback: { productId: string, quantity: number }[] = [];
+
     for (const newItem of updatedSaleDataFromDialog.items) {
       const productIndex = mockProducts.findIndex(p => p.id === newItem.productId);
       if (productIndex !== -1) {
         if (mockProducts[productIndex].stock >= newItem.quantity) {
           mockProducts[productIndex].stock -= newItem.quantity;
+          stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity });
         } else {
-          // Not enough stock, revert changes made so far in this attempt
           toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available. Adjustment cancelled.`, variant: "destructive"});
-          // Re-add stock for items already processed in this loop before failure
-          for (let i = 0; i < updatedSaleDataFromDialog.items.indexOf(newItem); i++) {
-             const prevNewItem = updatedSaleDataFromDialog.items[i];
-             const prevProdIdx = mockProducts.findIndex(p => p.id === prevNewItem.productId);
-             if (prevProdIdx !== -1) mockProducts[prevProdIdx].stock += prevNewItem.quantity;
-          }
-          // Re-deduct stock for original items (as they were added back initially)
+          stockChangesToRollback.forEach(change => {
+            const prodIdx = mockProducts.findIndex(p => p.id === change.productId);
+            if (prodIdx !== -1) mockProducts[prodIdx].stock += change.quantity;
+          });
           originalSale.items.forEach(origItem => {
             const prodIdx = mockProducts.findIndex(p => p.id === origItem.productId);
             if (prodIdx !== -1) mockProducts[prodIdx].stock -= origItem.quantity;
@@ -145,20 +137,25 @@ export default function SalesPage() {
         }
       } else {
          toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment. Adjustment cancelled.`, variant: "destructive"});
-         stockSufficient = false; // Should ideally also revert previous item stock deductions in this loop
-         break; // Or handle more gracefully
+         stockSufficient = false; 
+         break; 
       }
     }
 
     if (!stockSufficient) {
-      setSaleToResolveFlag(null); // Close dialog if stock issue
-      return; // Stop further processing
+      setSaleToAdjust(null);
+      return; 
     }
     
-    const finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${resolutionComment}`;
+    let finalFlaggedComment = originalSale.flaggedComment || "";
+    if (wasInitiallyFlagged) {
+        finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
+    } else if (adjustmentComment.trim()) {
+        finalFlaggedComment = `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
+    }
     
     const finalUpdatedSale: Sale = {
-      ...originalSale, // Preserves original id, date, createdBy
+      ...originalSale, 
       customerName: updatedSaleDataFromDialog.customerName,
       customerContact: updatedSaleDataFromDialog.customerContact,
       items: updatedSaleDataFromDialog.items,
@@ -167,18 +164,21 @@ export default function SalesPage() {
       digitalPaid: updatedSaleDataFromDialog.digitalPaid,
       amountDue: updatedSaleDataFromDialog.amountDue,
       formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
-      isFlagged: false, // Flag is now resolved
+      isFlagged: wasInitiallyFlagged ? false : originalSale.isFlagged, 
       flaggedComment: finalFlaggedComment,
-      status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid', // Update status based on new amountDue
+      status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
     };
     
     mockSales[originalSaleIndex] = finalUpdatedSale;
     
-    addLog("Sale Flag Resolved & Adjusted", `Sale ID ${originalSaleId.substring(0,8)}... details updated and flag resolved by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. Resolution: ${resolutionComment}`);
-    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
-    toast({ title: "Sale Flag Resolved & Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated and flag cleared.` });
+    const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
+    const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
+    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
     
-    setSaleToResolveFlag(null); // Close the dialog
+    setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    toast({ title: logAction.replace(" &", " and"), description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    
+    setSaleToAdjust(null);
   };
   
   const openDeleteDialog = (sale: Sale) => {
@@ -192,7 +192,7 @@ export default function SalesPage() {
   };
 
   const handleConfirmDelete = () => {
-    if (!saleToDelete) return;
+    if (!saleToDelete || !user) return;
     if (!deleteReason.trim()) {
       toast({
         title: "Reason Required",
@@ -202,7 +202,6 @@ export default function SalesPage() {
       return;
     }
 
-    // Revert stock for deleted sale items
     saleToDelete.items.forEach(item => {
       const productIndex = mockProducts.findIndex(p => p.id === item.productId);
       if (productIndex !== -1) {
@@ -210,20 +209,16 @@ export default function SalesPage() {
       }
     });
 
-    if (user) {
-      addLog(
+    addLog(
         "Sale Deleted", 
         `Sale ID ${saleToDelete.id.substring(0,8)}... (Customer: ${saleToDelete.customerName}, Amount: NRP ${saleToDelete.totalAmount.toFixed(2)}) deleted by ${user.name}. Reason: ${deleteReason}`
-      );
-    }
-
-    // Remove sale from mockSales
+    );
+    
     const saleIndex = mockSales.findIndex(s => s.id === saleToDelete.id);
     if (saleIndex > -1) {
       mockSales.splice(saleIndex, 1);
     }
     
-    // Update UI
     setSalesData([...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     
     toast({ title: "Sale Deleted", description: `Sale ${saleToDelete.id.substring(0,8)}... has been deleted.` });
@@ -231,18 +226,16 @@ export default function SalesPage() {
   };
 
   const handleSaleAdded = () => {
-    // This function is called by SalesEntryForm when a new sale is added
-    // It ensures the salesData state (and thus the table) is updated
     setSalesData(
       [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     );
   };
 
   const salesByMonth = useMemo(() => {
-    if (user?.role !== 'admin') return {}; // Only group for admin
+    if (user?.role !== 'admin') return {}; 
     const grouped: { [key: string]: Sale[] } = {};
     salesData.forEach(sale => {
-      const monthYearKey = format(new Date(sale.date), 'yyyy-MM'); // e.g., 2023-10
+      const monthYearKey = format(new Date(sale.date), 'yyyy-MM'); 
       if (!grouped[monthYearKey]) {
         grouped[monthYearKey] = [];
       }
@@ -253,34 +246,29 @@ export default function SalesPage() {
 
   const sortedMonthYearKeys = useMemo(() => {
     if (user?.role !== 'admin') return [];
-    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a)); // Sort descending (newest month first)
+    return Object.keys(salesByMonth).sort((a, b) => b.localeCompare(a)); 
   }, [salesByMonth, user]);
 
 
   if (!user) return null;
 
-  // If user is staff, only show the SalesEntryForm
   if (user.role === 'staff') {
     return (
       <div>
         <SalesEntryForm onSaleAdded={handleSaleAdded} /> 
-        {/* Staff might also need to see their recent sales here, similar to dashboard if required */}
       </div>
     );
   }
 
-  // Admin view
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
       <CardDescription>View and manage all recorded sales transactions, grouped by month.</CardDescription>
       
-      {/* Sales Entry Form for Admin */}
       <div>
         <SalesEntryForm onSaleAdded={handleSaleAdded} />
       </div>
       
-      {/* Sales Table for Admin - Grouped by Month */}
       {salesData.length === 0 && (
          <Card className="shadow-lg mt-8">
             <CardHeader>
@@ -295,7 +283,7 @@ export default function SalesPage() {
       )}
 
       {salesData.length > 0 && sortedMonthYearKeys.map(monthYearKey => {
-        const monthDisplay = format(new Date(monthYearKey + '-01T00:00:00'), 'MMMM yyyy'); // Ensure correct date parsing for format
+        const monthDisplay = format(new Date(monthYearKey + '-01T00:00:00'), 'MMMM yyyy');
         const monthlySales = salesByMonth[monthYearKey];
         
         return (
@@ -361,7 +349,7 @@ export default function SalesPage() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                           {!sale.isFlagged && sale.flaggedComment && ( // Check if there's a comment even if not currently flagged (meaning it was resolved)
+                           {!sale.isFlagged && sale.flaggedComment && ( 
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -378,9 +366,9 @@ export default function SalesPage() {
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                       <TableCell>{sale.createdBy}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleAdjustSale(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
+                        <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
                           <Edit3 className="h-4 w-4" />
-                          <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale (Not Implemented)"}</span>
+                          <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
                         </Button>
                         <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
                           <Trash2 className="h-4 w-4" />
@@ -396,7 +384,6 @@ export default function SalesPage() {
         )
       })}
 
-      {/* Delete Confirmation Dialog */}
       {saleToDelete && (
         <AlertDialog open={!!saleToDelete} onOpenChange={(isOpen) => { if (!isOpen) closeDeleteDialog(); }}>
           <AlertDialogContent>
@@ -430,16 +417,19 @@ export default function SalesPage() {
         </AlertDialog>
       )}
 
-      {/* Resolve Flag Dialog */}
-      {saleToResolveFlag && (
-        <ResolveFlagDialog
-          sale={saleToResolveFlag}
-          isOpen={!!saleToResolveFlag}
-          onClose={() => setSaleToResolveFlag(null)}
-          onFlagResolved={handleFlagResolved}
-          allGlobalProducts={mockProducts} // Pass all products for selection
+      {saleToAdjust && (
+        <AdjustSaleDialog
+          sale={saleToAdjust}
+          isOpen={!!saleToAdjust}
+          onClose={() => setSaleToAdjust(null)}
+          onSaleAdjusted={handleSaleAdjustedOnSalesPage}
+          allGlobalProducts={mockProducts}
+          isInitiallyFlagged={saleToAdjust.isFlagged || false}
         />
       )}
     </div>
   );
 }
+
+
+    

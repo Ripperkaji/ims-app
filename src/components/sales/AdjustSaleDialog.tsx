@@ -98,10 +98,10 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   useEffect(() => {
     if (!isHybridPayment) {
-      if (validationError && validationError.startsWith("Hybrid payments")) {
-           setValidationError(null);
-      }
-      return;
+        if (validationError && validationError.startsWith("Hybrid payments")) {
+             setValidationError(null);
+        }
+        return;
     }
     if (dialogTotalAmount === 0 && !hybridCashPaid && !hybridDigitalPaid && !hybridAmountLeftDue) {
         setValidationError(null);
@@ -111,7 +111,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const cash = parseFloat(hybridCashPaid) || 0;
     const digital = parseFloat(hybridDigitalPaid) || 0;
     const due = parseFloat(hybridAmountLeftDue) || 0;
-    const filledFields = [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue].filter(val => val && val !== '').length;
+
+    const filledFields = [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue].filter(val => val !== '').length;
 
     if (filledFields === 2 && dialogTotalAmount > 0) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
@@ -176,13 +177,25 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         },
       ]);
     } else {
-     if (selectedProductTypeFilter !== 'all') {
+     if (selectedProductTypeFilter !== 'all' && productsToConsider.length > 0 && productsToConsider.every(p => {
+        const originalItem = sale.items.find(oi => oi.productId === p.id);
+        const currentStock = allGlobalProducts.find(gp => gp.id === p.id)?.stock || 0;
+        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
+        return (currentStock + quantityInOriginalSale === 0) || editedItems.find(si => si.productId === p.id);
+     })) {
         toast({
             title: "No More Products of Selected Type",
-            description: `All available '${selectedProductTypeFilter}' products for adjustment are either out of stock or already added. Try clearing the filter.`,
+            description: `All available '${selectedProductTypeFilter}' products are either out of stock for adjustment or already added. Try clearing the filter.`,
             variant: "destructive"
         });
-      } else {
+      } else if (selectedProductTypeFilter !== 'all' && productsToConsider.length === 0) {
+         toast({
+            title: "No Products of Selected Type",
+            description: `There are no products of type '${selectedProductTypeFilter}'. Try clearing the filter.`,
+            variant: "destructive"
+        });
+      }
+       else {
         toast({
             title: "No More Products",
             description: "All available products for adjustment are either out of stock or already added.",
@@ -212,7 +225,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
             toast({ title: "Out of Stock", description: `${newProduct.name} is effectively out of stock for adjustment. Quantity set to 0.`, variant: "destructive" });
             item.quantity = 0;
         } else {
-            item.quantity = 1; // Default to 1 if available
+            item.quantity = 1; 
         }
       }
     } else if (field === 'quantity') {
@@ -354,11 +367,12 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {isInitiallyFlagged ? <ShieldCheck className="h-5 w-5 text-green-600" /> : <Edit3 className="h-5 w-5 text-primary" />}
-            {isInitiallyFlagged ? "Resolve & Adjust Sale" : "Adjust Sale Details"}
+            {isInitiallyFlagged ? "Resolve Flag & Adjust Sale" : "Adjust Sale Details"}
           </DialogTitle>
           <DialogDescription>
             Reviewing sale <strong>{sale.id.substring(0,8)}...</strong>. Adjust details as necessary.
             {isInitiallyFlagged && " Provide a resolution comment."}
+            {!isInitiallyFlagged && " Provide an optional adjustment comment."}
           </DialogDescription>
         </DialogHeader>
 
@@ -414,7 +428,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Effective Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
                           </SelectItem>
                         );
                     })}

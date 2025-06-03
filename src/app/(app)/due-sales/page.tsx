@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from 'react';
 import { useRouter } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import ResolveFlagDialog from "@/components/sales/ResolveFlagDialog"; 
+import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +33,7 @@ type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'H
 export default function DueSalesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
+  const { toast } } = useToast();
   
   const [currentDueSales, setCurrentDueSales] = useState<Sale[]>([]);
   const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
@@ -88,7 +89,6 @@ export default function DueSalesPage() {
       
       addLog("Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${paidAmount.toFixed(2)}.`);
       
-      // Optimistically update UI for currentDueSales
       setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleToMarkAsPaid.id));
       
       toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id.substring(0,8)}... marked as Paid.` });
@@ -124,8 +124,8 @@ export default function DueSalesPage() {
       return;
     }
     const originalSale = mockSales[originalSaleIndex];
+    const wasInitiallyFlagged = originalSale.isFlagged;
 
-    // Stock Reversion for original items
     originalSale.items.forEach(originalItem => {
       const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
       if (productIndex !== -1) {
@@ -133,7 +133,6 @@ export default function DueSalesPage() {
       }
     });
 
-    // Stock Deduction for new/adjusted items
     let stockSufficient = true;
     const stockChangesToRollback: { productId: string, quantity: number }[] = [];
 
@@ -142,15 +141,13 @@ export default function DueSalesPage() {
       if (productIndex !== -1) {
         if (mockProducts[productIndex].stock >= newItem.quantity) {
           mockProducts[productIndex].stock -= newItem.quantity;
-          stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity }); // Track successful deductions
+          stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity });
         } else {
           toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available. Adjustment cancelled.`, variant: "destructive"});
-          // Rollback stock deductions made in this loop so far
           stockChangesToRollback.forEach(change => {
             const prodIdx = mockProducts.findIndex(p => p.id === change.productId);
             if (prodIdx !== -1) mockProducts[prodIdx].stock += change.quantity;
           });
-          // Re-deduct stock for original items (as they were added back initially)
           originalSale.items.forEach(origItem => {
             const prodIdx = mockProducts.findIndex(p => p.id === origItem.productId);
             if (prodIdx !== -1) mockProducts[prodIdx].stock -= origItem.quantity;
@@ -160,7 +157,7 @@ export default function DueSalesPage() {
         }
       } else {
          toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment. Adjustment cancelled.`, variant: "destructive"});
-         stockSufficient = false;
+         stockSufficient = false; 
          break; 
       }
     }
@@ -171,7 +168,7 @@ export default function DueSalesPage() {
     }
     
     let finalFlaggedComment = originalSale.flaggedComment || "";
-    if (originalSale.isFlagged) {
+    if (wasInitiallyFlagged) {
         finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
     } else if (adjustmentComment.trim()) {
         finalFlaggedComment = `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
@@ -187,20 +184,21 @@ export default function DueSalesPage() {
       digitalPaid: updatedSaleDataFromDialog.digitalPaid,
       amountDue: updatedSaleDataFromDialog.amountDue,
       formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
-      isFlagged: originalSale.isFlagged ? false : originalSale.isFlagged, // Clears flag if it was flagged, otherwise keeps current state
+      isFlagged: wasInitiallyFlagged ? false : originalSale.isFlagged,
       flaggedComment: finalFlaggedComment,
       status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
     };
     
     mockSales[originalSaleIndex] = finalUpdatedSale;
     
-    const logAction = originalSale.isFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
-    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. Comment: ${adjustmentComment || "N/A"}`);
+    const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
+    const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
+    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
     
     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
-    toast({ title: "Sale Updated", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    toast({ title: logAction.replace(" &", " and"), description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
     
     setSaleToAdjust(null);
   };
@@ -269,9 +267,9 @@ export default function DueSalesPage() {
                     <Button variant="outline" size="sm" onClick={() => openMarkAsPaidDialog(sale)}>
                       <CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid
                     </Button>
-                    <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale)} title="Adjust Sale">
+                    <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
                       <Edit3 className="h-4 w-4" />
-                      <span className="sr-only">Adjust Sale</span>
+                      <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -324,16 +322,19 @@ export default function DueSalesPage() {
       )}
 
       {saleToAdjust && (
-        <ResolveFlagDialog
+        <AdjustSaleDialog
           sale={saleToAdjust}
           isOpen={!!saleToAdjust}
           onClose={() => setSaleToAdjust(null)}
-          onFlagResolved={handleSaleAdjusted} // ResolveFlagDialog expects onFlagResolved
+          onSaleAdjusted={handleSaleAdjusted}
           allGlobalProducts={mockProducts}
+          isInitiallyFlagged={saleToAdjust.isFlagged || false}
         />
       )}
     </div>
   );
 }
+
+    
 
     
