@@ -8,22 +8,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, PlusCircle, PackagePlus, AlertOctagon } from "lucide-react";
+import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Product, LogEntry, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 import AddStockDialog from "@/components/products/AddStockDialog";
 import AddProductDialog from "@/components/products/AddProductDialog"; 
 import EditProductDialog from "@/components/products/EditProductDialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentProducts, setCurrentProducts] = useState<Product[]>(mockProducts.sort((a,b) => a.name.localeCompare(b.name)));
+  const [currentProducts, setCurrentProducts] = useState<Product[]>(() => mockProducts.sort((a,b) => a.name.localeCompare(b.name)));
   const [productToRestock, setProductToRestock] = useState<Product | null>(null);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ProductType | ''>('');
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -46,7 +50,13 @@ export default function ProductsPage() {
       });
     });
     return salesMap;
-  }, [mockSales]); // mockSales dependency
+  }, []); // mockSales is not in component state, so this recalculates only on initial render or if mockSales itself changes externally
+
+  const displayedProducts = useMemo(() => {
+    return currentProducts
+      .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
+      // Products in currentProducts are already sorted by name.
+  }, [currentProducts, selectedCategoryFilter]);
 
   const handleOpenEditProductDialog = (productId: string) => {
     const product = currentProducts.find(p => p.id === productId);
@@ -69,7 +79,7 @@ export default function ProductsPage() {
     if (productIndexGlobal !== -1) {
       const originalProduct = mockProducts[productIndexGlobal];
       const updatedProduct = {
-        ...originalProduct, // Preserve existing stock, totalAcquired, damage
+        ...originalProduct, 
         name: updatedDetails.name,
         category: updatedDetails.category,
         sellingPrice: updatedDetails.sellingPrice,
@@ -116,7 +126,7 @@ export default function ProductsPage() {
       damagedQuantity: 0,
     };
     
-    mockProducts.push(newProduct); // Add to global source first
+    mockProducts.push(newProduct);
     setCurrentProducts(prevProducts => [...prevProducts, newProduct].sort((a,b) => a.name.localeCompare(b.name)));
 
     addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added. Category: ${newProduct.category}, Cost: NRP ${newProduct.costPrice.toFixed(2)}, Selling Price: NRP ${newProduct.sellingPrice.toFixed(2)}, Initial Stock: ${newProduct.totalAcquiredStock}.`);
@@ -241,10 +251,30 @@ export default function ProductsPage() {
         )}
       </div>
       
+      <div className="my-4 flex items-center gap-4">
+        <Label htmlFor="categoryFilter" className="text-base font-medium flex items-center">
+            <Filter className="mr-2 h-4 w-4 text-primary"/> Filter by Category:
+        </Label>
+        <Select
+            value={selectedCategoryFilter}
+            onValueChange={(value) => setSelectedCategoryFilter(value === 'ALL_CATEGORIES_FILTER_VALUE' ? '' : value as ProductType)}
+        >
+            <SelectTrigger id="categoryFilter" className="w-auto min-w-[200px] sm:min-w-[280px]">
+            <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+            <SelectItem value="ALL_CATEGORIES_FILTER_VALUE">All Categories</SelectItem>
+            {ALL_PRODUCT_TYPES.map(type => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+            ))}
+            </SelectContent>
+        </Select>
+      </div>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Product Inventory Overview</CardTitle>
-          <CardDescription>Detailed list of products, stock levels, and related data.</CardDescription>
+          <CardDescription>Detailed list of products, stock levels, and related data. {selectedCategoryFilter && `(Showing: ${selectedCategoryFilter})`}</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -263,7 +293,7 @@ export default function ProductsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {currentProducts.map((product) => {
+              {displayedProducts.map((product) => {
                 const soldQty = calculatedSoldQuantities.get(product.id) || 0;
                 return (
                   <TableRow key={product.id}>
@@ -322,9 +352,9 @@ export default function ProductsPage() {
               })}
             </TableBody>
           </Table>
-          {currentProducts.length === 0 && (
+          {displayedProducts.length === 0 && (
              <div className="text-center py-8 text-muted-foreground">
-              No products found.
+              {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
             </div>
           )}
         </CardContent>
