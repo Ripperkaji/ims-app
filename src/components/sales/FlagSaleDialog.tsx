@@ -16,16 +16,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import type { Sale } from '@/types';
-import { Flag, MessageSquareWarning } from 'lucide-react'; // Added MessageSquareWarning for other reasons
+import { Flag, MessageSquareWarning } from 'lucide-react'; 
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export interface FlaggedItemDetailForUpdate { // Renamed to avoid conflict if this type is needed elsewhere
+export interface FlaggedItemDetailForUpdate { 
   productId: string;
   productName: string;
   quantitySold: number;
-  isDamagedExchanged: boolean; // This indicates if damage processing (stock adjustment) should occur
-  comment: string; // Comment specifically for this item's damage/exchange
+  isDamagedExchanged: boolean; 
+  comment: string; 
 }
 
 interface FlagSaleDialogProps {
@@ -44,8 +44,8 @@ interface ItemFlagState {
   productId: string;
   productName: string;
   quantitySold: number;
-  isMarkedForDamageExchange: boolean; // Checkbox state for damage exchange
-  damageComment: string; // Comment for this item's damage
+  isMarkedForDamageExchange: boolean; 
+  damageComment: string; 
 }
 
 export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }: FlagSaleDialogProps) {
@@ -61,11 +61,10 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           productId: item.productId,
           productName: item.productName,
           quantitySold: item.quantity,
-          isMarkedForDamageExchange: item.isFlaggedForDamageExchange || false, // Pre-fill if already flagged on item
-          damageComment: item.damageExchangeComment || '', // Pre-fill if already has comment
+          isMarkedForDamageExchange: item.isFlaggedForDamageExchange || false, 
+          damageComment: item.damageExchangeComment || '', 
         }))
       );
-      // Reset general flag states unless we want to pre-fill them from sale.flaggedComment logic
       setFlagForOtherReason(false); 
       setOtherReasonCommentText('');
     } else if (!isOpen) {
@@ -79,7 +78,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     const newStates = [...itemStates];
     newStates[index].isMarkedForDamageExchange = checked;
     if (!checked) { 
-      newStates[index].damageComment = ''; // Clear specific comment if unmarked
+      newStates[index].damageComment = ''; 
     }
     setItemStates(newStates);
   };
@@ -124,7 +123,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       productId: item.productId,
       productName: item.productName,
       quantitySold: item.quantitySold,
-      isDamagedExchanged: item.isMarkedForDamageExchange, // True, because we filtered for these
+      isDamagedExchanged: item.isMarkedForDamageExchange, 
       comment: item.damageComment,
     }));
 
@@ -193,7 +192,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
                 <Checkbox
                     id="flagForOtherReason"
                     checked={flagForOtherReason}
-                    onCheckedChange={(checked) => setFlagForOtherReason(Boolean(checked))}
+                    onCheckedChange={setFlagForOtherReason} // Simplified handler
                 />
                 <Label htmlFor="flagForOtherReason" className="text-sm font-normal">
                     Flag for other reason (e.g., data entry error, customer issue)
@@ -232,3 +231,4 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     </Dialog>
   );
 }
+
