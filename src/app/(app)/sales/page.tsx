@@ -370,10 +370,10 @@ export default function SalesPage() {
       </div>
 
       <Card className="shadow-lg mt-6">
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg font-semibold flex items-center gap-2"><ListFilter className="h-5 w-5"/> Filter Sales</CardTitle>
+        <CardHeader className="p-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2"><ListFilter className="h-4 w-4"/> Filter Sales</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
           <div>
             <Label htmlFor="filterDate" className="text-xs">Date</Label>
              <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
@@ -381,7 +381,7 @@ export default function SalesPage() {
                     <Button
                     variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal mt-1 h-9 text-xs",
+                        "w-full justify-start text-left font-normal mt-0.5 h-9 text-xs",
                         !filterDate && "text-muted-foreground"
                     )}
                     onClick={() => { setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
@@ -409,7 +409,7 @@ export default function SalesPage() {
                     setFilterDate(undefined);
                 }}
             >
-              <SelectTrigger id="filterMonthYear" className="mt-1 h-9 text-xs">
+              <SelectTrigger id="filterMonthYear" className="mt-0.5 h-9 text-xs">
                 <SelectValue placeholder="Select Month/Year" />
               </SelectTrigger>
               <SelectContent>
@@ -425,7 +425,7 @@ export default function SalesPage() {
           <div>
             <Label htmlFor="filterStatus" className="text-xs">Status</Label>
             <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as FilterStatusType)}>
-              <SelectTrigger id="filterStatus" className="mt-1 h-9 text-xs">
+              <SelectTrigger id="filterStatus" className="mt-0.5 h-9 text-xs">
                 <SelectValue placeholder="Select Status" />
               </SelectTrigger>
               <SelectContent>
@@ -444,12 +444,12 @@ export default function SalesPage() {
               value={filterCommentText}
               onChange={(e) => setFilterCommentText(e.target.value)}
               placeholder="Search in flag comments..."
-              className="mt-1 h-9 text-xs"
+              className="mt-0.5 h-9 text-xs"
               disabled={filterStatus !== 'flagged' && filterStatus !== 'resolvedFlagged'}
             />
           </div>
         </CardContent>
-        <CardFooter className="p-4 flex justify-end gap-2">
+        <CardFooter className="p-3 flex justify-end gap-2">
           <Button variant="outline" onClick={clearFilters} size="sm"><X className="mr-1.5 h-3.5 w-3.5" />Clear Filters</Button>
           <Button onClick={() => applyFilters()} size="sm"><FilterIcon className="mr-1.5 h-3.5 w-3.5" />Apply Filters</Button>
         </CardFooter>
