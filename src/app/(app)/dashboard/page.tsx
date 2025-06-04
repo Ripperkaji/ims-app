@@ -65,7 +65,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh, mockSales]); 
+  }, [user, triggerRefresh]); 
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -90,17 +90,16 @@ export default function DashboardPage() {
 
 
   const handleSaleFlagged = (
-    saleId: string, 
+    saleId: string,
     flaggedItemsDetail: FlaggedItemDetailForUpdate[],
-    isOtherReasonFlagged: boolean,
-    otherReasonCommentText: string
+    generalReasonComment: string
   ) => {
     const saleIndex = mockSales.findIndex(s => s.id === saleId);
     if (saleIndex === -1 || !user) {
       toast({ title: "Error", description: "Sale not found or user not available.", variant: "destructive"});
       return;
     }
-    
+
     const targetSale = mockSales[saleIndex];
     let itemDamageSummary = "";
     let itemsProcessedForDamageExchangeCount = 0;
@@ -124,8 +123,8 @@ export default function DashboardPage() {
               const originalDamage = product.damagedQuantity;
 
               product.damagedQuantity += itemDetail.quantitySold;
-              product.stock -= itemDetail.quantitySold; 
-              if (product.stock < 0) product.stock = 0; 
+              product.stock -= itemDetail.quantitySold;
+              if (product.stock < 0) product.stock = 0;
 
               const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
@@ -139,28 +138,25 @@ export default function DashboardPage() {
        addLogEntry("Sale Items Flagged (Damage)", `Sale ID ${saleId.substring(0,8)}... had items flagged for damage by ${user.name}. Details: ${itemDamageSummary}`, user.name);
     }
 
-    // Construct the main flagged comment
-    let finalFlaggedComment = "";
+    // Construct the main flagged comment including the general reason
+    let finalFlaggedComment = `General reason: ${generalReasonComment.trim()}`;
     if (itemDamageSummary) {
-      finalFlaggedComment += `Damaged items: ${itemDamageSummary}`;
-    }
-    if (isOtherReasonFlagged && otherReasonCommentText.trim()) {
-      if (finalFlaggedComment) finalFlaggedComment += "\n"; // Add newline if there's already damage summary
-      finalFlaggedComment += `Other reason for flag: ${otherReasonCommentText.trim()}`;
-      addLogEntry("Sale Flagged (Other Reason)", `Sale ID ${saleId.substring(0,8)}... flagged by ${user.name} for general reasons. Comment: ${otherReasonCommentText.trim()}`, user.name);
+      finalFlaggedComment += `\nDamaged items: ${itemDamageSummary}`;
     }
     
-    targetSale.flaggedComment = finalFlaggedComment.trim() || "Flagged for review."; // Default if somehow both empty
-    targetSale.isFlagged = true; // Mark the entire sale as flagged if any item is flagged or other reason is provided
+    addLogEntry("Sale Flagged", `Sale ID ${saleId.substring(0,8)}... flagged by ${user.name}. ${finalFlaggedComment}`, user.name);
+    
+    targetSale.flaggedComment = finalFlaggedComment.trim();
+    targetSale.isFlagged = true; 
 
-    toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged for admin review.`});
+    toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged. Reason: ${generalReasonComment}`});
     
     if (itemsProcessedForDamageExchangeCount > 0) {
         toast({ title: "Damage Exchanged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange from sale ${saleId.substring(0,8)}.... Details: ${allDamageExchangeLogDetails}`});
     }
 
-    setSaleToFlag(null); 
-    setTriggerRefresh(prev => prev + 1); 
+    setSaleToFlag(null);
+    setTriggerRefresh(prev => prev + 1);
   };
 
 
@@ -396,7 +392,7 @@ export default function DashboardPage() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                          ) : sale.flaggedComment ? ( // Sale is not flagged, but has a comment (meaning it was resolved/adjusted)
+                          ) : sale.flaggedComment ? ( 
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -409,9 +405,9 @@ export default function DashboardPage() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : ( // Sale is not flagged and has no prior comment (normal, flaggable sale)
+                          ) : ( 
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
-                              <Flag className="h-4 w-4 mr-1" /> Flag Items/Sale
+                              <Flag className="h-4 w-4 mr-1" /> Flag Sale
                             </Button>
                           )}
                         </TableCell>
