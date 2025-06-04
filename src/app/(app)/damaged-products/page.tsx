@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation";
 import { format } from 'date-fns'; // Import format
 
 interface DamagedProductEntry extends Product {
-  lastDamageLogDate?: string;
+  dateOfDamageLogged?: string;
 }
 
 export default function DamagedProductsPage() {
@@ -43,17 +43,16 @@ export default function DamagedProductsPage() {
         
         return {
           ...p,
-          lastDamageLogDate: relevantLogs.length > 0 ? relevantLogs[0].timestamp : undefined,
+          dateOfDamageLogged: relevantLogs.length > 0 ? relevantLogs[0].timestamp : undefined,
         };
       })
       .sort((a, b) => {
-        // Optional: Sort by last damage date first, then by name
-        if (a.lastDamageLogDate && b.lastDamageLogDate) {
-          const dateComparison = new Date(b.lastDamageLogDate).getTime() - new Date(a.lastDamageLogDate).getTime();
+        if (a.dateOfDamageLogged && b.dateOfDamageLogged) {
+          const dateComparison = new Date(b.dateOfDamageLogged).getTime() - new Date(a.dateOfDamageLogged).getTime();
           if (dateComparison !== 0) return dateComparison;
-        } else if (a.lastDamageLogDate) {
-          return -1; // Products with dates come first
-        } else if (b.lastDamageLogDate) {
+        } else if (a.dateOfDamageLogged) {
+          return -1; 
+        } else if (b.dateOfDamageLogged) {
           return 1;
         }
         return a.name.localeCompare(b.name);
@@ -89,7 +88,7 @@ export default function DamagedProductsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead className="text-center">Units Damaged</TableHead>
                 <TableHead className="text-center">Sellable Stock</TableHead>
-                <TableHead>Last Damage Logged</TableHead>
+                <TableHead>Date of Damage Logged</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -100,8 +99,8 @@ export default function DamagedProductsPage() {
                   <TableCell className="text-center font-semibold text-destructive">{product.damagedQuantity}</TableCell>
                   <TableCell className="text-center">{product.stock}</TableCell>
                   <TableCell>
-                    {product.lastDamageLogDate 
-                      ? format(new Date(product.lastDamageLogDate), 'MMM dd, yyyy HH:mm') 
+                    {product.dateOfDamageLogged
+                      ? format(new Date(product.dateOfDamageLogged), 'MMM dd, yyyy HH:mm') 
                       : 'N/A'}
                   </TableCell>
                 </TableRow>

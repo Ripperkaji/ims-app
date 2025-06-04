@@ -441,7 +441,7 @@ const initialMockLogEntries: LogEntry[] = [
     id: 'log1b',
     timestamp: new Date(new Date(initialMockSales.find(s=>s.id==='sale2')!.date).getTime() + 5*60*1000).toISOString(), // 5 mins after sale
     user: 'alice',
-    action: 'Sale Flagged',
+    action: 'Sale Flagged', 
     details: 'Sale ID sale2 for Jane Smith flagged by alice. Comment: Item mismatch, customer called.'
   },
   {
@@ -464,6 +464,29 @@ const initialMockLogEntries: LogEntry[] = [
     user: 'admin_user',
     action: 'Product Added',
     details: "Product 'Vape Pen Kit - Starter' (ID: prod5...) added. Category: POD/MOD Devices, Cost: NRP 18.00, Selling Price: NRP 29.99, Initial Stock: 40."
+  },
+  // Added mock log entries for "Product Damage & Stock Update (Exchange)"
+  // to make the Damaged Product Report more illustrative from the start.
+  {
+    id: 'log-dmg-prod1-init',
+    timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+    user: 'System',
+    action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Vape Juice - Mango Tango' (Qty: 1) from Sale ID MOCK_INIT_S1... marked damaged & exchanged by System. Prev Stock: 51, New Stock: 50, Prev Dmg: 1, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-prod2-init',
+    timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
+    user: 'System',
+    action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Vape Mod - Smok X' (Qty: 1) from Sale ID MOCK_INIT_S2... marked damaged & exchanged by System. Prev Stock: 26, New Stock: 25, Prev Dmg: 0, New Dmg: 1."
+  },
+  {
+    id: 'log-dmg-disp1-init',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
+    user: 'System',
+    action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Disposable - Watermelon Chill' (Qty: 2) from Sale ID MOCK_INIT_S3... marked damaged & exchanged by System. Prev Stock: 122, New Stock: 120, Prev Dmg: 1, New Dmg: 3."
   }
 ];
 
