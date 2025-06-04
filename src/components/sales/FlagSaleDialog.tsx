@@ -24,7 +24,7 @@ export interface FlaggedItemDetailForUpdate {
   productId: string;
   productName: string;
   quantitySold: number;
-  isDamagedExchanged: boolean;
+  isDamagedExchanged: boolean; // This now means process stock for damage
   comment: string;
 }
 
@@ -44,33 +44,35 @@ interface ItemFlagState {
   productId: string;
   productName: string;
   quantitySold: number;
-  isMarkedForDamageExchange: boolean;
+  isMarkedForDamageExchange: boolean; // UI checkbox state
   damageComment: string;
 }
 
 export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }: FlagSaleDialogProps) {
   const { toast } = useToast();
   const [itemStates, setItemStates] = useState<ItemFlagState[]>([]);
-  const [generalReasonCommentText, setGeneralReasonCommentText] = useState<string>('');
+  const [otherReasonCommentText, setOtherReasonCommentText] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && sale) {
       setItemStates(
         sale.items.map((originalSaleItem, originalIndex) => ({
-          tempUiId: `${originalSaleItem.productId}-${originalIndex}`,
+          tempUiId: `${originalSaleItem.productId}-${originalIndex}`, // Unique key for UI
           productId: originalSaleItem.productId,
           productName: originalSaleItem.productName,
           quantitySold: originalSaleItem.quantity,
-          isMarkedForDamageExchange: originalSaleItem.isFlaggedForDamageExchange || false,
-          damageComment: originalSaleItem.damageExchangeComment || '',
+          isMarkedForDamageExchange: false, // Default to false
+          damageComment: '',             // Default to empty
         }))
       );
-      setGeneralReasonCommentText('');
+      setOtherReasonCommentText('');
     } else if (!isOpen) {
+      // Reset when dialog is closed or not open
       setItemStates([]);
-      setGeneralReasonCommentText('');
+      setOtherReasonCommentText('');
     }
   }, [isOpen, sale]);
+
 
   const handleItemCheckboxChange = (tempUiIdToUpdate: string, checked: boolean) => {
     setItemStates(prevStates =>
@@ -78,6 +80,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
         if (item.tempUiId === tempUiIdToUpdate) {
           const updatedItem = { ...item, isMarkedForDamageExchange: checked };
           if (!checked) {
+            // Clear comment if checkbox is unchecked
             updatedItem.damageComment = '';
           }
           return updatedItem;
@@ -98,13 +101,14 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     );
   };
 
+
   const handleConfirmFlag = () => {
     const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
     
-    if (!generalReasonCommentText.trim()) {
-      toast({
+    if (!otherReasonCommentText.trim()) {
+       toast({
         title: "General Reason Required",
-        description: "Please provide a general reason for flagging this sale.",
+        description: "Please provide a general reason for flagging this sale (e.g., data entry error).",
         variant: "destructive",
       });
       return;
@@ -123,14 +127,18 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       productId: item.productId,
       productName: item.productName,
       quantitySold: item.quantitySold,
-      isDamagedExchanged: item.isMarkedForDamageExchange,
+      isDamagedExchanged: item.isMarkedForDamageExchange, // True if checkbox was checked, signifies stock processing
       comment: item.damageComment,
     }));
 
-    onSaleFlagged(sale.id, flaggedItemsData, generalReasonCommentText);
+    onSaleFlagged(sale.id, flaggedItemsData, otherReasonCommentText);
+    onClose(); // Close dialog after flagging
   };
 
   const handleDialogClose = () => {
+    // Reset state explicitly when dialog is programmatically closed or via X button/overlay click
+    setItemStates([]);
+    setOtherReasonCommentText('');
     onClose();
   }
 
@@ -138,9 +146,10 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
 
   const itemsMarkedForDamageExchange = itemStates.filter(i => i.isMarkedForDamageExchange);
   const allDamageCommentsProvided = itemsMarkedForDamageExchange.every(item => item.damageComment.trim() !== '');
-  const isGeneralCommentProvided = generalReasonCommentText.trim() !== '';
+  const isGeneralCommentProvided = otherReasonCommentText.trim() !== '';
   
   const canConfirm = isGeneralCommentProvided && (itemsMarkedForDamageExchange.length === 0 || allDamageCommentsProvided);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
@@ -151,11 +160,11 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           </DialogTitle>
           <DialogDescription>
             Sale ID: <strong>{sale.id.substring(0,8)}...</strong> | Customer: <strong>{sale.customerName}</strong>.
-            Mark items for damage exchange and provide a general reason for flagging.
+            Mark items for damage/exchange and provide a general reason for flagging.
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0">
+        <ScrollArea className="flex-grow min-h-0 overflow-y-auto">
           <div className="space-y-4 px-6 pb-4">
             <p className="text-sm font-medium mb-2">Item-Specific Damage/Exchange (Optional):</p>
             {itemStates.map((itemStateForRender) => (
@@ -195,8 +204,8 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
                <p className="text-xs text-muted-foreground mb-2">Explain why this sale is being flagged (e.g., data entry error, customer issue, incorrect item selection, etc.).</p>
               <Textarea
                   id="generalReasonCommentText"
-                  value={generalReasonCommentText}
-                  onChange={(e) => setGeneralReasonCommentText(e.target.value)}
+                  value={otherReasonCommentText}
+                  onChange={(e) => setOtherReasonCommentText(e.target.value)}
                   placeholder="Specify the overall reason for flagging..."
                   rows={3}
                   className="text-sm"
@@ -215,10 +224,11 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
             onClick={handleConfirmFlag}
             disabled={!canConfirm}
           >
-            <Flag className="mr-2 h-4 w-4" /> Confirm Flag
+            <Flag className="mr-2 h-4 w-4" /> Confirm Flag(s)
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
