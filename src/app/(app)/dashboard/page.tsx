@@ -42,21 +42,11 @@ export default function DashboardPage() {
   const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
   const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
 
-  const stockValuation = useMemo(() => {
-    return mockProducts.reduce((sum, p) => sum + (p.stock * p.costPrice), 0);
-  }, [triggerRefresh, mockProducts]);
-
-  const totalCustomerDues = useMemo(() => {
-    return mockSales.filter(s => s.amountDue > 0).reduce((sum, s) => sum + s.amountDue, 0);
-  }, [triggerRefresh, mockSales]);
-
-  const totalCashPayments = useMemo(() => {
-    return mockSales.reduce((sum, s) => sum + s.cashPaid, 0);
-  }, [triggerRefresh, mockSales]);
-
-  const totalDigitalPayments = useMemo(() => {
-    return mockSales.reduce((sum, s) => sum + s.digitalPaid, 0);
-  }, [triggerRefresh, mockSales]);
+  // Removed detailed financial calculations from here as they will move to /analytics
+  // const stockValuation = useMemo(() => { ... });
+  // const totalCustomerDues = useMemo(() => { ... });
+  // const totalCashPayments = useMemo(() => { ... });
+  // const totalDigitalPayments = useMemo(() => { ... });
 
   const salesTrendData = useMemo(() => {
     const salesByDay: { [key: string]: number } = {};
@@ -238,36 +228,13 @@ export default function DashboardPage() {
               isCurrency={false}
               href="/products"
             />
-             <AnalyticsCard
-              title="Stock Valuation (Cost)"
-              value={stockValuation}
-              icon={Archive}
-              description="Total cost of current inventory"
-              isCurrency={true}
-              href="/products"
-            />
             <AnalyticsCard
-              title="Outstanding Dues"
-              value={totalCustomerDues}
-              icon={UsersIcon}
-              description="Total amount due from customers"
-              isCurrency={true}
-              iconClassName={totalCustomerDues > 0 ? "text-orange-500" : "text-green-500"}
-              href="/due-sales"
-            />
-            <AnalyticsCard
-              title="Total Cash Received"
-              value={totalCashPayments}
-              icon={Wallet}
-              description="From sales transactions"
-              isCurrency={true}
-            />
-            <AnalyticsCard
-              title="Total Digital Received"
-              value={totalDigitalPayments}
-              icon={Smartphone}
-              description="From sales transactions"
-              isCurrency={true}
+              title="Advanced Analytics"
+              value="View Reports" // Or some other non-numeric value
+              icon={BarChart3}
+              description="View detailed reports and metrics."
+              isCurrency={false}
+              href="/analytics"
             />
           </>
         )}
@@ -512,3 +479,6 @@ function PlaceholderChart() {
     </div>
   )
 }
+
+
+    
