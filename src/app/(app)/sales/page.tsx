@@ -65,7 +65,7 @@ export default function SalesPage() {
 
   // Filter states
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
-  const [filterMonthYear, setFilterMonthYear] = useState<string>(''); // YYYY-MM
+  const [filterMonthYear, setFilterMonthYear] = useState<string>(ALL_MONTHS_FILTER_VALUE); // YYYY-MM
   const [filterStatus, setFilterStatus] = useState<FilterStatusType>('all');
   const [filterCommentText, setFilterCommentText] = useState<string>('');
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
@@ -304,7 +304,7 @@ export default function SalesPage() {
             const saleDate = startOfDay(new Date(sale.date));
             return isValid(saleDate) && saleDate.getTime() === fDate.getTime();
         });
-    } else if (filterMonthYear) {
+    } else if (filterMonthYear && filterMonthYear !== ALL_MONTHS_FILTER_VALUE) {
         tempFilteredSales = tempFilteredSales.filter(sale => {
             return format(new Date(sale.date), 'yyyy-MM') === filterMonthYear;
         });
@@ -335,18 +335,16 @@ export default function SalesPage() {
     
     setDisplayedSales(tempFilteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setIsFilterActive(true);
-    // setIsFilterPopoverOpen(false); // This state does not exist, calendar popover is separate
     toast({ title: "Filters Applied", description: `${tempFilteredSales.length} sales found.`});
   };
 
   const clearFilters = () => {
     setFilterDate(undefined);
-    setFilterMonthYear('');
+    setFilterMonthYear(ALL_MONTHS_FILTER_VALUE);
     setFilterStatus('all');
     setFilterCommentText('');
     setDisplayedSales(allSalesData);
     setIsFilterActive(false);
-    // setIsFilterPopoverOpen(false);
     toast({ title: "Filters Cleared", description: "Showing all sales."});
   };
 
@@ -363,32 +361,32 @@ export default function SalesPage() {
 
   // Admin View
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold font-headline">Sales Management</h1>
-      <CardDescription>View and manage all recorded sales transactions. Use filters to refine your search.</CardDescription>
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold font-headline">Sales Management</h1>
+      <CardDescription className="text-sm -mt-4">View and manage all recorded sales transactions. Use filters to refine your search.</CardDescription>
       
-      <div>
+      <div className="mt-4">
         <SalesEntryForm onSaleAdded={handleSaleAdded} />
       </div>
 
-      <Card className="shadow-lg mt-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><ListFilter /> Filter Sales</CardTitle>
+      <Card className="shadow-lg mt-6">
+        <CardHeader className="p-4">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2"><ListFilter className="h-5 w-5"/> Filter Sales</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
           <div>
-            <Label htmlFor="filterDate">Date</Label>
+            <Label htmlFor="filterDate" className="text-xs">Date</Label>
              <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button
                     variant={"outline"}
                     className={cn(
-                        "w-full justify-start text-left font-normal mt-1",
+                        "w-full justify-start text-left font-normal mt-1 h-9 text-xs",
                         !filterDate && "text-muted-foreground"
                     )}
-                    onClick={() => { setFilterMonthYear(''); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
+                    onClick={() => { setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
                     >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
                     {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
                     </Button>
                 </PopoverTrigger>
@@ -396,28 +394,28 @@ export default function SalesPage() {
                     <Calendar
                     mode="single"
                     selected={filterDate}
-                    onSelect={(date) => {setFilterDate(date); setFilterMonthYear(''); setIsCalendarPopoverOpen(false);}}
+                    onSelect={(date) => {setFilterDate(date); setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(false);}}
                     initialFocus
                     />
                 </PopoverContent>
             </Popover>
           </div>
           <div>
-            <Label htmlFor="filterMonthYear">Month/Year</Label>
+            <Label htmlFor="filterMonthYear" className="text-xs">Month/Year</Label>
             <Select 
                 value={filterMonthYear || ALL_MONTHS_FILTER_VALUE} 
                 onValueChange={(value) => {
-                    setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? '' : value); 
+                    setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? ALL_MONTHS_FILTER_VALUE : value); 
                     setFilterDate(undefined);
                 }}
             >
-              <SelectTrigger id="filterMonthYear" className="mt-1">
+              <SelectTrigger id="filterMonthYear" className="mt-1 h-9 text-xs">
                 <SelectValue placeholder="Select Month/Year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_MONTHS_FILTER_VALUE}>All Months</SelectItem>
+                <SelectItem value={ALL_MONTHS_FILTER_VALUE} className="text-xs">All Months</SelectItem>
                 {availableMonths.map(month => (
-                  <SelectItem key={month} value={month}>
+                  <SelectItem key={month} value={month} className="text-xs">
                     {format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}
                   </SelectItem>
                 ))}
@@ -425,45 +423,45 @@ export default function SalesPage() {
             </Select>
           </div>
           <div>
-            <Label htmlFor="filterStatus">Status</Label>
+            <Label htmlFor="filterStatus" className="text-xs">Status</Label>
             <Select value={filterStatus} onValueChange={(value) => setFilterStatus(value as FilterStatusType)}>
-              <SelectTrigger id="filterStatus" className="mt-1">
+              <SelectTrigger id="filterStatus" className="mt-1 h-9 text-xs">
                 <SelectValue placeholder="Select Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="due">Due</SelectItem>
-                <SelectItem value="flagged">Flagged</SelectItem>
-                <SelectItem value="resolvedFlagged">Resolved Flagged</SelectItem>
+                <SelectItem value="all" className="text-xs">All Statuses</SelectItem>
+                <SelectItem value="paid" className="text-xs">Paid</SelectItem>
+                <SelectItem value="due" className="text-xs">Due</SelectItem>
+                <SelectItem value="flagged" className="text-xs">Flagged</SelectItem>
+                <SelectItem value="resolvedFlagged" className="text-xs">Resolved Flagged</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label htmlFor="filterCommentText">Flag Comment</Label>
+            <Label htmlFor="filterCommentText" className="text-xs">Flag Comment</Label>
             <Input
               id="filterCommentText"
               value={filterCommentText}
               onChange={(e) => setFilterCommentText(e.target.value)}
               placeholder="Search in flag comments..."
-              className="mt-1"
+              className="mt-1 h-9 text-xs"
               disabled={filterStatus !== 'flagged' && filterStatus !== 'resolvedFlagged'}
             />
           </div>
         </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-          <Button variant="outline" onClick={clearFilters}><X className="mr-2 h-4 w-4" />Clear Filters</Button>
-          <Button onClick={() => applyFilters()}><FilterIcon className="mr-2 h-4 w-4" />Apply Filters</Button>
+        <CardFooter className="p-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={clearFilters} size="sm"><X className="mr-1.5 h-3.5 w-3.5" />Clear Filters</Button>
+          <Button onClick={() => applyFilters()} size="sm"><FilterIcon className="mr-1.5 h-3.5 w-3.5" />Apply Filters</Button>
         </CardFooter>
       </Card>
       
       {displayedSales.length === 0 && (
-         <Card className="shadow-lg mt-8">
-            <CardHeader>
-              <CardTitle>Sales Records</CardTitle>
+         <Card className="shadow-lg mt-6">
+            <CardHeader className="p-4">
+              <CardTitle className="text-lg font-semibold">Sales Records</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
+            <CardContent className="p-4">
+              <div className="text-center py-6 text-muted-foreground">
                 {isFilterActive ? "No sales records match your current filters." : "No sales records found."}
               </div>
             </CardContent>
@@ -471,50 +469,50 @@ export default function SalesPage() {
       )}
 
       {isFilterActive && displayedSales.length > 0 && (
-        <Card className="shadow-lg mt-8">
-          <CardHeader>
-            <CardTitle>Filtered Sales Results</CardTitle>
-            <CardDescription>Showing {displayedSales.length} sale(s) matching your criteria.</CardDescription>
+        <Card className="shadow-lg mt-6">
+          <CardHeader className="p-4">
+            <CardTitle className="text-lg font-semibold">Filtered Sales Results</CardTitle>
+            <CardDescription className="text-xs">Showing {displayedSales.length} sale(s) matching your criteria.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Total Amount</TableHead>
-                  <TableHead>Payment Details</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Recorded By</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-xs">ID</TableHead>
+                  <TableHead className="text-xs">Customer</TableHead>
+                  <TableHead className="text-xs">Contact</TableHead>
+                  <TableHead className="text-xs">Total Amount</TableHead>
+                  <TableHead className="text-xs">Payment Details</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Recorded By</TableHead>
+                  <TableHead className="text-right text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {displayedSales.map((sale) => (
-                  <TableRow key={sale.id} className={sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
-                    <TableCell className="font-medium">{sale.id.substring(0, 8)}...</TableCell>
-                    <TableCell>{sale.customerName}</TableCell>
-                    <TableCell>
+                  <TableRow key={sale.id} className={cn(sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : '', "text-xs")}>
+                    <TableCell className="font-medium py-2.5">{sale.id.substring(0, 8)}...</TableCell>
+                    <TableCell className="py-2.5">{sale.customerName}</TableCell>
+                    <TableCell className="py-2.5">
                       {sale.customerContact ? (
-                        <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 text-xs hover:underline text-primary">
+                        <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary">
                           <Phone className="h-3 w-3" /> {sale.customerContact}
                         </a>
                       ) : <span className="text-xs">N/A</span>}
                     </TableCell>
-                    <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
-                    <TableCell>{getPaymentSummary(sale)}</TableCell>
-                    <TableCell>
+                    <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
+                    <TableCell className="py-2.5">
                       <div className="flex items-center space-x-1">
-                        <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                        <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={cn(sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600', "text-xs px-2 py-0.5")}>
                           {sale.status}
                         </Badge>
                         {sale.amountDue > 0 && (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
+                                <AlertTriangle className="h-3.5 w-3.5 text-orange-500 cursor-default" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
@@ -526,7 +524,7 @@ export default function SalesPage() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Flag className="h-4 w-4 text-destructive cursor-pointer" />
+                                <Flag className="h-3.5 w-3.5 text-destructive cursor-pointer" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
@@ -538,7 +536,7 @@ export default function SalesPage() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <ShieldCheck className="h-4 w-4 text-green-600 cursor-default" />
+                                <ShieldCheck className="h-3.5 w-3.5 text-green-600 cursor-default" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment}</p>
@@ -548,15 +546,15 @@ export default function SalesPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
-                    <TableCell>{sale.createdBy}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
-                        <Edit3 className="h-4 w-4" />
+                    <TableCell className="py-2.5">{format(new Date(sale.date), 'MMM dd, yy HH:mm')}</TableCell>
+                    <TableCell className="py-2.5">{sale.createdBy}</TableCell>
+                    <TableCell className="text-right space-x-1 py-2.5">
+                      <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"} className="h-7 w-7">
+                        <Edit3 className="h-3.5 w-3.5" />
                         <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
                       </Button>
-                      <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale" className="h-7 w-7">
+                        <Trash2 className="h-3.5 w-3.5" />
                         <span className="sr-only">Delete Sale</span>
                       </Button>
                     </TableCell>
@@ -573,49 +571,49 @@ export default function SalesPage() {
         const monthlySales = salesByMonth[monthYearKey];
         
         return (
-          <Card key={monthYearKey} className="shadow-lg mt-8">
-            <CardHeader>
-              <CardTitle>{monthDisplay}</CardTitle>
+          <Card key={monthYearKey} className="shadow-lg mt-6">
+            <CardHeader className="p-4">
+              <CardTitle className="text-lg font-semibold">{monthDisplay}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Payment Details</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Recorded By</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="text-xs">ID</TableHead>
+                    <TableHead className="text-xs">Customer</TableHead>
+                    <TableHead className="text-xs">Contact</TableHead>
+                    <TableHead className="text-xs">Total Amount</TableHead>
+                    <TableHead className="text-xs">Payment Details</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Recorded By</TableHead>
+                    <TableHead className="text-right text-xs">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {monthlySales.map((sale) => (
-                    <TableRow key={sale.id} className={sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
-                      <TableCell className="font-medium">{sale.id.substring(0, 8)}...</TableCell>
-                      <TableCell>{sale.customerName}</TableCell>
-                      <TableCell>
+                    <TableRow key={sale.id} className={cn(sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : '', "text-xs")}>
+                      <TableCell className="font-medium py-2.5">{sale.id.substring(0, 8)}...</TableCell>
+                      <TableCell className="py-2.5">{sale.customerName}</TableCell>
+                      <TableCell className="py-2.5">
                         {sale.customerContact ? (
-                          <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 text-xs hover:underline text-primary">
+                          <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary">
                             <Phone className="h-3 w-3" /> {sale.customerContact}
                           </a>
                         ) : <span className="text-xs">N/A</span>}
                       </TableCell>
-                      <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>{getPaymentSummary(sale)}</TableCell>
-                      <TableCell>
+                      <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
+                      <TableCell className="py-2.5">
                         <div className="flex items-center space-x-1">
-                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={cn(sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600', "text-xs px-2 py-0.5")}>
                             {sale.status}
                           </Badge>
                           {sale.amountDue > 0 && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <AlertTriangle className="h-4 w-4 text-orange-500 cursor-default" />
+                                  <AlertTriangle className="h-3.5 w-3.5 text-orange-500 cursor-default" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
@@ -627,7 +625,7 @@ export default function SalesPage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Flag className="h-4 w-4 text-destructive cursor-pointer" />
+                                  <Flag className="h-3.5 w-3.5 text-destructive cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
@@ -639,7 +637,7 @@ export default function SalesPage() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <ShieldCheck className="h-4 w-4 text-green-600 cursor-default" />
+                                  <ShieldCheck className="h-3.5 w-3.5 text-green-600 cursor-default" />
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment}</p>
@@ -649,15 +647,15 @@ export default function SalesPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy HH:mm')}</TableCell>
-                      <TableCell>{sale.createdBy}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}>
-                          <Edit3 className="h-4 w-4" />
+                      <TableCell className="py-2.5">{format(new Date(sale.date), 'MMM dd, yy HH:mm')}</TableCell>
+                      <TableCell className="py-2.5">{sale.createdBy}</TableCell>
+                      <TableCell className="text-right space-x-1 py-2.5">
+                        <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale.id)} title={sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"} className="h-7 w-7">
+                          <Edit3 className="h-3.5 w-3.5" />
                           <span className="sr-only">{sale.isFlagged ? "Resolve Flag & Adjust" : "Adjust Sale"}</span>
                         </Button>
-                        <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale">
-                          <Trash2 className="h-4 w-4" />
+                        <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(sale)} title="Delete Sale" className="h-7 w-7">
+                          <Trash2 className="h-3.5 w-3.5" />
                           <span className="sr-only">Delete Sale</span>
                         </Button>
                       </TableCell>

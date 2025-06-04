@@ -358,28 +358,28 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline flex items-center gap-2"><ShoppingCart /> New Sale Entry</CardTitle>
-        <CardDescription>Enter customer details and products for the new sale.</CardDescription>
+      <CardHeader className="p-4">
+        <CardTitle className="text-xl font-headline flex items-center gap-2"><ShoppingCart /> New Sale Entry</CardTitle>
+        <CardDescription className="text-sm">Enter customer details and products for the new sale.</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
+        <CardContent className="space-y-4 p-4">
+          <div className="space-y-1.5">
             <Label className="text-base font-medium">Sale Origin (Required)</Label>
             <RadioGroup
               value={saleOrigin ?? ""}
               onValueChange={(value) => setSaleOrigin(value as 'store' | 'online')}
-              className="flex items-center space-x-6 pt-1"
+              className="flex items-center space-x-4 pt-1"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="store" id="storeVisit" />
-                <Label htmlFor="storeVisit" className="font-normal flex items-center gap-2 text-sm">
+                <Label htmlFor="storeVisit" className="font-normal flex items-center gap-1.5 text-sm">
                   <Store className="h-4 w-4 text-primary" /> Store Visit
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="online" id="onlineSale" />
-                <Label htmlFor="onlineSale" className="font-normal flex items-center gap-2 text-sm">
+                <Label htmlFor="onlineSale" className="font-normal flex items-center gap-1.5 text-sm">
                   <Globe className="h-4 w-4 text-primary" /> Online
                 </Label>
               </div>
@@ -389,8 +389,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
             )}
           </div>
           
-          <fieldset disabled={!saleOrigin} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <fieldset disabled={!saleOrigin} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <Label htmlFor="customerName" className="text-base">Customer Name</Label>
                 <Input
@@ -418,36 +418,36 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Label className="text-base">Selected Items</Label>
               {selectedItems.map((item, index) => (
-                <div key={item.tempId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,2fr)_auto_auto_auto] items-end gap-3 p-3 border rounded-lg bg-card">
+                <div key={item.tempId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,2fr)_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
                   
                   <div className="space-y-1">
-                    <Label htmlFor={`category-${index}`}>Category</Label>
+                    <Label htmlFor={`category-${index}`} className="text-xs">Category</Label>
                     <Select
                       value={item.selectedCategory}
                       onValueChange={(value) => handleItemCategoryChange(index, value as ProductType | '')}
                     >
-                      <SelectTrigger id={`category-${index}`}>
+                      <SelectTrigger id={`category-${index}`} className="h-9 text-xs">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
                         {ALL_PRODUCT_TYPES.map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                          <SelectItem key={type} value={type} className="text-xs">{type}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor={`product-${index}`}>Product</Label>
+                    <Label htmlFor={`product-${index}`} className="text-xs">Product</Label>
                     <Select
                       value={item.productId}
                       onValueChange={(value) => handleItemProductChange(index, value)}
                       disabled={!item.selectedCategory}
                     >
-                      <SelectTrigger id={`product-${index}`} disabled={!item.selectedCategory}>
+                      <SelectTrigger id={`product-${index}`} disabled={!item.selectedCategory} className="h-9 text-xs">
                         <SelectValue placeholder="Select product" />
                       </SelectTrigger>
                       <SelectContent>
@@ -462,7 +462,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                           })
                           .sort((a,b) => a.name.localeCompare(b.name))
                           .map(p => (
-                            <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>
+                            <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId} className="text-xs">
                               {p.name} ({p.category}) - Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)}
                             </SelectItem>
                           ))
@@ -471,22 +471,22 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                     </Select>
                   </div>
                   
-                  <div className="w-24 space-y-1">
-                    <Label htmlFor={`quantity-${index}`}>Quantity</Label>
+                  <div className="w-20 space-y-1">
+                    <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label>
                     <Input
                       id={`quantity-${index}`}
                       type="number"
                       min="0" 
                       value={item.quantity}
                       onChange={(e) => handleItemQuantityChange(index, e.target.value)}
-                      className="text-center"
+                      className="text-center h-9 text-xs"
                       disabled={!item.productId}
                     />
                   </div>
 
-                  <div className="text-right w-28 space-y-1">
-                      <Label>Subtotal</Label>
-                      <p className="font-semibold text-lg h-10 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
+                  <div className="text-right w-24 space-y-1">
+                      <Label className="text-xs">Subtotal</Label>
+                      <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
                   </div>
 
                   <Button
@@ -494,18 +494,18 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                     variant="destructive"
                     size="icon"
                     onClick={() => handleRemoveItem(index)}
-                    className="shrink-0 self-center"
+                    className="shrink-0 self-center h-8 w-8"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               ))}
-              <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
+              <Button type="button" variant="outline" onClick={handleAddItem} className="w-full h-9">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Item
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
               <div>
                 <Label htmlFor="paymentMethod" className="text-base">Payment Method</Label>
                 <Select value={formPaymentMethod} onValueChange={(value) => setFormPaymentMethod(value as PaymentMethodSelection)}>
@@ -522,20 +522,20 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                 </Select>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Total Sale Amount</p>
-                <p className="text-3xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Total Sale Amount</p>
+                <p className="text-2xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p>
               </div>
             </div>
 
             {isHybridPayment && (
-              <Card className="p-4 border-primary/50 bg-primary/5">
-                <CardHeader className="p-2 pt-0">
-                  <CardTitle className="text-lg font-semibold">Hybrid Payment Details</CardTitle>
-                   <CardDescription>Enter amounts for each payment type. Sum must equal total sale amount.</CardDescription>
+              <Card className="p-3 border-primary/50 bg-primary/5">
+                <CardHeader className="p-1.5 pt-0">
+                  <CardTitle className="text-base font-semibold">Hybrid Payment Details</CardTitle>
+                   <CardDescription className="text-xs">Amounts must sum to total sale amount.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3 p-2">
+                <CardContent className="space-y-2 p-1.5">
                   <div>
-                    <Label htmlFor="hybridCashPaid">Cash Paid (NRP)</Label>
+                    <Label htmlFor="hybridCashPaid" className="text-xs">Cash Paid (NRP)</Label>
                     <Input
                       id="hybridCashPaid"
                       type="number"
@@ -544,11 +544,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="mt-1"
+                      className="mt-0.5 h-9 text-xs"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="hybridDigitalPaid">Digital Payment Paid (NRP)</Label>
+                    <Label htmlFor="hybridDigitalPaid" className="text-xs">Digital Payment Paid (NRP)</Label>
                     <Input
                       id="hybridDigitalPaid"
                       type="number"
@@ -557,11 +557,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="mt-1"
+                      className="mt-0.5 h-9 text-xs"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="hybridAmountLeftDue">Amount Left Due (NRP)</Label>
+                    <Label htmlFor="hybridAmountLeftDue" className="text-xs">Amount Left Due (NRP)</Label>
                     <Input
                       id="hybridAmountLeftDue"
                       type="number"
@@ -570,14 +570,14 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="mt-1"
+                      className="mt-0.5 h-9 text-xs"
                     />
                   </div>
                   {validationError && (
-                      <Alert variant="destructive" className="mt-2">
-                          <Info className="h-4 w-4" />
-                          <AlertTitle>Payment Error</AlertTitle>
-                          <AlertDescription>{validationError}</AlertDescription>
+                      <Alert variant="destructive" className="mt-1.5 p-2.5">
+                          <Info className="h-3.5 w-3.5" />
+                          <AlertTitle className="text-xs">Payment Error</AlertTitle>
+                          <AlertDescription className="text-xs">{validationError}</AlertDescription>
                       </Alert>
                   )}
                 </CardContent>
@@ -585,9 +585,9 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
             )}
           </fieldset>
         </CardContent>
-        <CardFooter>
-          <Button type="submit" size="lg" className="w-full text-lg py-3" disabled={!saleOrigin || (!!validationError && isHybridPayment)}>
-            <Landmark className="mr-2 h-5 w-5" /> Record Sale
+        <CardFooter className="p-4">
+          <Button type="submit" size="lg" className="w-full text-base py-2.5" disabled={!saleOrigin || (!!validationError && isHybridPayment)}>
+            <Landmark className="mr-2 h-4 w-4" /> Record Sale
           </Button>
         </CardFooter>
       </form>
