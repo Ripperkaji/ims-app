@@ -30,6 +30,8 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number; // This is sellingPrice at the time of sale
   totalPrice: number;
+  isFlaggedForDamageExchange?: boolean; // New: For item-specific damage flag
+  damageExchangeComment?: string;      // New: Comment for item-specific damage
 }
 
 export interface Sale {
@@ -48,8 +50,8 @@ export interface Sale {
   date: string; 
   status: 'Paid' | 'Due'; 
   createdBy: string; 
-  isFlagged?: boolean;
-  flaggedComment?: string;
+  isFlagged?: boolean; // General flag for the sale
+  flaggedComment?: string; // General comment for the sale, can summarize item flags
   saleOrigin: 'store' | 'online';
 }
 

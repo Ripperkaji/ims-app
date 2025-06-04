@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
-import type { Sale, LogEntry, Product } from '@/types';
+import type { Sale, LogEntry, Product, SaleItem } from '@/types';
 import React, { useMemo, useState, useEffect } from 'react';
 import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -24,6 +24,13 @@ const chartConfig = {
   expenses: { label: "Expenses", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig
 
+interface FlaggedItemDetailForUpdate {
+  productId: string;
+  productName: string;
+  quantitySold: number;
+  isDamagedExchanged: boolean;
+  comment: string;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -34,10 +41,10 @@ export default function DashboardPage() {
   const netProfit = totalSalesAmount - totalExpensesAmount;
   const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
-  const criticalStockCount = mockProducts.filter(p => p.stock === 1).length;
-  const outOfStockCount = mockProducts.filter(p => p.stock === 0).length;
   
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales]); 
+  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [mockProducts, user]);
+  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [mockProducts, user]);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales, user]); 
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -57,15 +64,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user?.role === 'staff') {
-      const sevenDaysAgo = subDays(new Date(), 7); // Calculation moved to useEffect
+      const sevenDaysAgo = subDays(new Date(), 7);
       const filteredSales = mockSales
         .filter(sale => sale.createdBy === user.name && new Date(sale.date) >= sevenDaysAgo)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentStaffSales(filteredSales);
     } else {
-      setRecentStaffSales([]); // Clear if not staff or user changes
+      setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh]); // mockSales is stable from import, no need to add as dep
+  }, [user, triggerRefresh, mockSales]); // Added mockSales as dependency
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -89,46 +96,57 @@ export default function DashboardPage() {
   };
 
 
-  const handleSaleFlagged = (flaggedSaleId: string, comment: string, isDamageExchanged: boolean) => {
-    const saleIndex = mockSales.findIndex(s => s.id === flaggedSaleId);
+  const handleSaleFlagged = (saleId: string, flaggedItemsDetail: FlaggedItemDetailForUpdate[]) => {
+    const saleIndex = mockSales.findIndex(s => s.id === saleId);
     if (saleIndex === -1 || !user) {
       toast({ title: "Error", description: "Sale not found or user not available.", variant: "destructive"});
       return;
     }
     
-    const flaggedSale = mockSales[saleIndex];
-    flaggedSale.isFlagged = true;
-    flaggedSale.flaggedComment = comment;
+    const targetSale = mockSales[saleIndex];
+    targetSale.isFlagged = true; // Mark the entire sale as flagged if any item is flagged
 
-    addLogEntry("Sale Flagged", `Sale ID ${flaggedSaleId.substring(0,8)}... flagged by ${user.name}. Comment: ${comment}`, user.name);
-    toast({ title: "Sale Flagged", description: `Sale ${flaggedSaleId.substring(0,8)}... has been flagged for admin review.`});
-    
-    if (isDamageExchanged) {
-      let allDamageExchangeLogs = "";
-      flaggedSale.items.forEach(saleItem => {
-        const productIndex = mockProducts.findIndex(p => p.id === saleItem.productId);
-        if (productIndex !== -1) {
-          const product = mockProducts[productIndex];
-          const originalStock = product.stock;
-          const originalDamage = product.damagedQuantity;
+    let mainFlagComment = "Items flagged for damage: ";
+    let itemsProcessedForDamageExchange = 0;
+    let allDamageExchangeLogDetails = "";
 
-          product.damagedQuantity += saleItem.quantity;
-          product.stock -= saleItem.quantity; 
+    flaggedItemsDetail.forEach(itemDetail => {
+      const saleItemIndex = targetSale.items.findIndex(si => si.productId === itemDetail.productId);
+      if (saleItemIndex !== -1) {
+        targetSale.items[saleItemIndex].isFlaggedForDamageExchange = true;
+        targetSale.items[saleItemIndex].damageExchangeComment = itemDetail.comment;
+        mainFlagComment += `${itemDetail.productName} (Qty: ${itemDetail.quantitySold}, Comment: ${itemDetail.comment || 'N/A'}); `;
 
-          if (product.stock < 0) { 
-             product.stock = 0; 
+        if (itemDetail.isDamagedExchanged) {
+          itemsProcessedForDamageExchange++;
+          const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
+          if (productIndex !== -1) {
+            const product = mockProducts[productIndex];
+            const originalStock = product.stock;
+            const originalDamage = product.damagedQuantity;
+
+            product.damagedQuantity += itemDetail.quantitySold;
+            product.stock -= itemDetail.quantitySold; 
+
+            if (product.stock < 0) { 
+               product.stock = 0; 
+            }
+            const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. By ${user.name}. Comment: ${itemDetail.comment}`;
+            addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
+            allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. `;
+          } else {
+             addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
           }
-          const damageLogDetails = `Damage Exchange for Sale ID ${flaggedSaleId.substring(0,8)}...: Product '${saleItem.productName}' (Qty: ${saleItem.quantity}) marked damaged & exchanged. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. By ${user.name}.`;
-          addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetails, user.name);
-          allDamageExchangeLogs += `${saleItem.productName} (Qty: ${saleItem.quantity}) damaged & exchanged. `;
-
-        } else {
-          addLogEntry("Damage Exchange Error", `Product ID ${saleItem.productId} from Sale ID ${flaggedSaleId.substring(0,8)}... not found during damage exchange processing.`, user.name);
         }
-      });
-      if (allDamageExchangeLogs) {
-        toast({ title: "Damage Exchanged", description: `Items from sale ${flaggedSaleId.substring(0,8)}... processed for damage exchange: ${allDamageExchangeLogs}`});
       }
+    });
+    
+    targetSale.flaggedComment = mainFlagComment;
+    addLogEntry("Sale Items Flagged", `Sale ID ${saleId.substring(0,8)}... had items flagged by ${user.name}. Details: ${mainFlagComment}`, user.name);
+    toast({ title: "Sale Items Flagged", description: `Items in sale ${saleId.substring(0,8)}... have been flagged for admin review.`});
+    
+    if (itemsProcessedForDamageExchange > 0) {
+        toast({ title: "Damage Exchanged", description: `Processed ${itemsProcessedForDamageExchange} item(s) for damage exchange from sale ${saleId.substring(0,8)}.... Details: ${allDamageExchangeLogDetails}`});
     }
 
     setSaleToFlag(null); 
@@ -255,7 +273,7 @@ export default function DashboardPage() {
                                   <Flag className="h-4 w-4 text-destructive cursor-pointer" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{sale.flaggedComment || "Flagged for review"}</p>
+                                  <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -303,7 +321,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2"><Briefcase /> Your Recent Sales (Last 7 Days)</CardTitle>
-              <CardDescription>Sales you recorded in the past week. You can flag sales with issues for admin review.</CardDescription>
+              <CardDescription>Sales you recorded in the past week. You can flag sales with issues (e.g. item damage) for admin review.</CardDescription>
             </CardHeader>
             <CardContent>
               {recentStaffSales.length > 0 ? (
@@ -319,7 +337,7 @@ export default function DashboardPage() {
                   </TableHeader>
                   <TableBody>
                     {recentStaffSales.map(sale => (
-                      <TableRow key={sale.id}>
+                      <TableRow key={sale.id} className={sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
                         <TableCell>{sale.customerName}</TableCell>
                         <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                         <TableCell>
@@ -358,7 +376,7 @@ export default function DashboardPage() {
                               </TooltipProvider>
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
-                              <Flag className="h-4 w-4 mr-1" /> Flag
+                              <Flag className="h-4 w-4 mr-1" /> Flag Items
                             </Button>
                           )}
                         </TableCell>
