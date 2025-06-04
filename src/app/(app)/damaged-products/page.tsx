@@ -3,20 +3,25 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
-import { mockProducts } from "@/lib/data";
+import { mockProducts, mockLogEntries } from "@/lib/data"; // Import mockLogEntries
 import type { Product } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertOctagon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { format } from 'date-fns'; // Import format
+
+interface DamagedProductEntry extends Product {
+  lastDamageLogDate?: string;
+}
 
 export default function DamagedProductsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [damagedProductList, setDamagedProductList] = useState<Product[]>([]);
+  const [damagedProductList, setDamagedProductList] = useState<DamagedProductEntry[]>([]);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -24,12 +29,38 @@ export default function DamagedProductsPage() {
       router.push('/dashboard');
       return;
     }
-    // Filter and sort products with damaged quantity
-    const filtered = mockProducts
+
+    const filteredAndEnriched = mockProducts
       .filter(p => p.damagedQuantity > 0)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    setDamagedProductList(filtered);
-  }, [user, router, toast]); // mockProducts dependency can be added if it's expected to change from other actions dynamically
+      .map(p => {
+        const relevantLogs = mockLogEntries
+          .filter(
+            log =>
+              log.action === "Product Damage & Stock Update (Exchange)" &&
+              log.details.includes(p.name)
+          )
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        return {
+          ...p,
+          lastDamageLogDate: relevantLogs.length > 0 ? relevantLogs[0].timestamp : undefined,
+        };
+      })
+      .sort((a, b) => {
+        // Optional: Sort by last damage date first, then by name
+        if (a.lastDamageLogDate && b.lastDamageLogDate) {
+          const dateComparison = new Date(b.lastDamageLogDate).getTime() - new Date(a.lastDamageLogDate).getTime();
+          if (dateComparison !== 0) return dateComparison;
+        } else if (a.lastDamageLogDate) {
+          return -1; // Products with dates come first
+        } else if (b.lastDamageLogDate) {
+          return 1;
+        }
+        return a.name.localeCompare(b.name);
+      });
+
+    setDamagedProductList(filteredAndEnriched);
+  }, [user, router, toast]);
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -47,7 +78,7 @@ export default function DamagedProductsPage() {
         <CardHeader>
           <CardTitle>List of Damaged Products</CardTitle>
           <CardDescription>
-            Products with one or more units recorded as damaged. Damage is typically recorded during sale flagging.
+            Products with units recorded as damaged. Damage is typically recorded during sale flagging.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -58,6 +89,7 @@ export default function DamagedProductsPage() {
                 <TableHead>Category</TableHead>
                 <TableHead className="text-center">Units Damaged</TableHead>
                 <TableHead className="text-center">Sellable Stock</TableHead>
+                <TableHead>Last Damage Logged</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -67,6 +99,11 @@ export default function DamagedProductsPage() {
                   <TableCell>{product.category}</TableCell>
                   <TableCell className="text-center font-semibold text-destructive">{product.damagedQuantity}</TableCell>
                   <TableCell className="text-center">{product.stock}</TableCell>
+                  <TableCell>
+                    {product.lastDamageLogDate 
+                      ? format(new Date(product.lastDamageLogDate), 'MMM dd, yyyy HH:mm') 
+                      : 'N/A'}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
