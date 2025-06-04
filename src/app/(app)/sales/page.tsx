@@ -36,7 +36,7 @@ import { cn } from "@/lib/utils";
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
 
-const ALL_MONTHS_FILTER_VALUE = "__ALL_MONTHS__";
+const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
 
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
@@ -481,6 +481,7 @@ export default function SalesPage() {
                   <TableHead className="text-xs">ID</TableHead>
                   <TableHead className="text-xs">Customer</TableHead>
                   <TableHead className="text-xs">Contact</TableHead>
+                  <TableHead className="text-xs">Items Sold</TableHead>
                   <TableHead className="text-xs">Total Amount</TableHead>
                   <TableHead className="text-xs">Payment Details</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
@@ -500,6 +501,9 @@ export default function SalesPage() {
                           <Phone className="h-3 w-3" /> {sale.customerContact}
                         </a>
                       ) : <span className="text-xs">N/A</span>}
+                    </TableCell>
+                    <TableCell className="py-2.5 max-w-xs truncate">
+                      {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
                     </TableCell>
                     <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
                     <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
@@ -582,6 +586,7 @@ export default function SalesPage() {
                     <TableHead className="text-xs">ID</TableHead>
                     <TableHead className="text-xs">Customer</TableHead>
                     <TableHead className="text-xs">Contact</TableHead>
+                    <TableHead className="text-xs">Items Sold</TableHead>
                     <TableHead className="text-xs">Total Amount</TableHead>
                     <TableHead className="text-xs">Payment Details</TableHead>
                     <TableHead className="text-xs">Status</TableHead>
@@ -601,6 +606,9 @@ export default function SalesPage() {
                             <Phone className="h-3 w-3" /> {sale.customerContact}
                           </a>
                         ) : <span className="text-xs">N/A</span>}
+                      </TableCell>
+                       <TableCell className="py-2.5 max-w-xs truncate">
+                        {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
                       </TableCell>
                       <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
@@ -715,3 +723,4 @@ export default function SalesPage() {
   );
 }
     
+

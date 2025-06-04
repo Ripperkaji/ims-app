@@ -18,6 +18,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const chartConfig = {
   sales: { label: "Sales", color: "hsl(var(--primary))" },
@@ -237,7 +238,7 @@ export default function DashboardPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Contact</TableHead>
+                    <TableHead>Items Sold</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
@@ -247,12 +248,8 @@ export default function DashboardPage() {
                   {recentSalesForAdmin.map(sale => (
                     <TableRow key={sale.id}>
                       <TableCell>{sale.customerName}</TableCell>
-                       <TableCell>
-                        {sale.customerContact ? (
-                          <a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 text-xs hover:underline text-primary">
-                            <Phone className="h-3 w-3" /> {sale.customerContact}
-                          </a>
-                        ) : <span className="text-xs">N/A</span>}
+                      <TableCell className="text-xs max-w-[150px] truncate">
+                         {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
                       </TableCell>
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
@@ -347,6 +344,7 @@ export default function DashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Customer</TableHead>
+                      <TableHead>Items Sold</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Date</TableHead>
@@ -355,8 +353,11 @@ export default function DashboardPage() {
                   </TableHeader>
                   <TableBody>
                     {recentStaffSales.map(sale => (
-                      <TableRow key={sale.id} className={sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
+                      <TableRow key={sale.id} className={cn(sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : '', 'text-sm')}>
                         <TableCell>{sale.customerName}</TableCell>
+                        <TableCell className="text-xs max-w-[200px] truncate">
+                          {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
+                        </TableCell>
                         <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1">
