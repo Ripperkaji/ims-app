@@ -9,14 +9,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { CalendarDays, FilePenLine, Landmark, ReceiptText } from 'lucide-react'; // Using Landmark as generic currency icon
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+// Removed useToast here as parent (ExpensesPage) will handle it
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import type { Expense } from '@/types'; // Import Expense type
+import { useToast } from '@/hooks/use-toast';
 
-export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newExpense: any) => void }) {
+
+export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newExpense: Expense) => void }) {
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast } = useToast(); // Keep toast for form-level validation
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -33,19 +36,25 @@ export default function ExpensesForm({ onExpenseAdded }: { onExpenseAdded: (newE
       toast({ title: "Invalid Amount", description: "Please enter a valid positive amount.", variant: "destructive" });
       return;
     }
+    if (["Product Damage", "Tester Allocation"].includes(category.trim())) {
+        toast({ title: "Invalid Category", description: `Category '${category.trim()}' is reserved for system entries. Please choose a different one.`, variant: "destructive" });
+        return;
+    }
 
-    const newExpense = {
-      id: `exp-${Date.now()}`,
+
+    // Create the newExpense object but don't include 'id' as parent (ExpensesPage) will handle it or it will be generated there
+    const newExpenseData: Expense = {
+      id: `exp-manual-${Date.now()}`, // Manual entries can still generate ID here, or parent can handle
       date: date.toISOString(),
       description,
       category,
       amount: numericAmount,
-      recordedBy: user?.name || 'Admin',
+      recordedBy: user?.name || 'Admin', // Or ensure user is always available
     };
     
-    onExpenseAdded(newExpense); 
-    toast({ title: "Expense Recorded!", description: `${category} expense of NRP ${numericAmount.toFixed(2)} recorded.`});
+    onExpenseAdded(newExpenseData); // Pass the fully formed Expense object
 
+    // Reset form fields
     setDate(new Date());
     setDescription('');
     setCategory('');

@@ -2,7 +2,7 @@
 "use client";
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data";
+import { mockSales, mockExpenses, mockProducts, mockLogEntries, addSystemExpense } from "@/lib/data";
 import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase, Flag, AlertCircle, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
-import type { Sale, LogEntry, Product, SaleItem } from '@/types';
+import type { Sale, LogEntry, Product, SaleItem, Expense } from '@/types';
 import React, { useMemo, useState, useEffect } from 'react';
 import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -29,30 +29,35 @@ const chartConfig = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [triggerRefresh, setTriggerRefresh] = useState(0); // Used to force re-calculation of dashboard stats
 
-  const totalSalesAmount = mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-  const totalExpensesAmount = mockExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const netProfit = totalSalesAmount - totalExpensesAmount;
-  const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
-  const totalProducts = mockProducts.length;
+
+  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [triggerRefresh, mockSales]);
+  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [triggerRefresh, mockExpenses]);
+  const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
+  const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
+  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); // Assuming products list doesn't change as frequently or is less critical for triggerRefresh
   
-  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, []);
-  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, []);
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, []); 
+  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [triggerRefresh, mockProducts]);
+  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
 
-  const salesByDay: { [key: string]: number } = {};
-  mockSales.forEach(sale => {
-    const day = format(new Date(sale.date), 'MMM dd');
-    salesByDay[day] = (salesByDay[day] || 0) + sale.totalAmount;
-  });
-  const salesTrendData = Object.entries(salesByDay)
-    .map(([date, sales]) => ({ date, sales }))
-    .slice(-7); 
+  const salesTrendData = useMemo(() => {
+    const salesByDay: { [key: string]: number } = {};
+    mockSales.forEach(sale => {
+      const day = format(new Date(sale.date), 'MMM dd');
+      salesByDay[day] = (salesByDay[day] || 0) + sale.totalAmount;
+    });
+    return Object.entries(salesByDay)
+      .map(([date, sales]) => ({ date, sales }))
+      .slice(-7); 
+  }, [triggerRefresh, mockSales]);
 
-  const recentSalesForAdmin = [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5);
+  const recentSalesForAdmin = useMemo(() => 
+    [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5)
+  , [triggerRefresh, mockSales]);
 
   const [saleToFlag, setSaleToFlag] = useState<Sale | null>(null);
-  const [triggerRefresh, setTriggerRefresh] = useState(0);
   const [recentStaffSales, setRecentStaffSales] = useState<Sale[]>([]);
 
 
@@ -66,7 +71,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh]); 
+  }, [user, triggerRefresh, mockSales]); // Added mockSales dependency
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -106,7 +111,6 @@ export default function DashboardPage() {
     let itemsProcessedForDamageExchangeCount = 0;
     let allDamageExchangeLogDetails = "";
 
-    // Process item-specific damage exchanges first
     if (flaggedItemsDetail.length > 0) {
       flaggedItemsDetail.forEach(itemDetail => {
         const saleItemIndex = targetSale.items.findIndex(si => si.productId === itemDetail.productId);
@@ -115,7 +119,7 @@ export default function DashboardPage() {
           targetSale.items[saleItemIndex].damageExchangeComment = itemDetail.comment;
           itemDamageSummary += `${itemDetail.productName} (Qty: ${itemDetail.quantitySold}, Comment: ${itemDetail.comment || 'N/A'}); `;
 
-          if (itemDetail.isDamagedExchanged) { // This field in FlaggedItemDetailForUpdate signals to process stock
+          if (itemDetail.isDamagedExchanged) { 
             itemsProcessedForDamageExchangeCount++;
             const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
             if (productIndex !== -1) {
@@ -129,7 +133,18 @@ export default function DashboardPage() {
 
               const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
-              allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. `;
+              
+              // Create expense entry for damaged item
+              const damageExpense: Omit<Expense, 'id'> = {
+                date: new Date().toISOString(),
+                description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
+                category: "Product Damage",
+                amount: itemDetail.quantitySold * product.costPrice,
+                recordedBy: user.name,
+              };
+              addSystemExpense(damageExpense);
+              
+              allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.costPrice).toFixed(2)}. `;
             } else {
                addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
             }
@@ -139,7 +154,6 @@ export default function DashboardPage() {
        addLogEntry("Sale Items Flagged (Damage)", `Sale ID ${saleId.substring(0,8)}... had items flagged for damage by ${user.name}. Details: ${itemDamageSummary}`, user.name);
     }
 
-    // Construct the main flagged comment including the general reason
     let finalFlaggedComment = `General reason: ${generalReasonComment.trim()}`;
     if (itemDamageSummary) {
       finalFlaggedComment += `\nDamaged items: ${itemDamageSummary}`;
@@ -153,7 +167,7 @@ export default function DashboardPage() {
     toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged. Reason: ${generalReasonComment}`});
     
     if (itemsProcessedForDamageExchangeCount > 0) {
-        toast({ title: "Damage Exchanged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange from sale ${saleId.substring(0,8)}.... Details: ${allDamageExchangeLogDetails}`});
+        toast({ title: "Damage Exchanged & Expense Logged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange. Details: ${allDamageExchangeLogDetails}`});
     }
 
     setSaleToFlag(null);
@@ -254,7 +268,7 @@ export default function DashboardPage() {
                       <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-1">
-                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                          <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={cn(sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600', "text-xs")}>
                             {sale.status}
                           </Badge>
                            {sale.amountDue > 0 && (
@@ -361,7 +375,7 @@ export default function DashboardPage() {
                         <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-1">
-                            <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}>
+                            <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className={cn(sale.status === 'Paid' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600', "text-xs")}>
                               {sale.status}
                             </Badge>
                             {sale.amountDue > 0 && (
@@ -444,4 +458,5 @@ function PlaceholderChart() {
     </div>
   )
 }
+
 

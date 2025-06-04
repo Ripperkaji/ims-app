@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Expense } from '@/types';
 import { useRouter } from "next/navigation";
 import {
@@ -29,7 +29,7 @@ export default function ExpensesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [expenses, setExpenses] = useState<Expense[]>(mockExpenses);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // To force re-render when mockExpenses changes
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -38,8 +38,27 @@ export default function ExpensesPage() {
     }
   }, [user, router, toast]);
 
+  // Derive displayedExpenses from the global mockExpenses and sort it
+  // refreshTrigger is used to ensure this useMemo re-runs when we manually update mockExpenses
+  const displayedExpenses = useMemo(() => {
+    return [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [refreshTrigger]); // mockExpenses is not in deps as direct mutation won't trigger useMemo
+
+  useEffect(() => {
+    // This effect listens for changes in the length of mockExpenses as a proxy
+    // for external updates (like system-generated expenses).
+    // This is a workaround for not having a global state manager.
+    setRefreshTrigger(prev => prev + 1);
+  }, [mockExpenses.length]);
+
+
   const handleExpenseAdded = (newExpense: Expense) => {
-    setExpenses(prevExpenses => [newExpense, ...prevExpenses].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    // The ExpensesForm will call this after validating and creating the newExpense object
+    // We add it to the global mockExpenses array
+    mockExpenses.unshift(newExpense); // Add to the beginning
+    mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Re-sort
+    setRefreshTrigger(prev => prev + 1); // Trigger re-render
+    toast({ title: "Expense Recorded!", description: `${newExpense.category} expense of NRP ${newExpense.amount.toFixed(2)} recorded.`});
   };
 
   const handleEditExpense = (expenseId: string) => {
@@ -47,12 +66,22 @@ export default function ExpensesPage() {
   };
 
   const handleDeleteExpense = (expenseId: string) => {
-    // setExpenses(expenses.filter(exp => exp.id !== expenseId));
-    toast({ title: "Action Required", description: `Deleting expense ${expenseId} - (Not Implemented)` });
+    const expenseIndex = mockExpenses.findIndex(exp => exp.id === expenseId);
+    if (expenseIndex > -1) {
+      const systemCategories = ["Product Damage", "Tester Allocation"];
+      if (systemCategories.includes(mockExpenses[expenseIndex].category)) {
+        toast({ title: "Deletion Restricted", description: `System-generated expenses like '${mockExpenses[expenseIndex].category}' cannot be deleted directly.`, variant: "destructive" });
+        return;
+      }
+      mockExpenses.splice(expenseIndex, 1);
+      setRefreshTrigger(prev => prev + 1); // Trigger re-render
+      toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
+    } else {
+      toast({ title: "Error", description: "Expense not found for deletion.", variant: "destructive" });
+    }
   };
 
   if (!user || user.role !== 'admin') {
-    // This will be handled by redirect, but good to have a fallback UI or null.
     return null; 
   }
 
@@ -84,7 +113,7 @@ export default function ExpensesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {expenses.map((expense) => (
+                  {displayedExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell>{format(new Date(expense.date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell className="font-medium">{expense.category}</TableCell>
@@ -92,13 +121,24 @@ export default function ExpensesPage() {
                       <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
                       <TableCell>{expense.recordedBy}</TableCell>
                       <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleEditExpense(expense.id)}>
+                        <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => handleEditExpense(expense.id)}
+                            disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
+                            title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be edited" : "Edit Expense"}
+                        >
                           <Edit className="h-4 w-4" />
                            <span className="sr-only">Edit Expense</span>
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
+                            <Button 
+                                variant="destructive" 
+                                size="icon"
+                                disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
+                                title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be deleted" : "Delete Expense"}
+                            >
                               <Trash2 className="h-4 w-4" />
                                <span className="sr-only">Delete Expense</span>
                             </Button>
@@ -107,7 +147,7 @@ export default function ExpensesPage() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the expense record. (This is a placeholder, no actual deletion will occur).
+                                This action cannot be undone. This will permanently delete the expense record for '{expense.description}'.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -123,7 +163,7 @@ export default function ExpensesPage() {
                   ))}
                 </TableBody>
               </Table>
-              {expenses.length === 0 && (
+              {displayedExpenses.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   No expenses recorded yet.
                 </div>

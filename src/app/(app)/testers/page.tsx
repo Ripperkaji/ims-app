@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
-import { mockProducts, mockLogEntries } from "@/lib/data";
-import type { Product, LogEntry, ProductType } from '@/types';
+import { mockProducts, mockLogEntries, addSystemExpense } from "@/lib/data";
+import type { Product, LogEntry, ProductType, Expense } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -88,26 +88,19 @@ export default function TestersPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // State for the assignment card
   const [selectedCategoryForTester, setSelectedCategoryForTester] = useState<ProductType | ''>('');
   const [selectedProductForTester, setSelectedProductForTester] = useState<string | null>(null);
   const [newTesterQuantityInput, setNewTesterQuantityInput] = useState<string>('');
-
-  // State for the list of products displayed in the card's dropdown. Includes all products.
-  const [productsForTesterAssignmentCard, setProductsForTesterAssignmentCard] = useState<ProductForTesterCard[]>([]);
   
-  // State for the table that shows only products with active testers
+  const [productsForTesterAssignmentCard, setProductsForTesterAssignmentCard] = useState<ProductForTesterCard[]>([]);
   const [productsWithTestersList, setProductsWithTestersList] = useState<Product[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
   const refreshDerivedProductStates = () => {
-      // Re-derive the list for the assignment card's product dropdown from the latest mockProducts
       setProductsForTesterAssignmentCard(
-        mockProducts.map(p => ({
-          ...p, // Spread the latest from mockProducts
-        })).sort((a, b) => a.name.localeCompare(b.name))
+        mockProducts.map(p => ({ ...p })).sort((a, b) => a.name.localeCompare(b.name))
       );
-      // Re-derive the list for the "Active Testers" table
       setProductsWithTestersList(
         mockProducts.filter(p => p.testerQuantity > 0).sort((a, b) => a.name.localeCompare(b.name))
       );
@@ -121,7 +114,7 @@ export default function TestersPage() {
     }
     refreshDerivedProductStates();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, router, toast]); // Run once on mount and if user changes (though user change implies redirect)
+  }, [user, router, toast, refreshTrigger]); 
 
 
   const addLog = (action: string, details: string) => {
@@ -139,14 +132,13 @@ export default function TestersPage() {
 
   const handleCategoryChangeForTesterCard = (category: ProductType | '') => {
     setSelectedCategoryForTester(category);
-    setSelectedProductForTester(null); // Reset product selection when category changes
-    setNewTesterQuantityInput(''); // Reset quantity input
+    setSelectedProductForTester(null); 
+    setNewTesterQuantityInput(''); 
   };
   
   const handleProductChangeForTesterCard = (productId: string) => {
     setSelectedProductForTester(productId);
     const product = mockProducts.find(p => p.id === productId);
-    // Set input to current tester quantity of the selected product
     setNewTesterQuantityInput((product?.testerQuantity || 0).toString());
   };
 
@@ -178,7 +170,6 @@ export default function TestersPage() {
 
     if (newDesiredTesterQty === oldTesterQty) {
       toast({ title: "No Change", description: `Tester quantity for ${currentProductGlobal.name} is already ${oldTesterQty}.`, variant: "default" });
-       // No actual data change, but refresh states to ensure UI is consistent if needed and reset form
       refreshDerivedProductStates();
       setSelectedCategoryForTester('');
       setSelectedProductForTester(null);
@@ -189,7 +180,7 @@ export default function TestersPage() {
     const deltaTesters = newDesiredTesterQty - oldTesterQty;
     let newStock = oldStock;
 
-    if (deltaTesters > 0) { // Increasing testers
+    if (deltaTesters > 0) { 
       if (oldStock < deltaTesters) {
         toast({
           title: "Insufficient Stock",
@@ -197,15 +188,33 @@ export default function TestersPage() {
           variant: "destructive",
           duration: 7000
         });
-        setNewTesterQuantityInput(oldTesterQty.toString()); // Reset input to old value
+        setNewTesterQuantityInput(oldTesterQty.toString()); 
         return;
       }
       newStock -= deltaTesters;
-    } else { // Decreasing testers (deltaTesters is negative)
+      
+      // Create expense entry for tester allocation
+      const testerExpense: Omit<Expense, 'id'> = {
+        date: new Date().toISOString(),
+        description: `Tester Allocation: ${deltaTesters}x ${currentProductGlobal.name}`,
+        category: "Tester Allocation",
+        amount: deltaTesters * currentProductGlobal.costPrice,
+        recordedBy: user.name,
+      };
+      addSystemExpense(testerExpense);
+      toast({
+        title: "Tester Quantity Updated & Expense Logged",
+        description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Stock is now ${newStock}. Expense of NRP ${(deltaTesters * currentProductGlobal.costPrice).toFixed(2)} logged.`,
+      });
+
+    } else { // Decreasing testers
       newStock -= deltaTesters; // e.g., stock - (-1) = stock + 1
+      toast({
+        title: "Tester Quantity Updated",
+        description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Stock is now ${newStock}.`,
+      });
     }
     
-    // Directly mutate mockProducts
     mockProducts[productGlobalIndex].stock = newStock;
     mockProducts[productGlobalIndex].testerQuantity = newDesiredTesterQty;
 
@@ -213,15 +222,9 @@ export default function TestersPage() {
       "Tester Quantity Updated",
       `Tester quantity for '${currentProductGlobal.name}' (ID: ${selectedProductId.substring(0,8)}...) changed from ${oldTesterQty} to ${newDesiredTesterQty} by ${user.name}. Sellable stock adjusted from ${oldStock} to ${newStock}.`
     );
-    toast({
-      title: "Tester Quantity Updated",
-      description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Stock is now ${newStock}.`,
-    });
-
-    // Refresh UI states from the mutated mockProducts
-    refreshDerivedProductStates();
     
-    // Reset form fields
+    setRefreshTrigger(prev => prev + 1); // Trigger refresh for all dependent states
+    
     setSelectedCategoryForTester('');
     setSelectedProductForTester(null);
     setNewTesterQuantityInput('');
@@ -287,7 +290,7 @@ export default function TestersPage() {
                 disabled={!selectedProductForTester}
               />
             </div>
-            <div className="md:mt-auto"> {/* Aligns button with input on larger screens */}
+            <div className="md:mt-auto"> 
                 {selectedProductForTester ? <ProductInfoDisplay productId={selectedProductForTester} /> : <div className="h-10"></div>}
             </div>
           </div>

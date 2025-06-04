@@ -717,6 +717,29 @@ mockSales.forEach(sale => {
     }
   });
 });
+
+// Helper function to add system-generated expenses
+export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
+  const newExpense: Expense = {
+    id: `exp-sys-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    ...expenseData,
+  };
+  mockExpenses.push(newExpense);
+  mockExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  // Log this system expense
+  const logEntry: LogEntry = {
+    id: `log-exp-${newExpense.id}`,
+    timestamp: new Date().toISOString(),
+    user: newExpense.recordedBy || 'System', // Use recordedBy or 'System'
+    action: 'System Expense Recorded',
+    details: `Expense Category: ${newExpense.category}, Amount: NRP ${newExpense.amount.toFixed(2)}. Desc: ${newExpense.description}`,
+  };
+  mockLogEntries.unshift(logEntry); // Add to the beginning
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return newExpense;
+}
     
     
     
