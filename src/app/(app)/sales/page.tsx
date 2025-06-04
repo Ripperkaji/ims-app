@@ -1,3 +1,4 @@
+
 "use client";
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
@@ -35,6 +36,8 @@ import { cn } from "@/lib/utils";
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
 
+const ALL_MONTHS_FILTER_VALUE = "__ALL_MONTHS__";
+
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
     const parts = [];
@@ -66,7 +69,8 @@ export default function SalesPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatusType>('all');
   const [filterCommentText, setFilterCommentText] = useState<string>('');
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
-  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState<boolean>(false);
+  const [isCalendarPopoverOpen, setIsCalendarPopoverOpen] = useState<boolean>(false);
+
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -77,17 +81,16 @@ export default function SalesPage() {
   }, [allSalesData]);
 
   useEffect(() => {
-    // Re-sync allSalesData if mockSales changes externally (e.g. new sale added)
     const sortedMockSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setAllSalesData(sortedMockSales);
     if (!isFilterActive) {
       setDisplayedSales(sortedMockSales);
     } else {
-      // If filters are active, re-apply them.
-      // This is a simplified approach; a more robust one might store current filter values and re-apply.
-      // For now, we'll just note that adding/deleting sales might require re-applying filters manually.
+      // If filters are active, re-apply them with the potentially updated allSalesData
+      applyFilters(sortedMockSales);
     }
-  }, []); // mockSales is not in deps to avoid loop, actions will call handleSaleAdded etc.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -255,7 +258,7 @@ export default function SalesPage() {
     const newAllSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setAllSalesData(newAllSales);
     if (isFilterActive) {
-      applyFilters(newAllSales); // Re-apply filters with updated data
+      applyFilters(newAllSales); 
     } else {
       setDisplayedSales(newAllSales);
     }
@@ -264,23 +267,20 @@ export default function SalesPage() {
     closeDeleteDialog();
   };
 
-  const handleSaleAdded = (newSale: Sale) => { // newSale is passed from SalesEntryForm
-    // allSalesData is already updated because mockSales is updated in SalesEntryForm
+  const handleSaleAdded = (newSale: Sale) => { 
     const newAllSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setAllSalesData(newAllSales); // Ensure allSalesData state is current
+    setAllSalesData(newAllSales); 
     if (isFilterActive) {
-      // If filters are active, you might want to re-apply them or clear them
-      // For now, let's re-apply to potentially include the new sale if it matches
       applyFilters(newAllSales);
     } else {
-      setDisplayedSales(newAllSales); // Update displayed sales if no filter is active
+      setDisplayedSales(newAllSales); 
     }
   };
 
   const salesByMonth = useMemo(() => {
     if (user?.role !== 'admin') return {}; 
     const grouped: { [key: string]: Sale[] } = {};
-    allSalesData.forEach(sale => { // Use allSalesData for grouping
+    allSalesData.forEach(sale => { 
       const monthYearKey = format(new Date(sale.date), 'yyyy-MM'); 
       if (!grouped[monthYearKey]) {
         grouped[monthYearKey] = [];
@@ -335,7 +335,7 @@ export default function SalesPage() {
     
     setDisplayedSales(tempFilteredSales.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     setIsFilterActive(true);
-    setIsFilterPopoverOpen(false); // Close popover if open
+    // setIsFilterPopoverOpen(false); // This state does not exist, calendar popover is separate
     toast({ title: "Filters Applied", description: `${tempFilteredSales.length} sales found.`});
   };
 
@@ -346,7 +346,7 @@ export default function SalesPage() {
     setFilterCommentText('');
     setDisplayedSales(allSalesData);
     setIsFilterActive(false);
-    setIsFilterPopoverOpen(false);
+    // setIsFilterPopoverOpen(false);
     toast({ title: "Filters Cleared", description: "Showing all sales."});
   };
 
@@ -378,7 +378,7 @@ export default function SalesPage() {
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <div>
             <Label htmlFor="filterDate">Date</Label>
-            <Popover open={isFilterPopoverOpen && !!filterDate} onOpenChange={(open) => { if (open) setFilterMonthYear(''); setIsFilterPopoverOpen(open);}}>
+             <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
                 <PopoverTrigger asChild>
                     <Button
                     variant={"outline"}
@@ -386,7 +386,7 @@ export default function SalesPage() {
                         "w-full justify-start text-left font-normal mt-1",
                         !filterDate && "text-muted-foreground"
                     )}
-                    onClick={() => { setFilterMonthYear(''); setIsFilterPopoverOpen(!isFilterPopoverOpen);}}
+                    onClick={() => { setFilterMonthYear(''); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
                     >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
@@ -396,7 +396,7 @@ export default function SalesPage() {
                     <Calendar
                     mode="single"
                     selected={filterDate}
-                    onSelect={(date) => {setFilterDate(date); setFilterMonthYear(''); setIsFilterPopoverOpen(false);}}
+                    onSelect={(date) => {setFilterDate(date); setFilterMonthYear(''); setIsCalendarPopoverOpen(false);}}
                     initialFocus
                     />
                 </PopoverContent>
@@ -404,12 +404,18 @@ export default function SalesPage() {
           </div>
           <div>
             <Label htmlFor="filterMonthYear">Month/Year</Label>
-            <Select value={filterMonthYear} onValueChange={(value) => {setFilterMonthYear(value); setFilterDate(undefined);}}>
+            <Select 
+                value={filterMonthYear || ALL_MONTHS_FILTER_VALUE} 
+                onValueChange={(value) => {
+                    setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? '' : value); 
+                    setFilterDate(undefined);
+                }}
+            >
               <SelectTrigger id="filterMonthYear" className="mt-1">
                 <SelectValue placeholder="Select Month/Year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Months</SelectItem>
+                <SelectItem value={ALL_MONTHS_FILTER_VALUE}>All Months</SelectItem>
                 {availableMonths.map(month => (
                   <SelectItem key={month} value={month}>
                     {format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}
@@ -472,7 +478,6 @@ export default function SalesPage() {
           </CardHeader>
           <CardContent>
             <Table>
-              {/* Table structure identical to grouped view for consistency */}
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
