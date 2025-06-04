@@ -63,8 +63,9 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           damageComment: item.damageExchangeComment || '',
         }))
       );
-      setGeneralReasonCommentText('');
+      setGeneralReasonCommentText(''); // Reset general comment when dialog opens
     } else if (!isOpen) {
+      // Clear states when dialog is closed, ensures fresh state for next open
       setItemStates([]);
       setGeneralReasonCommentText('');
     }
@@ -74,7 +75,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     const newStates = [...itemStates];
     newStates[index].isMarkedForDamageExchange = checked;
     if (!checked) {
-      newStates[index].damageComment = '';
+      newStates[index].damageComment = ''; // Clear comment if unchecked
     }
     setItemStates(newStates);
   };
@@ -86,8 +87,6 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
   };
 
   const handleConfirmFlag = () => {
-    const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
-
     if (!generalReasonCommentText.trim()) {
       toast({
         title: "General Reason Required",
@@ -97,6 +96,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       return;
     }
 
+    const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
     if (itemsMarkedForDamage.some(item => !item.damageComment.trim())) {
       toast({
         title: "Comment Required for Damaged Items",
@@ -106,27 +106,28 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       return;
     }
     
-    // If no items are marked for damage, and general comment is also empty, it's an issue (though covered by above).
-    // But the primary condition is that a general reason is ALWAYS needed.
-    // And if items are damaged, they need comments.
-
     const flaggedItemsData: FlaggedItemDetailForUpdate[] = itemsMarkedForDamage.map(item => ({
       productId: item.productId,
       productName: item.productName,
       quantitySold: item.quantitySold,
-      isDamagedExchanged: item.isMarkedForDamageExchange,
+      isDamagedExchanged: item.isMarkedForDamageExchange, // This is the crucial part from checkbox
       comment: item.damageComment,
     }));
 
     onSaleFlagged(sale.id, flaggedItemsData, generalReasonCommentText);
+    // onClose(); // Let the parent component handle closing if needed after submission
   };
 
   const handleDialogClose = () => {
+    // Reset local states on close to ensure dialog is fresh next time
+    setItemStates([]);
+    setGeneralReasonCommentText('');
     onClose();
   }
 
   if (!isOpen || !sale) return null;
 
+  // Determine if confirm button should be enabled
   const itemsMarkedForDamage = itemStates.filter(i => i.isMarkedForDamageExchange);
   const allDamageCommentsProvided = itemsMarkedForDamage.every(item => item.damageComment.trim() !== '');
   const isGeneralCommentProvided = generalReasonCommentText.trim() !== '';
@@ -159,7 +160,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
                   onCheckedChange={(checked) => handleItemCheckboxChange(index, Boolean(checked))}
                 />
                 <Label htmlFor={`damageExchanged-${item.productId}`} className="text-sm font-normal">
-                  Mark as Damaged &amp; Exchanged
+                  Mark as Damaged & Exchanged
                 </Label>
               </div>
               {item.isMarkedForDamageExchange && (
@@ -183,7 +184,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
 
           <div className="mt-4 pt-4 border-t">
             <Label htmlFor="generalReasonCommentText" className="text-sm font-medium mb-1 block">General Flag Reason (Required)</Label>
-             <p className="text-xs text-muted-foreground mb-2">Explain why this sale is being flagged (e.g., data entry error, customer issue, etc.).</p>
+             <p className="text-xs text-muted-foreground mb-2">Explain why this sale is being flagged (e.g., data entry error, customer issue, incorrect item selection, etc.).</p>
             <Textarea
                 id="generalReasonCommentText"
                 value={generalReasonCommentText}
