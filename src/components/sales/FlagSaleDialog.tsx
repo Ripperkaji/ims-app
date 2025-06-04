@@ -40,6 +40,7 @@ interface FlagSaleDialogProps {
 }
 
 interface ItemFlagState {
+  tempUiId: string; // Added for unique key
   productId: string;
   productName: string;
   quantitySold: number;
@@ -55,34 +56,46 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
   useEffect(() => {
     if (isOpen && sale) {
       setItemStates(
-        sale.items.map(item => ({
-          productId: item.productId,
-          productName: item.productName,
-          quantitySold: item.quantity,
-          isMarkedForDamageExchange: item.isFlaggedForDamageExchange || false,
-          damageComment: item.damageExchangeComment || '',
+        sale.items.map((originalSaleItem, originalIndex) => ({
+          tempUiId: `${originalSaleItem.productId}-${originalIndex}`, // Generate unique key
+          productId: originalSaleItem.productId,
+          productName: originalSaleItem.productName,
+          quantitySold: originalSaleItem.quantity,
+          isMarkedForDamageExchange: originalSaleItem.isFlaggedForDamageExchange || false,
+          damageComment: originalSaleItem.damageExchangeComment || '',
         }))
       );
-      setGeneralReasonCommentText(''); 
+      setGeneralReasonCommentText('');
     } else if (!isOpen) {
       setItemStates([]);
       setGeneralReasonCommentText('');
     }
   }, [isOpen, sale]);
 
-  const handleItemCheckboxChange = (index: number, checked: boolean) => {
-    const newStates = [...itemStates];
-    newStates[index].isMarkedForDamageExchange = checked;
-    if (!checked) {
-      newStates[index].damageComment = ''; 
-    }
-    setItemStates(newStates);
+  const handleItemCheckboxChange = (tempUiIdToUpdate: string, checked: boolean) => {
+    setItemStates(prevStates =>
+      prevStates.map(item => {
+        if (item.tempUiId === tempUiIdToUpdate) {
+          const updatedItem = { ...item, isMarkedForDamageExchange: checked };
+          if (!checked) {
+            updatedItem.damageComment = '';
+          }
+          return updatedItem;
+        }
+        return item;
+      })
+    );
   };
 
-  const handleItemCommentChange = (index: number, value: string) => {
-    const newStates = [...itemStates];
-    newStates[index].damageComment = value;
-    setItemStates(newStates);
+  const handleItemCommentChange = (tempUiIdToUpdate: string, value: string) => {
+    setItemStates(prevStates =>
+      prevStates.map(item => {
+        if (item.tempUiId === tempUiIdToUpdate) {
+          return { ...item, damageComment: value };
+        }
+        return item;
+      })
+    );
   };
 
   const handleConfirmFlag = () => {
@@ -114,11 +127,11 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     }));
 
     onSaleFlagged(sale.id, flaggedItemsData, generalReasonCommentText);
+    // No need to call onClose here, parent component handles it after onSaleFlagged completes.
   };
 
   const handleDialogClose = () => {
-    setItemStates([]);
-    setGeneralReasonCommentText('');
+    // State reset is handled by useEffect when isOpen changes
     onClose();
   }
 
@@ -143,30 +156,30 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow min-h-0 py-2 pr-3 -mr-2"> {/* Added min-h-0 */}
+        <ScrollArea className="flex-grow min-h-0 py-2 pr-3 -mr-2">
           <div className="space-y-4">
             <p className="text-sm font-medium mb-2">Item-Specific Damage/Exchange (Optional):</p>
-            {itemStates.map((item, index) => (
-              <div key={item.productId} className="p-3 border rounded-md bg-muted/30 mb-3">
-                <p className="font-semibold">{item.productName} <span className="text-sm text-muted-foreground">(Qty Sold: {item.quantitySold})</span></p>
+            {itemStates.map((itemStateForRender) => (
+              <div key={itemStateForRender.tempUiId} className="p-3 border rounded-md bg-muted/30 mb-3">
+                <p className="font-semibold">{itemStateForRender.productName} <span className="text-sm text-muted-foreground">(Qty Sold: {itemStateForRender.quantitySold})</span></p>
                 <div className="flex items-center space-x-2 mt-2 mb-1">
                   <Checkbox
-                    id={`damageExchanged-${item.productId}`}
-                    checked={item.isMarkedForDamageExchange}
-                    onCheckedChange={(checked) => handleItemCheckboxChange(index, Boolean(checked))}
+                    id={`damageExchanged-${itemStateForRender.tempUiId}`}
+                    checked={itemStateForRender.isMarkedForDamageExchange}
+                    onCheckedChange={(checked) => handleItemCheckboxChange(itemStateForRender.tempUiId, Boolean(checked))}
                   />
-                  <Label htmlFor={`damageExchanged-${item.productId}`} className="text-sm font-normal">
+                  <Label htmlFor={`damageExchanged-${itemStateForRender.tempUiId}`} className="text-sm font-normal">
                     Mark as Damaged & Exchanged
                   </Label>
                 </div>
-                {item.isMarkedForDamageExchange && (
+                {itemStateForRender.isMarkedForDamageExchange && (
                   <div className="mt-1">
-                    <Label htmlFor={`damageComment-${item.productId}`} className="text-xs">Damage Comment (Required if item marked)</Label>
+                    <Label htmlFor={`damageComment-${itemStateForRender.tempUiId}`} className="text-xs">Damage Comment (Required if item marked)</Label>
                     <Textarea
-                      id={`damageComment-${item.productId}`}
-                      value={item.damageComment}
-                      onChange={(e) => handleItemCommentChange(index, e.target.value)}
-                      placeholder={`Reason for damage/exchange of ${item.productName}...`}
+                      id={`damageComment-${itemStateForRender.tempUiId}`}
+                      value={itemStateForRender.damageComment}
+                      onChange={(e) => handleItemCommentChange(itemStateForRender.tempUiId, e.target.value)}
+                      placeholder={`Reason for damage/exchange of ${itemStateForRender.productName}...`}
                       rows={2}
                       className="text-sm"
                     />
@@ -193,7 +206,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           </div>
         </ScrollArea>
 
-        <DialogFooter className="pt-4 border-t"> {/* Removed mt-auto */}
+        <DialogFooter className="pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           </DialogClose>
@@ -210,4 +223,3 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     </Dialog>
   );
 }
-
