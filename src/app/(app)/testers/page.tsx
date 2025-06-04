@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { mockProducts, mockLogEntries } from "@/lib/data";
 import type { Product, LogEntry, ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
