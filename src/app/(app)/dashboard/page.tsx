@@ -15,7 +15,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } fro
 import { format, subDays } from 'date-fns';
 import type { Sale, LogEntry, Product, SaleItem } from '@/types';
 import React, { useMemo, useState, useEffect } from 'react';
-import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
+import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -24,13 +24,6 @@ const chartConfig = {
   expenses: { label: "Expenses", color: "hsl(var(--destructive))" },
 } satisfies ChartConfig
 
-interface FlaggedItemDetailForUpdate {
-  productId: string;
-  productName: string;
-  quantitySold: number;
-  isDamagedExchanged: boolean;
-  comment: string;
-}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -42,9 +35,9 @@ export default function DashboardPage() {
   const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
   
-  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [mockProducts, user]);
-  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [mockProducts, user]);
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales, user]); 
+  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [mockProducts]);
+  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [mockProducts]);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales]); 
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -72,7 +65,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh, mockSales]); // Added mockSales as dependency
+  }, [user, triggerRefresh]); 
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -96,7 +89,12 @@ export default function DashboardPage() {
   };
 
 
-  const handleSaleFlagged = (saleId: string, flaggedItemsDetail: FlaggedItemDetailForUpdate[]) => {
+  const handleSaleFlagged = (
+    saleId: string, 
+    flaggedItemsDetail: FlaggedItemDetailForUpdate[],
+    isOtherReasonFlagged: boolean,
+    otherReasonCommentText: string
+  ) => {
     const saleIndex = mockSales.findIndex(s => s.id === saleId);
     if (saleIndex === -1 || !user) {
       toast({ title: "Error", description: "Sale not found or user not available.", variant: "destructive"});
@@ -104,49 +102,61 @@ export default function DashboardPage() {
     }
     
     const targetSale = mockSales[saleIndex];
-    targetSale.isFlagged = true; // Mark the entire sale as flagged if any item is flagged
-
-    let mainFlagComment = "Items flagged for damage: ";
-    let itemsProcessedForDamageExchange = 0;
+    let itemDamageSummary = "";
+    let itemsProcessedForDamageExchangeCount = 0;
     let allDamageExchangeLogDetails = "";
 
-    flaggedItemsDetail.forEach(itemDetail => {
-      const saleItemIndex = targetSale.items.findIndex(si => si.productId === itemDetail.productId);
-      if (saleItemIndex !== -1) {
-        targetSale.items[saleItemIndex].isFlaggedForDamageExchange = true;
-        targetSale.items[saleItemIndex].damageExchangeComment = itemDetail.comment;
-        mainFlagComment += `${itemDetail.productName} (Qty: ${itemDetail.quantitySold}, Comment: ${itemDetail.comment || 'N/A'}); `;
+    // Process item-specific damage exchanges first
+    if (flaggedItemsDetail.length > 0) {
+      flaggedItemsDetail.forEach(itemDetail => {
+        const saleItemIndex = targetSale.items.findIndex(si => si.productId === itemDetail.productId);
+        if (saleItemIndex !== -1) {
+          targetSale.items[saleItemIndex].isFlaggedForDamageExchange = true;
+          targetSale.items[saleItemIndex].damageExchangeComment = itemDetail.comment;
+          itemDamageSummary += `${itemDetail.productName} (Qty: ${itemDetail.quantitySold}, Comment: ${itemDetail.comment || 'N/A'}); `;
 
-        if (itemDetail.isDamagedExchanged) {
-          itemsProcessedForDamageExchange++;
-          const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
-          if (productIndex !== -1) {
-            const product = mockProducts[productIndex];
-            const originalStock = product.stock;
-            const originalDamage = product.damagedQuantity;
+          if (itemDetail.isDamagedExchanged) { // This field in FlaggedItemDetailForUpdate signals to process stock
+            itemsProcessedForDamageExchangeCount++;
+            const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
+            if (productIndex !== -1) {
+              const product = mockProducts[productIndex];
+              const originalStock = product.stock;
+              const originalDamage = product.damagedQuantity;
 
-            product.damagedQuantity += itemDetail.quantitySold;
-            product.stock -= itemDetail.quantitySold; 
+              product.damagedQuantity += itemDetail.quantitySold;
+              product.stock -= itemDetail.quantitySold; 
+              if (product.stock < 0) product.stock = 0; 
 
-            if (product.stock < 0) { 
-               product.stock = 0; 
+              const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
+              addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
+              allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. `;
+            } else {
+               addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
             }
-            const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. By ${user.name}. Comment: ${itemDetail.comment}`;
-            addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
-            allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. `;
-          } else {
-             addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
           }
         }
-      }
-    });
+      });
+       addLogEntry("Sale Items Flagged (Damage)", `Sale ID ${saleId.substring(0,8)}... had items flagged for damage by ${user.name}. Details: ${itemDamageSummary}`, user.name);
+    }
+
+    // Construct the main flagged comment
+    let finalFlaggedComment = "";
+    if (itemDamageSummary) {
+      finalFlaggedComment += `Damaged items: ${itemDamageSummary}`;
+    }
+    if (isOtherReasonFlagged && otherReasonCommentText.trim()) {
+      if (finalFlaggedComment) finalFlaggedComment += "\n"; // Add newline if there's already damage summary
+      finalFlaggedComment += `Other reason for flag: ${otherReasonCommentText.trim()}`;
+      addLogEntry("Sale Flagged (Other Reason)", `Sale ID ${saleId.substring(0,8)}... flagged by ${user.name} for general reasons. Comment: ${otherReasonCommentText.trim()}`, user.name);
+    }
     
-    targetSale.flaggedComment = mainFlagComment;
-    addLogEntry("Sale Items Flagged", `Sale ID ${saleId.substring(0,8)}... had items flagged by ${user.name}. Details: ${mainFlagComment}`, user.name);
-    toast({ title: "Sale Items Flagged", description: `Items in sale ${saleId.substring(0,8)}... have been flagged for admin review.`});
+    targetSale.flaggedComment = finalFlaggedComment.trim() || "Flagged for review."; // Default if somehow both empty
+    targetSale.isFlagged = true; // Mark the entire sale as flagged if any item is flagged or other reason is provided
+
+    toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged for admin review.`});
     
-    if (itemsProcessedForDamageExchange > 0) {
-        toast({ title: "Damage Exchanged", description: `Processed ${itemsProcessedForDamageExchange} item(s) for damage exchange from sale ${saleId.substring(0,8)}.... Details: ${allDamageExchangeLogDetails}`});
+    if (itemsProcessedForDamageExchangeCount > 0) {
+        toast({ title: "Damage Exchanged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange from sale ${saleId.substring(0,8)}.... Details: ${allDamageExchangeLogDetails}`});
     }
 
     setSaleToFlag(null); 
@@ -321,7 +331,7 @@ export default function DashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="font-headline flex items-center gap-2"><Briefcase /> Your Recent Sales (Last 7 Days)</CardTitle>
-              <CardDescription>Sales you recorded in the past week. You can flag sales with issues (e.g. item damage) for admin review.</CardDescription>
+              <CardDescription>Sales you recorded in the past week. You can flag sales with issues (e.g. item damage, entry errors) for admin review.</CardDescription>
             </CardHeader>
             <CardContent>
               {recentStaffSales.length > 0 ? (
@@ -376,7 +386,7 @@ export default function DashboardPage() {
                               </TooltipProvider>
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
-                              <Flag className="h-4 w-4 mr-1" /> Flag Items
+                              <Flag className="h-4 w-4 mr-1" /> Flag Items/Sale
                             </Button>
                           )}
                         </TableCell>
@@ -391,7 +401,7 @@ export default function DashboardPage() {
           </Card>
         </>
       )}
-      {saleToFlag && (
+      {saleToFlag && user && ( // Ensure user is available, though it should be for dashboard
         <FlagSaleDialog
           sale={saleToFlag}
           isOpen={!!saleToFlag}

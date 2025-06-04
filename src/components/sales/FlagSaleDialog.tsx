@@ -15,37 +15,44 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import type { Sale, SaleItem } from '@/types';
-import { Flag, AlertTriangle } from 'lucide-react';
+import type { Sale } from '@/types';
+import { Flag, MessageSquareWarning } from 'lucide-react'; // Added MessageSquareWarning for other reasons
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface FlaggedItemDetail {
+export interface FlaggedItemDetailForUpdate { // Renamed to avoid conflict if this type is needed elsewhere
   productId: string;
   productName: string;
   quantitySold: number;
-  isDamagedExchanged: boolean;
-  comment: string;
+  isDamagedExchanged: boolean; // This indicates if damage processing (stock adjustment) should occur
+  comment: string; // Comment specifically for this item's damage/exchange
 }
 
 interface FlagSaleDialogProps {
   sale: Sale;
   isOpen: boolean;
   onClose: () => void;
-  onSaleFlagged: (saleId: string, flaggedItemsDetail: FlaggedItemDetail[]) => void;
+  onSaleFlagged: (
+    saleId: string, 
+    flaggedItemsDetail: FlaggedItemDetailForUpdate[],
+    isOtherReasonFlagged: boolean,
+    otherReasonCommentText: string
+  ) => void;
 }
 
 interface ItemFlagState {
   productId: string;
   productName: string;
   quantitySold: number;
-  isMarked: boolean;
-  comment: string;
+  isMarkedForDamageExchange: boolean; // Checkbox state for damage exchange
+  damageComment: string; // Comment for this item's damage
 }
 
 export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }: FlagSaleDialogProps) {
   const { toast } = useToast();
   const [itemStates, setItemStates] = useState<ItemFlagState[]>([]);
+  const [flagForOtherReason, setFlagForOtherReason] = useState<boolean>(false);
+  const [otherReasonCommentText, setOtherReasonCommentText] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && sale) {
@@ -54,60 +61,74 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           productId: item.productId,
           productName: item.productName,
           quantitySold: item.quantity,
-          isMarked: item.isFlaggedForDamageExchange || false,
-          comment: item.damageExchangeComment || '',
+          isMarkedForDamageExchange: item.isFlaggedForDamageExchange || false, // Pre-fill if already flagged on item
+          damageComment: item.damageExchangeComment || '', // Pre-fill if already has comment
         }))
       );
+      // Reset general flag states unless we want to pre-fill them from sale.flaggedComment logic
+      setFlagForOtherReason(false); 
+      setOtherReasonCommentText('');
     } else if (!isOpen) {
-      setItemStates([]); // Reset when closed
+      setItemStates([]); 
+      setFlagForOtherReason(false);
+      setOtherReasonCommentText('');
     }
   }, [isOpen, sale]);
 
   const handleItemCheckboxChange = (index: number, checked: boolean) => {
     const newStates = [...itemStates];
-    newStates[index].isMarked = checked;
-    if (!checked) { // Clear comment if unmarked
-      newStates[index].comment = '';
+    newStates[index].isMarkedForDamageExchange = checked;
+    if (!checked) { 
+      newStates[index].damageComment = ''; // Clear specific comment if unmarked
     }
     setItemStates(newStates);
   };
 
   const handleItemCommentChange = (index: number, value: string) => {
     const newStates = [...itemStates];
-    newStates[index].comment = value;
+    newStates[index].damageComment = value;
     setItemStates(newStates);
   };
 
   const handleConfirmFlag = () => {
-    const itemsToFlag = itemStates.filter(item => item.isMarked);
-    if (itemsToFlag.length === 0) {
+    const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
+    
+    if (itemsMarkedForDamage.length === 0 && !flagForOtherReason) {
       toast({
-        title: "No Items Selected",
-        description: "Please mark at least one item for damage exchange or provide a reason.",
+        title: "No Action Selected",
+        description: "Please mark at least one item for damage exchange OR check 'Flag for other reason'.",
         variant: "destructive",
       });
       return;
     }
 
-    if (itemsToFlag.some(item => !item.comment.trim())) {
+    if (itemsMarkedForDamage.some(item => !item.damageComment.trim())) {
       toast({
-        title: "Comment Required",
+        title: "Comment Required for Damaged Items",
         description: "Please provide a comment for each item marked for damage exchange.",
         variant: "destructive",
       });
       return;
     }
+
+    if (flagForOtherReason && !otherReasonCommentText.trim()) {
+       toast({
+        title: "Comment Required for Other Reason",
+        description: "Please provide a comment if flagging for 'other reason'.",
+        variant: "destructive",
+      });
+      return;
+    }
     
-    const flaggedItemsData: FlaggedItemDetail[] = itemsToFlag.map(item => ({
+    const flaggedItemsData: FlaggedItemDetailForUpdate[] = itemsMarkedForDamage.map(item => ({
       productId: item.productId,
       productName: item.productName,
       quantitySold: item.quantitySold,
-      isDamagedExchanged: item.isMarked,
-      comment: item.comment,
+      isDamagedExchanged: item.isMarkedForDamageExchange, // True, because we filtered for these
+      comment: item.damageComment,
     }));
 
-    onSaleFlagged(sale.id, flaggedItemsData);
-    // Parent (DashboardPage) closes dialog by setting saleToFlag to null which also resets local state via useEffect
+    onSaleFlagged(sale.id, flaggedItemsData, flagForOtherReason, otherReasonCommentText);
   };
   
   const handleDialogClose = () => {
@@ -116,56 +137,84 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
 
   if (!isOpen || !sale) return null;
 
+  const canConfirm = itemStates.filter(i => i.isMarkedForDamageExchange && i.damageComment.trim()).length > 0 || 
+                     (flagForOtherReason && otherReasonCommentText.trim());
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Flag className="h-5 w-5 text-destructive" /> Flag Items in Sale for Review
+            <Flag className="h-5 w-5 text-destructive" /> Flag Sale for Review
           </DialogTitle>
           <DialogDescription>
             Sale ID: <strong>{sale.id.substring(0,8)}...</strong> | Customer: <strong>{sale.customerName}</strong>.
-            Mark individual items for damage exchange and provide comments.
+            Mark items for damage exchange and/or flag for other reasons.
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow py-2 pr-3 -mr-2">
-          <div className="space-y-4">
-            {itemStates.map((item, index) => (
-              <div key={item.productId} className="p-3 border rounded-md bg-muted/50">
-                <p className="font-semibold">{item.productName} <span className="text-sm text-muted-foreground">(Qty: {item.quantitySold})</span></p>
-                <div className="flex items-center space-x-2 mt-2 mb-1">
-                  <Checkbox
-                    id={`damageExchanged-${item.productId}`}
-                    checked={item.isMarked}
-                    onCheckedChange={(checked) => handleItemCheckboxChange(index, Boolean(checked))}
-                  />
-                  <Label htmlFor={`damageExchanged-${item.productId}`} className="text-sm font-normal">
-                    Mark this item as Damaged &amp; Exchanged
-                  </Label>
-                </div>
-                {item.isMarked && (
-                  <div className="mt-1">
-                    <Label htmlFor={`comment-${item.productId}`} className="text-xs">Comment (Required)</Label>
-                    <Textarea
-                      id={`comment-${item.productId}`}
-                      value={item.comment}
-                      onChange={(e) => handleItemCommentChange(index, e.target.value)}
-                      placeholder={`Reason for flagging ${item.productName}...`}
-                      rows={2}
-                      className="text-sm"
-                    />
-                  </div>
-                )}
+        <ScrollArea className="flex-grow py-2 pr-3 -mr-2 space-y-4">
+          <p className="text-sm font-medium mb-2">Item-Specific Damage/Exchange:</p>
+          {itemStates.map((item, index) => (
+            <div key={item.productId} className="p-3 border rounded-md bg-muted/30 mb-3">
+              <p className="font-semibold">{item.productName} <span className="text-sm text-muted-foreground">(Qty Sold: {item.quantitySold})</span></p>
+              <div className="flex items-center space-x-2 mt-2 mb-1">
+                <Checkbox
+                  id={`damageExchanged-${item.productId}`}
+                  checked={item.isMarkedForDamageExchange}
+                  onCheckedChange={(checked) => handleItemCheckboxChange(index, Boolean(checked))}
+                />
+                <Label htmlFor={`damageExchanged-${item.productId}`} className="text-sm font-normal">
+                  Mark as Damaged &amp; Exchanged
+                </Label>
               </div>
-            ))}
+              {item.isMarkedForDamageExchange && (
+                <div className="mt-1">
+                  <Label htmlFor={`damageComment-${item.productId}`} className="text-xs">Damage Comment (Required)</Label>
+                  <Textarea
+                    id={`damageComment-${item.productId}`}
+                    value={item.damageComment}
+                    onChange={(e) => handleItemCommentChange(index, e.target.value)}
+                    placeholder={`Reason for damage/exchange of ${item.productName}...`}
+                    rows={2}
+                    className="text-sm"
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+          {itemStates.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">This sale has no items to mark for damage.</p>
+          )}
+
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-sm font-medium mb-2">General Flag (Other Reasons):</p>
+            <div className="flex items-center space-x-2 mb-2">
+                <Checkbox
+                    id="flagForOtherReason"
+                    checked={flagForOtherReason}
+                    onCheckedChange={(checked) => setFlagForOtherReason(Boolean(checked))}
+                />
+                <Label htmlFor="flagForOtherReason" className="text-sm font-normal">
+                    Flag for other reason (e.g., data entry error, customer issue)
+                </Label>
+            </div>
+            {flagForOtherReason && (
+                <div>
+                    <Label htmlFor="otherReasonCommentText" className="text-xs">Comment for Other Reason (Required)</Label>
+                    <Textarea
+                        id="otherReasonCommentText"
+                        value={otherReasonCommentText}
+                        onChange={(e) => setOtherReasonCommentText(e.target.value)}
+                        placeholder="Specify the reason for flagging (e.g., wrong customer name, incorrect item added initially)..."
+                        rows={3}
+                        className="text-sm"
+                    />
+                </div>
+            )}
           </div>
         </ScrollArea>
         
-        {itemStates.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">This sale has no items to flag.</p>
-        )}
-
         <DialogFooter className="mt-auto pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
@@ -174,9 +223,9 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
             type="button" 
             variant="destructive" 
             onClick={handleConfirmFlag}
-            disabled={itemStates.filter(i => i.isMarked).length === 0 || itemStates.some(i => i.isMarked && !i.comment.trim())}
+            disabled={!canConfirm}
           >
-            Confirm Flag Items
+            <Flag className="mr-2 h-4 w-4" /> Confirm Flag(s)
           </Button>
         </DialogFooter>
       </DialogContent>
