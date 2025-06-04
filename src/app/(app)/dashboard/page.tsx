@@ -396,7 +396,7 @@ export default function DashboardPage() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                          ) : sale.flaggedComment ? (
+                          ) : sale.flaggedComment ? ( // Sale is not flagged, but has a comment (meaning it was resolved/adjusted)
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -409,7 +409,7 @@ export default function DashboardPage() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : (
+                          ) : ( // Sale is not flagged and has no prior comment (normal, flaggable sale)
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
                               <Flag className="h-4 w-4 mr-1" /> Flag Items/Sale
                             </Button>
@@ -426,8 +426,9 @@ export default function DashboardPage() {
           </Card>
         </>
       )}
-      {saleToFlag && user && ( // Ensure user is available, though it should be for dashboard
+      {saleToFlag && user && ( 
         <FlagSaleDialog
+          key={saleToFlag.id}
           sale={saleToFlag}
           isOpen={!!saleToFlag}
           onClose={handleCloseFlagDialog}
@@ -446,3 +447,4 @@ function PlaceholderChart() {
     </div>
   )
 }
+
