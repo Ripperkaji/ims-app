@@ -50,12 +50,11 @@ export default function ProductsPage() {
       });
     });
     return salesMap;
-  }, [mockSales]); // Added mockSales to dependency array
+  }, [mockSales]); 
 
   const displayedProducts = useMemo(() => {
     return currentProducts
       .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
-      // Products in currentProducts are already sorted by name.
   }, [currentProducts, selectedCategoryFilter]);
 
   const handleOpenEditProductDialog = (productId: string) => {
@@ -124,7 +123,7 @@ export default function ProductsPage() {
       totalAcquiredStock: newProductData.totalAcquiredStock,
       stock: newProductData.totalAcquiredStock,
       damagedQuantity: 0,
-      testerQuantity: 0, // Initialize tester quantity to 0
+      testerQuantity: 0, 
     };
     
     mockProducts.push(newProduct);
@@ -137,66 +136,6 @@ export default function ProductsPage() {
     });
   };
   
-  const handleDamageChange = (productId: string, value: number | string) => {
-    const productIndexGlobal = mockProducts.findIndex(p => p.id === productId);
-    if (productIndexGlobal === -1 || !user) {
-        toast({ title: "Error", description: "Product not found or user not available.", variant: "destructive" });
-        return;
-    }
-
-    const productBeforeChange = { ...mockProducts[productIndexGlobal] }; // Important: shallow copy for comparison
-
-    let damageToSet: number;
-    if (value === "") {
-        damageToSet = 0;
-    } else if (typeof value === 'number' && !isNaN(value)) {
-        damageToSet = Math.max(0, value);
-    } else {
-        const parsedValue = parseInt(String(value), 10);
-        if (!isNaN(parsedValue)) {
-            damageToSet = Math.max(0, parsedValue);
-        } else {
-            toast({ title: "Invalid Damage Qty", description: "Please enter a valid number for damage.", variant: "destructive" });
-            return;
-        }
-    }
-
-    if (productBeforeChange.damagedQuantity === damageToSet) {
-        return;
-    }
-
-    const damageDifference = damageToSet - productBeforeChange.damagedQuantity;
-    const newStockLevel = productBeforeChange.stock - damageDifference;
-
-    if (newStockLevel < 0) {
-        toast({
-            title: "Stock Error",
-            description: `Setting damage to ${damageToSet} would result in negative stock (${newStockLevel}). Current stock is ${productBeforeChange.stock}, current damage ${productBeforeChange.damagedQuantity}. Max possible new damage is ${productBeforeChange.damagedQuantity + productBeforeChange.stock}.`,
-            variant: "destructive",
-            duration: 7000
-        });
-        return;
-    }
-    
-    mockProducts[productIndexGlobal].damagedQuantity = damageToSet;
-    mockProducts[productIndexGlobal].stock = newStockLevel;
-
-    setCurrentProducts(prevProducts =>
-        prevProducts.map(p =>
-            p.id === productId ? { ...mockProducts[productIndexGlobal] } : p
-        ).sort((a, b) => a.name.localeCompare(b.name))
-    );
-    
-    addLog(
-        "Product Damage & Stock Update",
-        `Damage for '${productBeforeChange.name}' (ID: ${productId.substring(0,8)}...) changed from ${productBeforeChange.damagedQuantity} to ${damageToSet}. Stock changed from ${productBeforeChange.stock} to ${newStockLevel}. By ${user.name}.`
-    );
-    toast({
-        title: "Damage & Stock Updated",
-        description: `Damage for ${productBeforeChange.name} set to ${damageToSet}. Remaining stock is now ${newStockLevel}.`,
-    });
-  };
-
 
   const handleOpenAddStockDialog = (product: Product) => {
     setProductToRestock(product);
@@ -298,17 +237,7 @@ export default function ProductsPage() {
                     <TableCell>NRP {product.sellingPrice.toFixed(2)}</TableCell>
                     <TableCell>{soldQty}</TableCell>
                     <TableCell>
-                      {user.role === 'admin' ? (
-                        <Input
-                          type="number"
-                          defaultValue={product.damagedQuantity}
-                          onBlur={(e) => handleDamageChange(product.id, e.target.value === "" ? "" : e.target.valueAsNumber)}
-                          className="w-20 h-9"
-                          min="0"
-                        />
-                      ) : (
-                        product.damagedQuantity
-                      )}
+                      {product.damagedQuantity}
                     </TableCell>
                     <TableCell>{product.testerQuantity || 0}</TableCell>
                     <TableCell>
@@ -370,3 +299,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+
