@@ -14,7 +14,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
 import type { Sale, LogEntry, Product } from '@/types';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import FlagSaleDialog from "@/components/sales/FlagSaleDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -37,7 +37,7 @@ export default function DashboardPage() {
   const criticalStockCount = mockProducts.filter(p => p.stock === 1).length;
   const outOfStockCount = mockProducts.filter(p => p.stock === 0).length;
   
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales, user]); // Re-calculate when mockSales might change
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales]); 
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -52,17 +52,21 @@ export default function DashboardPage() {
 
   const [saleToFlag, setSaleToFlag] = useState<Sale | null>(null);
   const [triggerRefresh, setTriggerRefresh] = useState(0);
+  const [recentStaffSales, setRecentStaffSales] = useState<Sale[]>([]);
 
 
-  const recentStaffSales = useMemo(() => {
+  useEffect(() => {
     if (user?.role === 'staff') {
-      const sevenDaysAgo = subDays(new Date(), 7);
-      return mockSales
+      const sevenDaysAgo = subDays(new Date(), 7); // Calculation moved to useEffect
+      const filteredSales = mockSales
         .filter(sale => sale.createdBy === user.name && new Date(sale.date) >= sevenDaysAgo)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentStaffSales(filteredSales);
+    } else {
+      setRecentStaffSales([]); // Clear if not staff or user changes
     }
-    return [];
-  }, [user, triggerRefresh]); 
+  }, [user, triggerRefresh]); // mockSales is stable from import, no need to add as dep
+
 
   const handleOpenFlagDialog = (sale: Sale) => {
     setSaleToFlag(sale);
@@ -109,11 +113,10 @@ export default function DashboardPage() {
           const originalDamage = product.damagedQuantity;
 
           product.damagedQuantity += saleItem.quantity;
-          product.stock -= saleItem.quantity; // Reduce stock for the exchanged item
+          product.stock -= saleItem.quantity; 
 
-          if (product.stock < 0) { // Prevent negative stock if not desired, though for mock data it might be illustrative
-             // console.warn(`Stock for ${product.name} went negative during damage exchange.`);
-             // product.stock = 0; // Optionally cap at 0
+          if (product.stock < 0) { 
+             product.stock = 0; 
           }
           const damageLogDetails = `Damage Exchange for Sale ID ${flaggedSaleId.substring(0,8)}...: Product '${saleItem.productName}' (Qty: ${saleItem.quantity}) marked damaged & exchanged. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. By ${user.name}.`;
           addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetails, user.name);
@@ -390,4 +393,3 @@ function PlaceholderChart() {
     </div>
   )
 }
-
