@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, UserCircle, ChevronsLeftRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
-import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText } from 'lucide-react';
+import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,7 @@ const navItems: NavItem[] = [
   { href: '/products', label: 'Products', icon: Package, roles: ['admin', 'staff'] },
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
+  { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
 ];
 
@@ -64,7 +66,7 @@ export default function AppHeader() {
               <a
                 className={cn(
                   'flex items-center gap-4 px-2.5 transition-colors hover:text-sidebar-accent-foreground',
-                   pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard')
+                   pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href.length > '/dashboard'.length)
                     ? 'text-sidebar-accent-foreground font-semibold'
                     : 'text-muted-foreground'
                 )}

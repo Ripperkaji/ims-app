@@ -15,7 +15,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { PackagePlus, Tag, DollarSignIcon, Archive, Layers, ChevronsUpDown } from 'lucide-react'; 
+import { PackagePlus, Tag, DollarSignIcon, Archive, Layers, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
@@ -23,10 +23,10 @@ import { ALL_PRODUCT_TYPES } from '@/types';
 interface AddProductDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmAddProduct: (newProductData: { 
-    name: string; 
+  onConfirmAddProduct: (newProductData: {
+    name: string;
     category: ProductType;
-    sellingPrice: number; 
+    sellingPrice: number;
     costPrice: number;
     totalAcquiredStock: number;
   }) => void;
@@ -70,12 +70,12 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
       return;
     }
 
-    onConfirmAddProduct({ 
-      name, 
-      category, 
-      sellingPrice: numSellingPrice, 
+    onConfirmAddProduct({
+      name,
+      category,
+      sellingPrice: numSellingPrice,
       costPrice: numCostPrice,
-      totalAcquiredStock: numTotalAcquiredStock 
+      totalAcquiredStock: numTotalAcquiredStock
     });
     
     setName('');
@@ -83,7 +83,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
     setSellingPrice('');
     setCostPrice('');
     setTotalAcquiredStock('');
-    onClose(); 
+    onClose();
   };
 
   const handleCloseDialog = () => {

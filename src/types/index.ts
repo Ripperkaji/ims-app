@@ -22,6 +22,7 @@ export interface Product {
   totalAcquiredStock: number; // Cumulative total stock ever acquired/added
   damagedQuantity: number;    // Quantity marked as damaged
   stock: number;         // Current remaining stock (totalAcquiredStock - sold - damaged)
+  testerQuantity: number; // Number of units designated as testers
 }
 
 export interface SaleItem {
@@ -37,7 +38,7 @@ export interface SaleItem {
 export interface Sale {
   id: string;
   customerName: string;
-  customerContact?: string; 
+  customerContact?: string;
   items: SaleItem[];
   totalAmount: number;
   
@@ -47,9 +48,9 @@ export interface Sale {
   
   formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
-  date: string; 
-  status: 'Paid' | 'Due'; 
-  createdBy: string; 
+  date: string;
+  status: 'Paid' | 'Due';
+  createdBy: string;
   isFlagged?: boolean; // General flag for the sale
   flaggedComment?: string; // General comment for the sale, can summarize item flags
   saleOrigin: 'store' | 'online';
@@ -57,17 +58,17 @@ export interface Sale {
 
 export interface Expense {
   id: string;
-  date: string; 
+  date: string;
   description: string;
   category: string;
   amount: number;
-  recordedBy: string; 
+  recordedBy: string;
 }
 
 export interface LogEntry {
   id: string;
-  timestamp: string; 
-  user: string; 
-  action: string; 
-  details: string; 
+  timestamp: string;
+  user: string;
+  action: string;
+  details: string;
 }

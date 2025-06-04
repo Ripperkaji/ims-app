@@ -11,7 +11,8 @@ export const mockProducts: Product[] = [
     costPrice: 9.50,
     totalAcquiredStock: 70,
     damagedQuantity: 2,
-    stock: 50
+    stock: 50,
+    testerQuantity: 1
   },
   {
     id: 'prod2',
@@ -21,7 +22,8 @@ export const mockProducts: Product[] = [
     costPrice: 30.00,
     totalAcquiredStock: 35,
     damagedQuantity: 1,
-    stock: 25
+    stock: 25,
+    testerQuantity: 1
   },
   {
     id: 'prod3',
@@ -31,7 +33,8 @@ export const mockProducts: Product[] = [
     costPrice: 5.00,
     totalAcquiredStock: 120,
     damagedQuantity: 0,
-    stock: 100
+    stock: 100,
+    testerQuantity: 0
   },
   {
     id: 'prod4',
@@ -41,7 +44,8 @@ export const mockProducts: Product[] = [
     costPrice: 3.75,
     totalAcquiredStock: 100,
     damagedQuantity: 5,
-    stock: 75
+    stock: 75,
+    testerQuantity: 1
   },
   {
     id: 'prod5',
@@ -51,7 +55,8 @@ export const mockProducts: Product[] = [
     costPrice: 18.00,
     totalAcquiredStock: 40,
     damagedQuantity: 0,
-    stock: 30
+    stock: 30,
+    testerQuantity: 0
   },
 
   // Category: Disposables (Ensuring at least 3)
@@ -63,7 +68,8 @@ export const mockProducts: Product[] = [
     costPrice: 4.00,
     totalAcquiredStock: 150,
     damagedQuantity: 3,
-    stock: 120
+    stock: 120,
+    testerQuantity: 0
   },
   {
     id: 'disp2',
@@ -73,7 +79,8 @@ export const mockProducts: Product[] = [
     costPrice: 3.80,
     totalAcquiredStock: 120,
     damagedQuantity: 2,
-    stock: 90
+    stock: 90,
+    testerQuantity: 0
   },
   // prod4 is already a disposable
 
@@ -86,7 +93,8 @@ export const mockProducts: Product[] = [
     costPrice: 10.00,
     totalAcquiredStock: 80,
     damagedQuantity: 1,
-    stock: 60
+    stock: 60,
+    testerQuantity: 0
   },
   {
     id: 'nicsalt2',
@@ -96,7 +104,8 @@ export const mockProducts: Product[] = [
     costPrice: 9.75,
     totalAcquiredStock: 90,
     damagedQuantity: 4,
-    stock: 70
+    stock: 70,
+    testerQuantity: 0
   },
   // prod1 is already a nic salt
 
@@ -109,7 +118,8 @@ export const mockProducts: Product[] = [
     costPrice: 8.00,
     totalAcquiredStock: 60,
     damagedQuantity: 0,
-    stock: 45
+    stock: 45,
+    testerQuantity: 0
   },
   {
     id: 'freebase2',
@@ -119,7 +129,8 @@ export const mockProducts: Product[] = [
     costPrice: 8.50,
     totalAcquiredStock: 75,
     damagedQuantity: 2,
-    stock: 55
+    stock: 55,
+    testerQuantity: 0
   },
   {
     id: 'freebase3',
@@ -129,7 +140,8 @@ export const mockProducts: Product[] = [
     costPrice: 8.25,
     totalAcquiredStock: 65,
     damagedQuantity: 1,
-    stock: 50
+    stock: 50,
+    testerQuantity: 0
   },
 
   // Category: Coils (Ensuring at least 3)
@@ -141,7 +153,8 @@ export const mockProducts: Product[] = [
     costPrice: 6.50,
     totalAcquiredStock: 100,
     damagedQuantity: 3,
-    stock: 80
+    stock: 80,
+    testerQuantity: 0
   },
   {
     id: 'coil2',
@@ -151,7 +164,8 @@ export const mockProducts: Product[] = [
     costPrice: 6.00,
     totalAcquiredStock: 150,
     damagedQuantity: 5,
-    stock: 120
+    stock: 120,
+    testerQuantity: 0
   },
   // prod3 is already a coil
 
@@ -164,7 +178,8 @@ export const mockProducts: Product[] = [
     costPrice: 22.00,
     totalAcquiredStock: 50,
     damagedQuantity: 2,
-    stock: 35
+    stock: 35,
+    testerQuantity: 0
   },
   {
     id: 'podmod2',
@@ -174,7 +189,8 @@ export const mockProducts: Product[] = [
     costPrice: 40.00,
     totalAcquiredStock: 30,
     damagedQuantity: 0,
-    stock: 20
+    stock: 20,
+    testerQuantity: 1
   },
   // prod2 and prod5 are already POD/MOD devices, so we have more than 3
 
@@ -187,7 +203,8 @@ export const mockProducts: Product[] = [
     costPrice: 2.50,
     totalAcquiredStock: 200,
     damagedQuantity: 5,
-    stock: 150
+    stock: 150,
+    testerQuantity: 0
   },
   {
     id: 'cotton2',
@@ -197,7 +214,8 @@ export const mockProducts: Product[] = [
     costPrice: 3.00,
     totalAcquiredStock: 180,
     damagedQuantity: 3,
-    stock: 140
+    stock: 140,
+    testerQuantity: 0
   },
   {
     id: 'cotton3',
@@ -207,7 +225,8 @@ export const mockProducts: Product[] = [
     costPrice: 3.50,
     totalAcquiredStock: 160,
     damagedQuantity: 2,
-    stock: 130
+    stock: 130,
+    testerQuantity: 0
   },
 
   // Category: Coil Build & Maintenance (Ensuring at least 3)
@@ -219,7 +238,8 @@ export const mockProducts: Product[] = [
     costPrice: 15.00,
     totalAcquiredStock: 30,
     damagedQuantity: 1,
-    stock: 20
+    stock: 20,
+    testerQuantity: 0
   },
   {
     id: 'build2',
@@ -229,7 +249,8 @@ export const mockProducts: Product[] = [
     costPrice: 4.50,
     totalAcquiredStock: 80,
     damagedQuantity: 0,
-    stock: 60
+    stock: 60,
+    testerQuantity: 0
   },
   {
     id: 'build3',
@@ -239,9 +260,17 @@ export const mockProducts: Product[] = [
     costPrice: 6.00,
     totalAcquiredStock: 50,
     damagedQuantity: 1,
-    stock: 40
+    stock: 40,
+    testerQuantity: 0
   }
 ];
+// Initialize testerQuantity for all products if not present (for safety)
+mockProducts.forEach(p => {
+  if (p.testerQuantity === undefined) {
+    p.testerQuantity = 0;
+  }
+});
+
 
 export const mockSales: Sale[] = [
   {
@@ -279,7 +308,7 @@ export const mockSales: Sale[] = [
     date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
     status: 'Due',
     createdBy: 'alice', // Changed from Staff Bob
-    isFlagged: true, 
+    isFlagged: true,
     flaggedComment: 'Item mismatch, customer called.',
     saleOrigin: 'store',
   },
@@ -410,7 +439,7 @@ export const mockLogEntries: LogEntry[] = [
   },
   {
     id: 'log_sale6_flag',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 18000).toISOString(), 
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 18000).toISOString(),
     user: 'alice', // Changed from Staff Bob
     action: 'Sale Flagged',
     details: 'Sale ID sale6-alice-recent flagged by alice. Comment: Initial flag by alice.'
@@ -478,5 +507,3 @@ mockSales.forEach(sale => {
     sale.saleOrigin = 'store'; // Default to store if not specified
   }
 });
-
-    

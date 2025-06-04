@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -6,16 +7,17 @@ import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  LayoutDashboard, 
-  ShoppingCart, 
-  Package, 
-  CreditCard, 
-  Users, 
-  FileText, 
+import {
+  LayoutDashboard,
+  ShoppingCart,
+  Package,
+  CreditCard,
+  Users,
+  FileText,
   Settings,
   AlertTriangle,
-  Zap
+  Zap,
+  FlaskConical
 } from 'lucide-react';
 
 interface NavItem {
@@ -31,6 +33,7 @@ const navItems: NavItem[] = [
   { href: '/products', label: 'Products', icon: Package, roles: ['admin', 'staff'] },
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
+  { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
 ];
@@ -58,7 +61,7 @@ export default function AppSidebar() {
               <a
                 className={cn(
                   'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                  pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard')
+                  pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href.length > '/dashboard'.length) // More specific active check
                     ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
                     : 'text-sidebar-foreground'
                 )}
