@@ -8,7 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { BarChart3, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { mockSales, mockExpenses } from "@/lib/data"; // Import mock data
+import { mockSales, mockExpenses } from "@/lib/data"; 
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { format } from 'date-fns';
+
+const chartConfig = {
+  sales: { label: "Sales", color: "hsl(var(--primary))" },
+} satisfies ChartConfig;
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -25,6 +32,17 @@ export default function AnalyticsPage() {
   const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [mockSales]);
   const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [mockExpenses]);
   const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
+
+  const salesTrendData = useMemo(() => {
+    const salesByDay: { [key: string]: number } = {};
+    mockSales.forEach(sale => {
+      const day = format(new Date(sale.date), 'MMM dd');
+      salesByDay[day] = (salesByDay[day] || 0) + sale.totalAmount;
+    });
+    return Object.entries(salesByDay)
+      .map(([date, sales]) => ({ date, sales }))
+      .slice(-7); 
+  }, [mockSales]);
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -43,6 +61,28 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
         <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
       </div>
+      
+      <div className="grid gap-4 md:grid-cols-1">
+        <Card>
+            <CardHeader>
+              <CardTitle className="font-headline">Sales Trend (Last 7 entries)</CardTitle>
+              <CardDescription>Visual overview of sales performance.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                 <LineChart data={salesTrendData} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+      </div>
 
       <Card className="shadow-lg mt-6">
         <CardHeader>
@@ -59,7 +99,6 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
-      {/* Placeholder for more detailed charts and reports */}
     </div>
   );
 }

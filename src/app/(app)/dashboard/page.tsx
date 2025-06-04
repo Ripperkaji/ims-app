@@ -10,8 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
 import { format, subDays } from 'date-fns';
 import type { Sale, LogEntry, Product, SaleItem, Expense } from '@/types';
 import React, { useMemo, useState, useEffect } from 'react';
@@ -20,22 +18,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const chartConfig = {
-  sales: { label: "Sales", color: "hsl(var(--primary))" },
-  expenses: { label: "Expenses", color: "hsl(var(--destructive))" },
-} satisfies ChartConfig
-
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [triggerRefresh, setTriggerRefresh] = useState(0); 
 
-
-  // These calculations are still needed for sales trend chart, but cards are moved
-  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [triggerRefresh, mockSales]);
-  // const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [triggerRefresh, mockExpenses]);
-  // const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
 
   const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
   const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); 
@@ -44,17 +32,6 @@ export default function DashboardPage() {
   const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
   const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
 
-
-  const salesTrendData = useMemo(() => {
-    const salesByDay: { [key: string]: number } = {};
-    mockSales.forEach(sale => {
-      const day = format(new Date(sale.date), 'MMM dd');
-      salesByDay[day] = (salesByDay[day] || 0) + sale.totalAmount;
-    });
-    return Object.entries(salesByDay)
-      .map(([date, sales]) => ({ date, sales }))
-      .slice(-7); 
-  }, [triggerRefresh, mockSales]);
 
   const recentSalesForAdmin = useMemo(() => 
     [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5)
@@ -232,34 +209,13 @@ export default function DashboardPage() {
             />
           </>
         ) : (
-          // Staff view - could show their sales count or other relevant staff metrics
           <AnalyticsCard title="Total Sales (Session)" value={recentStaffSales.reduce((sum, s) => sum + s.totalAmount, 0)} icon={DollarSign} description="Your sales in this session" isCurrency={true}/>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" isCurrency={false} href="/products"/>
       </div>
 
       {user.role === 'admin' && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Sales Trend (Last 7 entries)</CardTitle>
-              <CardDescription>Visual overview of sales performance.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={salesTrendData} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-          
+        <div className="grid gap-4 md:grid-cols-1"> {/* Changed from md:grid-cols-2 */}
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Recent Sales</CardTitle>
@@ -476,6 +432,3 @@ function PlaceholderChart() {
     </div>
   )
 }
-
-
-    
