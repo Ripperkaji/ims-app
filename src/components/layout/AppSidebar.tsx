@@ -17,7 +17,8 @@ import {
   Settings,
   AlertTriangle,
   Zap,
-  FlaskConical
+  FlaskConical,
+  AlertOctagon
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
+  { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
 ];

@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, UserCircle, ChevronsLeftRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
-import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical } from 'lucide-react';
+import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical, AlertOctagon } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
+  { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
 ];
 
