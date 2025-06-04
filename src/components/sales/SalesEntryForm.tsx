@@ -453,7 +453,13 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       <SelectContent>
                         {item.selectedCategory && allGlobalProducts
                           .filter(p => p.category === item.selectedCategory)
-                          .filter(p => p.stock > 0 || (item.productId && p.id === item.productId))
+                          .filter(p => {
+                            const isCurrentItem = item.productId && p.id === item.productId;
+                            const isAlreadySelectedInOtherRows = selectedItems.some(
+                              (otherItem, otherIndex) => otherIndex !== index && otherItem.productId === p.id
+                            );
+                            return (p.stock > 0 || isCurrentItem) && !isAlreadySelectedInOtherRows;
+                          })
                           .sort((a,b) => a.name.localeCompare(b.name))
                           .map(p => (
                             <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId}>

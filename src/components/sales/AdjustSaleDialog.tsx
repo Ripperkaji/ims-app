@@ -307,7 +307,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   if (!isOpen) return null;
 
-  const availableProductsForDropdown = (currentItemId?: string) => {
+  const availableProductsForDropdown = (currentItemId?: string, currentItemIndex?: number) => {
     const baseProducts = allGlobalProducts;
       
     return baseProducts.filter(p => {
@@ -319,7 +319,11 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         const effectiveStock = currentGlobalStockValue + quantityInOriginalSaleForThisProduct;
 
         const isCurrentItemForThisRow = p.id === currentItemId;
-        const alreadySelectedInOtherEditedRows = editedItems.some(ei => ei.productId === p.id && ei.productId !== currentItemId);
+        
+        // Check if this product ID is selected in any *other* row
+        const alreadySelectedInOtherEditedRows = editedItems.some(
+            (otherItem, otherIndex) => otherIndex !== currentItemIndex && otherItem.productId === p.id
+        );
 
         if (isCurrentItemForThisRow) return true; 
         if (alreadySelectedInOtherEditedRows) return false; 
@@ -369,7 +373,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                    {availableProductsForDropdown(item.productId).map((p) => {
+                    {availableProductsForDropdown(item.productId, index).map((p) => {
                         const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
                         const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
                         const currentGlobalStockValue = productDetails?.stock || 0;
