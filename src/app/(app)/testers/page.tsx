@@ -1,29 +1,117 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { mockProducts, mockLogEntries } from "@/lib/data";
-import type { Product, LogEntry } from '@/types';
+import type { Product, LogEntry, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FlaskConical, Edit, Save } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { FlaskConical, Edit, Save, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-interface ProductWithTesterInput extends Product {
-  testerInput: string; // For controlled input state
+interface ProductForTesterCard extends Product {
+  // No extra fields needed here now, direct properties from Product will be used
 }
+
+// Component to display current stock and tester info for selected product in the card
+const ProductInfoDisplay = ({ productId }: { productId: string | null }) => {
+    const product = productId ? mockProducts.find(p => p.id === productId) : null;
+    if (!product) {
+        return <p className="text-sm text-muted-foreground h-10 flex items-center">Select a product to see details.</p>;
+    }
+    return (
+        <div className="text-sm space-y-1 h-10">
+            <p>Current Sellable Stock: <span className="font-semibold">{product.stock}</span></p>
+            <p>Current Testers: <span className="font-semibold">{product.testerQuantity || 0}</span></p>
+        </div>
+    );
+};
+
+// Component for Product Selection Dropdown
+const ProductSelect = ({
+  selectedCategory,
+  selectedValue,
+  onChange,
+  products,
+  disabled,
+}: {
+  selectedCategory: ProductType | '';
+  selectedValue: string | null;
+  onChange: (value: string) => void;
+  products: ProductForTesterCard[];
+  disabled: boolean;
+}) => {
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategory) return [];
+    return products
+      .filter(p => p.category === selectedCategory)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedCategory, products]);
+
+  return (
+    <Select
+      value={selectedValue || ''}
+      onValueChange={onChange}
+      disabled={disabled || filteredProducts.length === 0}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={disabled ? "First select category" : "Select product"} />
+      </SelectTrigger>
+      <SelectContent>
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map(p => (
+            <SelectItem key={p.id} value={p.id} disabled={!p.productId && p.stock <= 0 && p.testerQuantity <=0}>
+              {p.name} (Stock: {p.stock}, Testers: {p.testerQuantity || 0})
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="no-products" disabled>
+            No products in this category
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
+  );
+};
+
 
 export default function TestersPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [productsForTesterMgmt, setProductsForTesterMgmt] = useState<ProductWithTesterInput[]>([]);
+  // State for the assignment card
+  const [selectedCategoryForTester, setSelectedCategoryForTester] = useState<ProductType | ''>('');
+  const [selectedProductForTester, setSelectedProductForTester] = useState<string | null>(null);
+  const [newTesterQuantityInput, setNewTesterQuantityInput] = useState<string>('');
+
+  // State for the list of products displayed in the card's dropdown. Includes all products.
+  const [productsForTesterAssignmentCard, setProductsForTesterAssignmentCard] = useState<ProductForTesterCard[]>([]);
+  
+  // State for the table that shows only products with active testers
+  const [productsWithTestersList, setProductsWithTestersList] = useState<Product[]>([]);
+
+
+  const refreshDerivedProductStates = () => {
+      // Re-derive the list for the assignment card's product dropdown from the latest mockProducts
+      setProductsForTesterAssignmentCard(
+        mockProducts.map(p => ({
+          ...p, // Spread the latest from mockProducts
+        })).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      // Re-derive the list for the "Active Testers" table
+      setProductsWithTestersList(
+        mockProducts.filter(p => p.testerQuantity > 0).sort((a, b) => a.name.localeCompare(b.name))
+      );
+  };
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -31,13 +119,10 @@ export default function TestersPage() {
       router.push('/dashboard');
       return;
     }
-    // Initialize products with their current tester quantity as string for input
-    const initialProducts = mockProducts.map(p => ({
-      ...p,
-      testerInput: (p.testerQuantity || 0).toString()
-    })).sort((a, b) => a.name.localeCompare(b.name));
-    setProductsForTesterMgmt(initialProducts);
-  }, [user, router, toast]);
+    refreshDerivedProductStates();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router, toast]); // Run once on mount and if user changes (though user change implies redirect)
+
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -49,83 +134,99 @@ export default function TestersPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
-  const handleTesterInputChange = (productId: string, value: string) => {
-    setProductsForTesterMgmt(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? { ...p, testerInput: value } : p
-      )
-    );
+  const handleCategoryChangeForTesterCard = (category: ProductType | '') => {
+    setSelectedCategoryForTester(category);
+    setSelectedProductForTester(null); // Reset product selection when category changes
+    setNewTesterQuantityInput(''); // Reset quantity input
+  };
+  
+  const handleProductChangeForTesterCard = (productId: string) => {
+    setSelectedProductForTester(productId);
+    const product = mockProducts.find(p => p.id === productId);
+    // Set input to current tester quantity of the selected product
+    setNewTesterQuantityInput((product?.testerQuantity || 0).toString());
   };
 
-  const handleUpdateTesterQuantity = (productId: string) => {
-    if (!user) return;
 
-    const productState = productsForTesterMgmt.find(p => p.id === productId);
-    const productGlobalIndex = mockProducts.findIndex(p => p.id === productId);
-
-    if (!productState || productGlobalIndex === -1) {
-      toast({ title: "Error", description: "Product not found.", variant: "destructive" });
+  const handleUpdateTesterQuantityFromCard = () => {
+    if (!user || !selectedProductForTester) {
+      toast({ title: "Selection Missing", description: "Please select a product.", variant: "destructive" });
       return;
     }
 
+    const selectedProductId = selectedProductForTester;
+    const productGlobalIndex = mockProducts.findIndex(p => p.id === selectedProductId);
+
+    if (productGlobalIndex === -1) {
+      toast({ title: "Error", description: "Selected product not found in global list.", variant: "destructive" });
+      return;
+    }
+    
     const currentProductGlobal = mockProducts[productGlobalIndex];
     const oldTesterQty = currentProductGlobal.testerQuantity || 0;
     const oldStock = currentProductGlobal.stock;
 
-    const newDesiredTesterQty = parseInt(productState.testerInput, 10);
+    const newDesiredTesterQty = parseInt(newTesterQuantityInput.trim(), 10);
 
     if (isNaN(newDesiredTesterQty) || newDesiredTesterQty < 0) {
       toast({ title: "Invalid Input", description: "Tester quantity must be a non-negative number.", variant: "destructive" });
-      // Reset input to reflect current global state
-      setProductsForTesterMgmt(prev => prev.map(p => p.id === productId ? {...p, testerInput: oldTesterQty.toString()} : p));
       return;
     }
 
     if (newDesiredTesterQty === oldTesterQty) {
-      toast({ title: "No Change", description: "Tester quantity is already set to this value.", variant: "default" });
+      toast({ title: "No Change", description: `Tester quantity for ${currentProductGlobal.name} is already ${oldTesterQty}.`, variant: "default" });
+       // No actual data change, but refresh states to ensure UI is consistent if needed and reset form
+      refreshDerivedProductStates();
+      setSelectedCategoryForTester('');
+      setSelectedProductForTester(null);
+      setNewTesterQuantityInput('');
       return;
     }
 
     const deltaTesters = newDesiredTesterQty - oldTesterQty;
+    let newStock = oldStock;
 
     if (deltaTesters > 0) { // Increasing testers
       if (oldStock < deltaTesters) {
         toast({
           title: "Insufficient Stock",
-          description: `Not enough sellable stock to convert to testers. Available: ${oldStock}. Needed: ${deltaTesters}. Max testers: ${oldTesterQty + oldStock}.`,
+          description: `Not enough sellable stock to convert to ${deltaTesters} new tester(s) for ${currentProductGlobal.name}. Available: ${oldStock}. Max new total testers: ${oldTesterQty + oldStock}.`,
           variant: "destructive",
           duration: 7000
         });
-         setProductsForTesterMgmt(prev => prev.map(p => p.id === productId ? {...p, testerInput: oldTesterQty.toString()} : p));
+        setNewTesterQuantityInput(oldTesterQty.toString()); // Reset input to old value
         return;
       }
-      mockProducts[productGlobalIndex].stock -= deltaTesters;
-      mockProducts[productGlobalIndex].testerQuantity += deltaTesters;
+      newStock -= deltaTesters;
     } else { // Decreasing testers (deltaTesters is negative)
-      mockProducts[productGlobalIndex].stock -= deltaTesters; // e.g., stock - (-1) = stock + 1
-      mockProducts[productGlobalIndex].testerQuantity += deltaTesters; // e.g., testers + (-1) = testers - 1
+      newStock -= deltaTesters; // e.g., stock - (-1) = stock + 1
     }
-
-    // Update local state for UI consistency
-    const updatedProductForState = { ...mockProducts[productGlobalIndex], testerInput: mockProducts[productGlobalIndex].testerQuantity.toString() };
-    setProductsForTesterMgmt(prevProducts =>
-      prevProducts.map(p =>
-        p.id === productId ? updatedProductForState : p
-      ).sort((a, b) => a.name.localeCompare(b.name))
-    );
+    
+    // Directly mutate mockProducts
+    mockProducts[productGlobalIndex].stock = newStock;
+    mockProducts[productGlobalIndex].testerQuantity = newDesiredTesterQty;
 
     addLog(
       "Tester Quantity Updated",
-      `Tester quantity for '${currentProductGlobal.name}' (ID: ${productId.substring(0,8)}...) changed from ${oldTesterQty} to ${newDesiredTesterQty} by ${user.name}. Sellable stock adjusted from ${oldStock} to ${mockProducts[productGlobalIndex].stock}.`
+      `Tester quantity for '${currentProductGlobal.name}' (ID: ${selectedProductId.substring(0,8)}...) changed from ${oldTesterQty} to ${newDesiredTesterQty} by ${user.name}. Sellable stock adjusted from ${oldStock} to ${newStock}.`
     );
     toast({
       title: "Tester Quantity Updated",
-      description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Stock is now ${mockProducts[productGlobalIndex].stock}.`,
+      description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Stock is now ${newStock}.`,
     });
+
+    // Refresh UI states from the mutated mockProducts
+    refreshDerivedProductStates();
+    
+    // Reset form fields
+    setSelectedCategoryForTester('');
+    setSelectedProductForTester(null);
+    setNewTesterQuantityInput('');
   };
+
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -138,11 +239,83 @@ export default function TestersPage() {
           <FlaskConical className="h-7 w-7 text-primary" /> Tester Product Management
         </h1>
       </div>
+
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Manage Tester Units</CardTitle>
+          <CardTitle>Assign/Update Tester Units</CardTitle>
           <CardDescription>
-            Set the number of tester units for each product. Adjusting testers will affect sellable stock.
+            Select a product and set its total tester quantity. This will adjust sellable stock.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="testerCategorySelect">Product Category</Label>
+              <Select value={selectedCategoryForTester} onValueChange={handleCategoryChangeForTesterCard}>
+                <SelectTrigger id="testerCategorySelect">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_PRODUCT_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="testerProductSelect">Product</Label>
+              <ProductSelect
+                selectedCategory={selectedCategoryForTester}
+                selectedValue={selectedProductForTester}
+                onChange={handleProductChangeForTesterCard}
+                products={productsForTesterAssignmentCard}
+                disabled={!selectedCategoryForTester}
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div>
+              <Label htmlFor="newTesterQuantity">New Total Tester Quantity</Label>
+              <Input
+                id="newTesterQuantity"
+                type="number"
+                value={newTesterQuantityInput}
+                onChange={(e) => setNewTesterQuantityInput(e.target.value)}
+                placeholder="Enter total testers"
+                min="0"
+                disabled={!selectedProductForTester}
+              />
+            </div>
+            <div className="md:mt-auto"> {/* Aligns button with input on larger screens */}
+                {selectedProductForTester ? <ProductInfoDisplay productId={selectedProductForTester} /> : <div className="h-10"></div>}
+            </div>
+          </div>
+           {selectedProductForTester && parseInt(newTesterQuantityInput) < 0 && (
+             <Alert variant="destructive">
+                <Info className="h-4 w-4" />
+                <AlertTitle>Invalid Input</AlertTitle>
+                <AlertDescription>Tester quantity cannot be negative.</AlertDescription>
+            </Alert>
+           )}
+
+        </CardContent>
+        <CardFooter>
+          <Button 
+            onClick={handleUpdateTesterQuantityFromCard} 
+            disabled={!selectedProductForTester || newTesterQuantityInput.trim() === '' || parseInt(newTesterQuantityInput) < 0 }
+            className={(!selectedProductForTester || newTesterQuantityInput.trim() === '' || parseInt(newTesterQuantityInput) < 0) ? "bg-primary/50" : ""}
+          >
+            <Save className="mr-2 h-4 w-4" /> Update Tester Quantity
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Products Currently Assigned as Testers</CardTitle>
+           <CardDescription>
+            List of products with one or more units designated as testers.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -151,45 +324,24 @@ export default function TestersPage() {
               <TableRow>
                 <TableHead>Product Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-center">Sellable Stock</TableHead>
                 <TableHead className="text-center">Current Testers</TableHead>
-                <TableHead className="w-40 text-center">Set Tester Qty</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-center">Sellable Stock</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {productsForTesterMgmt.map((product) => (
+              {productsWithTestersList.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>
-                  <TableCell className="text-center">{mockProducts.find(p=>p.id === product.id)?.stock || 0}</TableCell>
-                  <TableCell className="text-center">{mockProducts.find(p=>p.id === product.id)?.testerQuantity || 0}</TableCell>
-                  <TableCell className="text-center">
-                    <Input
-                      type="number"
-                      value={product.testerInput}
-                      onChange={(e) => handleTesterInputChange(product.id, e.target.value)}
-                      className="w-24 h-9 text-center mx-auto"
-                      min="0"
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleUpdateTesterQuantity(product.id)}
-                      disabled={parseInt(product.testerInput,10) === (mockProducts.find(p=>p.id === product.id)?.testerQuantity || 0) && product.testerInput === (mockProducts.find(p=>p.id === product.id)?.testerQuantity || 0).toString()}
-                    >
-                      <Save className="mr-2 h-4 w-4" /> Update
-                    </Button>
-                  </TableCell>
+                  <TableCell className="text-center">{product.testerQuantity || 0}</TableCell>
+                  <TableCell className="text-center">{product.stock}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {productsForTesterMgmt.length === 0 && (
+          {productsWithTestersList.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No products found in the inventory.
+              No products are currently assigned as testers. Use the form above to assign them.
             </div>
           )}
         </CardContent>
@@ -197,3 +349,4 @@ export default function TestersPage() {
     </div>
   );
 }
+
