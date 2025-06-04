@@ -3,7 +3,7 @@
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase, Flag, AlertCircle } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase, Flag, AlertCircle, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,9 +35,9 @@ export default function DashboardPage() {
   const dueSalesCount = mockSales.filter(sale => sale.amountDue > 0).length;
   const totalProducts = mockProducts.length;
   
-  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [mockProducts]);
-  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [mockProducts]);
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [mockSales]); 
+  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, []);
+  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, []);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, []); 
 
   const salesByDay: { [key: string]: number } = {};
   mockSales.forEach(sale => {
@@ -65,7 +65,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh]); 
+  }, [user, triggerRefresh, mockSales]); 
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -288,6 +288,18 @@ export default function DashboardPage() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
+                           {!sale.isFlagged && sale.flaggedComment && ( 
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <ShieldCheck className="h-4 w-4 text-green-600 cursor-default" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell>
@@ -384,6 +396,19 @@ export default function DashboardPage() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
+                          ) : sale.flaggedComment ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="flex items-center text-sm text-green-600 cursor-default">
+                                    <ShieldCheck className="h-4 w-4 mr-1" /> Resolved
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           ) : (
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
                               <Flag className="h-4 w-4 mr-1" /> Flag Items/Sale
