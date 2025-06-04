@@ -387,6 +387,112 @@ const initialMockSales: Sale[] = [
   }
 ];
 
+const initialDamageLogEntries: LogEntry[] = [
+  {
+    id: 'log-dmg-prod1-init',
+    timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Vape Juice - Mango Tango' (Qty: 2) from Sale ID MOCK_DMG_S1... marked damaged & exchanged by System. Prev Stock: 52, New Stock: 50, Prev Dmg: 0, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-prod2-init',
+    timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Vape Mod - Smok X' (Qty: 1) from Sale ID MOCK_DMG_S2... marked damaged & exchanged by System. Prev Stock: 26, New Stock: 25, Prev Dmg: 0, New Dmg: 1."
+  },
+  {
+    id: 'log-dmg-prod4-init',
+    timestamp: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Disposable Vape - Blueberry Ice' (Qty: 5) from Sale ID MOCK_DMG_S3... marked damaged & exchanged by System. Prev Stock: 80, New Stock: 75, Prev Dmg: 0, New Dmg: 5."
+  },
+  {
+    id: 'log-dmg-disp1-init',
+    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Disposable - Watermelon Chill' (Qty: 3) from Sale ID MOCK_DMG_S4... marked damaged & exchanged by System. Prev Stock: 123, New Stock: 120, Prev Dmg: 0, New Dmg: 3."
+  },
+  {
+    id: 'log-dmg-disp2-init',
+    timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Disposable - Cool Mint Blast' (Qty: 2) from Sale ID MOCK_DMG_S5... marked damaged & exchanged by System. Prev Stock: 92, New Stock: 90, Prev Dmg: 0, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-nicsalt1-init',
+    timestamp: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Nic Salt - Strawberry Kiwi' (Qty: 1) from Sale ID MOCK_DMG_S6... marked damaged & exchanged by System. Prev Stock: 61, New Stock: 60, Prev Dmg: 0, New Dmg: 1."
+  },
+  {
+    id: 'log-dmg-nicsalt2-init',
+    timestamp: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Nic Salt - Blue Razz Ice' (Qty: 4) from Sale ID MOCK_DMG_S7... marked damaged & exchanged by System. Prev Stock: 74, New Stock: 70, Prev Dmg: 0, New Dmg: 4."
+  },
+  {
+    id: 'log-dmg-freebase2-init',
+    timestamp: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Freebase - Vanilla Custard' (Qty: 2) from Sale ID MOCK_DMG_S8... marked damaged & exchanged by System. Prev Stock: 57, New Stock: 55, Prev Dmg: 0, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-freebase3-init',
+    timestamp: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Freebase - Green Apple Zing' (Qty: 1) from Sale ID MOCK_DMG_S9... marked damaged & exchanged by System. Prev Stock: 51, New Stock: 50, Prev Dmg: 0, New Dmg: 1."
+  },
+  {
+    id: 'log-dmg-coil1-init',
+    timestamp: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Mesh Coils - 0.4ohm (3 Pk)' (Qty: 3) from Sale ID MOCK_DMG_S10... marked damaged & exchanged by System. Prev Stock: 83, New Stock: 80, Prev Dmg: 0, New Dmg: 3."
+  },
+  {
+    id: 'log-dmg-coil2-init',
+    timestamp: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'MTL Coils - 1.2ohm (5 Pk)' (Qty: 5) from Sale ID MOCK_DMG_S11... marked damaged & exchanged by System. Prev Stock: 125, New Stock: 120, Prev Dmg: 0, New Dmg: 5."
+  },
+  {
+    id: 'log-dmg-podmod1-init',
+    timestamp: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Compact Pod System - Caliburn G' (Qty: 2) from Sale ID MOCK_DMG_S12... marked damaged & exchanged by System. Prev Stock: 37, New Stock: 35, Prev Dmg: 0, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-cotton1-init',
+    timestamp: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Organic Vape Cotton - Premium Strips' (Qty: 5) from Sale ID MOCK_DMG_S13... marked damaged & exchanged by System. Prev Stock: 155, New Stock: 150, Prev Dmg: 0, New Dmg: 5."
+  },
+  {
+    id: 'log-dmg-cotton2-init',
+    timestamp: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Cotton Bacon Bits - V2' (Qty: 3) from Sale ID MOCK_DMG_S14... marked damaged & exchanged by System. Prev Stock: 143, New Stock: 140, Prev Dmg: 0, New Dmg: 3."
+  },
+  {
+    id: 'log-dmg-cotton3-init',
+    timestamp: new Date(Date.now() - 26 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Shoelace Cotton Agleted (20 Pcs)' (Qty: 2) from Sale ID MOCK_DMG_S15... marked damaged & exchanged by System. Prev Stock: 132, New Stock: 130, Prev Dmg: 0, New Dmg: 2."
+  },
+  {
+    id: 'log-dmg-build1-init',
+    timestamp: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Coil Building Toolkit - Basic' (Qty: 1) from Sale ID MOCK_DMG_S16... marked damaged & exchanged by System. Prev Stock: 21, New Stock: 20, Prev Dmg: 0, New Dmg: 1."
+  },
+  {
+    id: 'log-dmg-build3-init',
+    timestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: "Product Damage & Stock Update (Exchange): Item 'Precision Screwdriver Set for Vapes' (Qty: 1) from Sale ID MOCK_DMG_S17... marked damaged & exchanged by System. Prev Stock: 41, New Stock: 40, Prev Dmg: 0, New Dmg: 1."
+  },
+];
+
+
 const initialMockLogEntries: LogEntry[] = [
    {
     id: 'log0',
@@ -465,29 +571,7 @@ const initialMockLogEntries: LogEntry[] = [
     action: 'Product Added',
     details: "Product 'Vape Pen Kit - Starter' (ID: prod5...) added. Category: POD/MOD Devices, Cost: NRP 18.00, Selling Price: NRP 29.99, Initial Stock: 40."
   },
-  // Added mock log entries for "Product Damage & Stock Update (Exchange)"
-  // to make the Damaged Product Report more illustrative from the start.
-  {
-    id: 'log-dmg-prod1-init',
-    timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
-    user: 'System',
-    action: 'Product Damage & Stock Update (Exchange)',
-    details: "Product Damage & Stock Update (Exchange): Item 'Vape Juice - Mango Tango' (Qty: 1) from Sale ID MOCK_INIT_S1... marked damaged & exchanged by System. Prev Stock: 51, New Stock: 50, Prev Dmg: 1, New Dmg: 2."
-  },
-  {
-    id: 'log-dmg-prod2-init',
-    timestamp: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), // 12 days ago
-    user: 'System',
-    action: 'Product Damage & Stock Update (Exchange)',
-    details: "Product Damage & Stock Update (Exchange): Item 'Vape Mod - Smok X' (Qty: 1) from Sale ID MOCK_INIT_S2... marked damaged & exchanged by System. Prev Stock: 26, New Stock: 25, Prev Dmg: 0, New Dmg: 1."
-  },
-  {
-    id: 'log-dmg-disp1-init',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-    user: 'System',
-    action: 'Product Damage & Stock Update (Exchange)',
-    details: "Product Damage & Stock Update (Exchange): Item 'Disposable - Watermelon Chill' (Qty: 2) from Sale ID MOCK_INIT_S3... marked damaged & exchanged by System. Prev Stock: 122, New Stock: 120, Prev Dmg: 1, New Dmg: 3."
-  }
+  ...initialDamageLogEntries // Add the comprehensive damage logs here
 ];
 
 // Helper function to get a random date within the last N days
@@ -727,7 +811,7 @@ export const mockExpenses: Expense[] = [
 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
-export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
 
 // Ensure all sales items have the new fields
 mockSales.forEach(sale => {
@@ -759,7 +843,7 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
     details: `Expense Category: ${newExpense.category}, Amount: NRP ${newExpense.amount.toFixed(2)}. Desc: ${newExpense.description}`,
   };
   mockLogEntries.unshift(logEntry); // Add to the beginning
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
 
   return newExpense;
 }
