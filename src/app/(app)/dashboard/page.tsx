@@ -3,7 +3,7 @@
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { mockSales, mockExpenses, mockProducts, mockLogEntries, addSystemExpense } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users, Phone, Briefcase, Flag, AlertCircle, ShieldCheck } from "lucide-react";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users as UsersIcon, Phone, Briefcase, Flag, AlertCircle, ShieldCheck, Archive, Wallet, Smartphone } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,18 +29,34 @@ const chartConfig = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [triggerRefresh, setTriggerRefresh] = useState(0); // Used to force re-calculation of dashboard stats
+  const [triggerRefresh, setTriggerRefresh] = useState(0); 
 
 
   const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [triggerRefresh, mockSales]);
   const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [triggerRefresh, mockExpenses]);
   const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
   const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
-  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); // Assuming products list doesn't change as frequently or is less critical for triggerRefresh
+  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); 
   
   const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [triggerRefresh, mockProducts]);
   const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
   const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
+
+  const stockValuation = useMemo(() => {
+    return mockProducts.reduce((sum, p) => sum + (p.stock * p.costPrice), 0);
+  }, [triggerRefresh, mockProducts]);
+
+  const totalCustomerDues = useMemo(() => {
+    return mockSales.filter(s => s.amountDue > 0).reduce((sum, s) => sum + s.amountDue, 0);
+  }, [triggerRefresh, mockSales]);
+
+  const totalCashPayments = useMemo(() => {
+    return mockSales.reduce((sum, s) => sum + s.cashPaid, 0);
+  }, [triggerRefresh, mockSales]);
+
+  const totalDigitalPayments = useMemo(() => {
+    return mockSales.reduce((sum, s) => sum + s.digitalPaid, 0);
+  }, [triggerRefresh, mockSales]);
 
   const salesTrendData = useMemo(() => {
     const salesByDay: { [key: string]: number } = {};
@@ -71,7 +87,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]); 
     }
-  }, [user, triggerRefresh, mockSales]); // Added mockSales dependency
+  }, [user, triggerRefresh, mockSales]); 
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -134,7 +150,6 @@ export default function DashboardPage() {
               const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
               
-              // Create expense entry for damaged item
               const damageExpense: Omit<Expense, 'id'> = {
                 date: new Date().toISOString(),
                 description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
@@ -182,42 +197,81 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" />
+        <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" isCurrency={true}/>
         {user.role === 'admin' && (
           <>
-            <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" />
-            <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" />
+            <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
+            <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
             <AnalyticsCard 
               title="Due Payments" 
               value={dueSalesCount} 
               icon={AlertTriangle} 
-              description="Sales with pending payment" 
+              description={`${dueSalesCount} sale(s) with pending payment`}
               iconClassName={dueSalesCount > 0 ? "text-destructive" : "text-green-500"}
+              isCurrency={false}
+              href="/due-sales"
             />
             <AnalyticsCard 
               title="Flagged Sales" 
               value={flaggedSalesCount} 
               icon={Flag} 
-              description="Sales marked for review" 
+              description={`${flaggedSalesCount} sale(s) marked for review`}
               iconClassName={flaggedSalesCount > 0 ? "text-destructive" : "text-green-500"}
+              isCurrency={false}
+              href="/sales"
             />
              <AnalyticsCard 
               title="Critical Stock (Qty 1)" 
               value={criticalStockCount} 
               icon={AlertTriangle} 
-              description="Products with only 1 unit left"
+              description={`${criticalStockCount} product(s) with 1 unit left`}
               iconClassName={criticalStockCount > 0 ? "text-orange-500" : "text-green-500"}
+              isCurrency={false}
+              href="/products"
             />
             <AnalyticsCard 
               title="Out of Stock Items" 
               value={outOfStockCount} 
               icon={AlertCircle} 
-              description="Products with no units left" 
+              description={`${outOfStockCount} product(s) with no units`}
               iconClassName={outOfStockCount > 0 ? "text-destructive" : "text-green-500"}
+              isCurrency={false}
+              href="/products"
+            />
+             <AnalyticsCard
+              title="Stock Valuation (Cost)"
+              value={stockValuation}
+              icon={Archive}
+              description="Total cost of current inventory"
+              isCurrency={true}
+              href="/products"
+            />
+            <AnalyticsCard
+              title="Outstanding Dues"
+              value={totalCustomerDues}
+              icon={UsersIcon}
+              description="Total amount due from customers"
+              isCurrency={true}
+              iconClassName={totalCustomerDues > 0 ? "text-orange-500" : "text-green-500"}
+              href="/due-sales"
+            />
+            <AnalyticsCard
+              title="Total Cash Received"
+              value={totalCashPayments}
+              icon={Wallet}
+              description="From sales transactions"
+              isCurrency={true}
+            />
+            <AnalyticsCard
+              title="Total Digital Received"
+              value={totalDigitalPayments}
+              icon={Smartphone}
+              description="From sales transactions"
+              isCurrency={true}
             />
           </>
         )}
-        <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" />
+        <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" isCurrency={false} href="/products"/>
       </div>
 
       {user.role === 'admin' && (
@@ -458,5 +512,3 @@ function PlaceholderChart() {
     </div>
   )
 }
-
-
