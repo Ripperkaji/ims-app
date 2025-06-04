@@ -32,9 +32,11 @@ export default function DashboardPage() {
   const [triggerRefresh, setTriggerRefresh] = useState(0); 
 
 
+  // These calculations are still needed for sales trend chart, but cards are moved
   const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [triggerRefresh, mockSales]);
-  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [triggerRefresh, mockExpenses]);
-  const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
+  // const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [triggerRefresh, mockExpenses]);
+  // const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
+
   const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
   const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); 
   
@@ -42,11 +44,6 @@ export default function DashboardPage() {
   const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
   const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
 
-  // Removed detailed financial calculations from here as they will move to /analytics
-  // const stockValuation = useMemo(() => { ... });
-  // const totalCustomerDues = useMemo(() => { ... });
-  // const totalCashPayments = useMemo(() => { ... });
-  // const totalDigitalPayments = useMemo(() => { ... });
 
   const salesTrendData = useMemo(() => {
     const salesByDay: { [key: string]: number } = {};
@@ -187,12 +184,9 @@ export default function DashboardPage() {
       <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" isCurrency={true}/>
-        {user.role === 'admin' && (
+        {user.role === 'admin' ? (
           <>
-            <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
-            <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
-            <AnalyticsCard 
+             <AnalyticsCard 
               title="Due Payments" 
               value={dueSalesCount} 
               icon={AlertTriangle} 
@@ -230,13 +224,16 @@ export default function DashboardPage() {
             />
             <AnalyticsCard
               title="Advanced Analytics"
-              value="View Reports" // Or some other non-numeric value
+              value="View Reports"
               icon={BarChart3}
               description="View detailed reports and metrics."
               isCurrency={false}
               href="/analytics"
             />
           </>
+        ) : (
+          // Staff view - could show their sales count or other relevant staff metrics
+          <AnalyticsCard title="Total Sales (Session)" value={recentStaffSales.reduce((sum, s) => sum + s.totalAmount, 0)} icon={DollarSign} description="Your sales in this session" isCurrency={true}/>
         )}
         <AnalyticsCard title="Total Products" value={totalProducts} icon={Package} description="Available product types" isCurrency={false} href="/products"/>
       </div>

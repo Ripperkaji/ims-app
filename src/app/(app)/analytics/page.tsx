@@ -3,10 +3,12 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
+import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
+import { BarChart3, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { mockSales, mockExpenses } from "@/lib/data"; // Import mock data
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -20,6 +22,10 @@ export default function AnalyticsPage() {
     }
   }, [user, router, toast]);
 
+  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [mockSales]);
+  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [mockExpenses]);
+  const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
+
   if (!user || user.role !== 'admin') {
     return null;
   }
@@ -32,11 +38,17 @@ export default function AnalyticsPage() {
         </h1>
       </div>
 
-      <Card className="shadow-lg">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" isCurrency={true}/>
+        <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
+        <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
+      </div>
+
+      <Card className="shadow-lg mt-6">
         <CardHeader>
           <CardTitle>Comprehensive Analytics Dashboard</CardTitle>
           <CardDescription>
-            Detailed insights and reports will be available here. (Under Construction)
+            More detailed insights and reports will be available here. (Under Construction)
           </CardDescription>
         </CardHeader>
         <CardContent>
