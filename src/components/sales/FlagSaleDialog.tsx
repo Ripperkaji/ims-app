@@ -40,7 +40,7 @@ interface FlagSaleDialogProps {
 }
 
 interface ItemFlagState {
-  tempUiId: string; // Added for unique key
+  tempUiId: string; 
   productId: string;
   productName: string;
   quantitySold: number;
@@ -57,7 +57,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     if (isOpen && sale) {
       setItemStates(
         sale.items.map((originalSaleItem, originalIndex) => ({
-          tempUiId: `${originalSaleItem.productId}-${originalIndex}`, // Generate unique key
+          tempUiId: `${originalSaleItem.productId}-${originalIndex}`,
           productId: originalSaleItem.productId,
           productName: originalSaleItem.productName,
           quantitySold: originalSaleItem.quantity,
@@ -99,6 +99,8 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
   };
 
   const handleConfirmFlag = () => {
+    const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
+    
     if (!generalReasonCommentText.trim()) {
       toast({
         title: "General Reason Required",
@@ -108,7 +110,6 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
       return;
     }
 
-    const itemsMarkedForDamage = itemStates.filter(item => item.isMarkedForDamageExchange);
     if (itemsMarkedForDamage.some(item => !item.damageComment.trim())) {
       toast({
         title: "Comment Required for Damaged Items",
@@ -127,11 +128,9 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
     }));
 
     onSaleFlagged(sale.id, flaggedItemsData, generalReasonCommentText);
-    // No need to call onClose here, parent component handles it after onSaleFlagged completes.
   };
 
   const handleDialogClose = () => {
-    // State reset is handled by useEffect when isOpen changes
     onClose();
   }
 
@@ -145,8 +144,8 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <Flag className="h-5 w-5 text-destructive" /> Flag Sale for Review
           </DialogTitle>
@@ -156,8 +155,8 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow min-h-0 py-2 pr-3 -mr-2">
-          <div className="space-y-4">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="space-y-4 px-6 pb-4">
             <p className="text-sm font-medium mb-2">Item-Specific Damage/Exchange (Optional):</p>
             {itemStates.map((itemStateForRender) => (
               <div key={itemStateForRender.tempUiId} className="p-3 border rounded-md bg-muted/30 mb-3">
@@ -206,7 +205,7 @@ export default function FlagSaleDialog({ sale, isOpen, onClose, onSaleFlagged }:
           </div>
         </ScrollArea>
 
-        <DialogFooter className="pt-4 border-t">
+        <DialogFooter className="p-6 pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline" onClick={handleDialogClose}>Cancel</Button>
           </DialogClose>
