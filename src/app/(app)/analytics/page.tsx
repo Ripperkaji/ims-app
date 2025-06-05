@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
     return mockExpenses
       .filter(expense => payableCategories.includes(expense.category))
       .reduce((sum, expense) => sum + expense.amount, 0);
-  }, [payableCategories, mockExpenses]);
+  }, [payableCategories]); // mockExpenses is intentionally not in deps if it's a stable global ref and refresh is handled elsewhere
 
   const categorySalesData = useMemo(() => {
     const salesByCategory: { [category: string]: number } = {};
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        <Card className="shadow-lg lg:col-span-2">
+        <Card className="shadow-lg lg:col-span-1">
             <CardHeader>
                 <CardTitle>Product Category Sales Distribution</CardTitle>
                 <CardDescription>Quantity of products sold by category (all time).</CardDescription>
@@ -151,3 +151,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
