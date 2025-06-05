@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react"; // Added Wallet
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,6 +39,14 @@ export default function AnalyticsPage() {
   const currentStockValuation = useMemo(() => {
     return mockProducts.reduce((sum, product) => sum + (product.stock * product.costPrice), 0);
   }, []);
+
+  const payableCategories = useMemo(() => ['Rent', 'Utilities', 'Logistics', 'Marketing', 'Software', 'Maintenance'], []);
+
+  const totalAccountPayableAmount = useMemo(() => {
+    return mockExpenses
+      .filter(expense => payableCategories.includes(expense.category))
+      .reduce((sum, expense) => sum + expense.amount, 0);
+  }, [payableCategories, mockExpenses]);
 
   const categorySalesData = useMemo(() => {
     const salesByCategory: { [category: string]: number } = {};
@@ -85,11 +93,12 @@ export default function AnalyticsPage() {
         </h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Changed lg:grid-cols-4 to lg:grid-cols-3 */}
         <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" isCurrency={true}/>
         <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
         <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
+        <AnalyticsCard title="Account Payable" value={totalAccountPayableAmount} icon={Wallet} description="Total of typically payable expenses (e.g., rent, utilities, supplier costs)." isCurrency={true}/>
       </div>
       
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
@@ -142,3 +151,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
