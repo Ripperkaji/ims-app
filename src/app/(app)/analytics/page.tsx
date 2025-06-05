@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
       config[categoryData.name] = {
-        label: categoryData.name, // Reverted to simple name
+        label: categoryData.name,
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
@@ -92,7 +92,7 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
         <Card className="shadow-lg lg:col-span-1">
             <CardHeader>
                 <CardTitle>Product Category Sales Distribution</CardTitle>
@@ -142,4 +142,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
