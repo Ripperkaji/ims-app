@@ -9,13 +9,6 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { BarChart3, DollarSign, TrendingUp, TrendingDown, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data"; 
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
-import { format } from 'date-fns';
-
-const chartConfig = {
-  sales: { label: "Sales", color: "hsl(var(--primary))" },
-} satisfies ChartConfig;
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -37,25 +30,6 @@ export default function AnalyticsPage() {
     return mockProducts.reduce((sum, product) => sum + (product.stock * product.costPrice), 0);
   }, [mockProducts]);
 
-  const salesTrendData = useMemo(() => {
-    const salesByDay: { [key: string]: number } = {};
-    // Use a copy of mockSales to avoid potential direct mutation issues if sorting is ever added to mockSales itself
-    const sortedSales = [...mockSales].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
-    sortedSales.forEach(sale => {
-      const day = format(new Date(sale.date), 'MMM dd');
-      salesByDay[day] = (salesByDay[day] || 0) + sale.totalAmount;
-    });
-    // Get the last 7 unique days with sales
-    const uniqueDays = Object.keys(salesByDay);
-    const last7UniqueDaysWithSales = uniqueDays.slice(-7);
-    
-    return last7UniqueDaysWithSales.map(day => ({
-        date: day,
-        sales: salesByDay[day]
-    }));
-  }, [mockSales]);
-
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -76,28 +50,6 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-1">
-        <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Sales Trend (Last 7 entries)</CardTitle>
-              <CardDescription>Visual overview of sales performance based on days with recorded sales.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={salesTrendData} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                    <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-      </div>
-
       <Card className="shadow-lg mt-6">
         <CardHeader>
           <CardTitle>Comprehensive Analytics Dashboard</CardTitle>
@@ -116,4 +68,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
