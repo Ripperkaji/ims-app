@@ -4,7 +4,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { BarChart3, DollarSign, TrendingUp, TrendingDown, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -22,13 +21,13 @@ export default function AnalyticsPage() {
     }
   }, [user, router, toast]);
 
-  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [mockSales]);
-  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [mockExpenses]);
+  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), []);
+  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), []);
   const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
   
   const currentStockValuation = useMemo(() => {
     return mockProducts.reduce((sum, product) => sum + (product.stock * product.costPrice), 0);
-  }, [mockProducts]);
+  }, []);
 
 
   if (!user || user.role !== 'admin') {
@@ -50,21 +49,7 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
       </div>
       
-      <Card className="shadow-lg mt-6">
-        <CardHeader>
-          <CardTitle>Comprehensive Analytics Dashboard</CardTitle>
-          <CardDescription>
-            More detailed insights and reports will be available here. (Under Construction)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <BarChart3 className="h-16 w-16 mx-auto mb-4" />
-            <p className="text-lg">This section will provide in-depth analytics.</p>
-            <p>More features coming soon!</p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Removed Comprehensive Analytics Dashboard Card */}
     </div>
   );
 }
