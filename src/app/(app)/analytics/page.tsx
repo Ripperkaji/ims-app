@@ -8,6 +8,17 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { BarChart3, DollarSign, TrendingUp, TrendingDown, Archive } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data"; 
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -29,6 +40,32 @@ export default function AnalyticsPage() {
     return mockProducts.reduce((sum, product) => sum + (product.stock * product.costPrice), 0);
   }, []);
 
+  const categorySalesData = useMemo(() => {
+    const salesByCategory: { [category: string]: number } = {};
+    mockSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = mockProducts.find(p => p.id === item.productId);
+        if (product) {
+          salesByCategory[product.category] = (salesByCategory[product.category] || 0) + item.quantity;
+        }
+      });
+    });
+    return Object.entries(salesByCategory)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value); // Sort for consistent color assignment and legend order
+  }, []); // mockSales and mockProducts are from global scope, use empty dep array for this mock setup
+
+  const categoryChartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    categorySalesData.forEach((categoryData, index) => {
+      config[categoryData.name] = {
+        label: categoryData.name,
+        color: `hsl(var(--chart-${(index % 5) + 1}))`, // Cycle through 5 chart colors
+      };
+    });
+    return config;
+  }, [categorySalesData]);
+
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -49,7 +86,65 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
       </div>
       
-      {/* Removed Comprehensive Analytics Dashboard Card */}
+      <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2">
+        <Card className="shadow-lg lg:col-span-1">
+            <CardHeader>
+                <CardTitle>Product Category Sales Distribution</CardTitle>
+                <CardDescription>Quantity of products sold by category (all time).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {categorySalesData.length > 0 ? (
+                <ChartContainer config={categoryChartConfig} className="mx-auto aspect-square max-h-[350px]">
+                    <PieChart>
+                    <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel nameKey="name" />}
+                    />
+                    <Pie
+                        data={categorySalesData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={120}
+                        innerRadius={70}
+                        labelLine={false}
+                    >
+                        {categorySalesData.map((entry) => (
+                        <Cell
+                            key={`cell-${entry.name}`}
+                            fill={categoryChartConfig[entry.name]?.color}
+                            className={cn("stroke-background focus:outline-none")}
+                        />
+                        ))}
+                    </Pie>
+                    <ChartLegend
+                        content={<ChartLegendContent nameKey="name" className="text-xs" />}
+                        verticalAlign="bottom"
+                        align="center"
+                    />
+                    </PieChart>
+                </ChartContainer>
+                ) : (
+                <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+                    No sales data available to display category distribution.
+                </div>
+                )}
+            </CardContent>
+        </Card>
+        {/* Placeholder for another chart or info card if needed */}
+        {/* 
+        <Card className="shadow-lg lg:col-span-1">
+            <CardHeader>
+                <CardTitle>Placeholder Card</CardTitle>
+                <CardDescription>More analytics coming soon.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[350px] flex items-center justify-center">
+                <p className="text-muted-foreground">Content for placeholder card.</p>
+            </CardContent>
+        </Card> 
+        */}
+      </div>
     </div>
   );
 }
