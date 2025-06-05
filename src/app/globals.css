@@ -38,6 +38,13 @@ body {
 
     --radius: 0.5rem;
 
+    /* Chart colors */
+    --chart-1: 173 41% 50%; /* Primary - Dark Cyan */
+    --chart-2: 259 46% 73%; /* Accent - Soft Lavender */
+    --chart-3: 25 95% 60%;  /* Vibrant Orange */
+    --chart-4: 190 50% 65%; /* Lighter Teal/Cyan */
+    --chart-5: 300 50% 70%; /* Soft Magenta/Pink */
+
     /* Sidebar specific theme */
     --sidebar-background: 210 20% 18%; /* Darker sidebar for contrast */
     --sidebar-foreground: 200 17% 90%;
@@ -79,6 +86,13 @@ body {
     --input: 210 20% 22%;
     --ring: 173 41% 50%;
     
+    /* Chart colors for dark theme - can be same or adjusted */
+    --chart-1: 173 41% 50%; 
+    --chart-2: 259 46% 73%; 
+    --chart-3: 25 95% 60%;  
+    --chart-4: 190 50% 65%; 
+    --chart-5: 300 50% 70%; 
+
     --sidebar-background: 210 20% 8%; 
     --sidebar-foreground: 200 17% 90%;
     --sidebar-primary: 173 41% 50%;
