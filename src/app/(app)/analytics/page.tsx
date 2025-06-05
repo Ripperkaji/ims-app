@@ -64,20 +64,8 @@ export default function AnalyticsPage() {
 
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
-      let label: React.ReactNode = categoryData.name;
-      if (categoryData.name === "E-liquid Free Base") {
-        label = <span>E-liquid<br />Free Base</span>;
-      } else if (categoryData.name === "E-liquid Nic Salt") {
-        label = <span>E-liquid<br />Nic Salt</span>;
-      } else if (categoryData.name === "POD/MOD Devices") {
-        label = <span>POD/MOD<br />Devices</span>;
-      } else if (categoryData.name === "Coil Build & Maintenance") {
-        label = <span>Coil Build<br />& Maintenance</span>;
-      }
-
-
       config[categoryData.name] = {
-        label: label,
+        label: categoryData.name, // Reverted to simple name
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
@@ -154,3 +142,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
