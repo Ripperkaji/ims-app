@@ -49,7 +49,7 @@ const DialogCardDescription = DialogCardDescriptionImport;
 
 
 export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolved, allGlobalProducts }: ResolveFlagDialogProps) {
-  const { toast } } from useToast();
+  const { toast } } = useToast();
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
   const [editedCustomerContact, setEditedCustomerContact] = useState(sale.customerContact || '');
@@ -157,8 +157,8 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
           productId: firstAvailableProduct.id,
           productName: firstAvailableProduct.name,
           quantity: 1,
-          unitPrice: firstAvailableProduct.price,
-          totalPrice: firstAvailableProduct.price,
+          unitPrice: firstAvailableProduct.sellingPrice, // Corrected: Use sellingPrice
+          totalPrice: firstAvailableProduct.sellingPrice, // Corrected: Use sellingPrice
         },
       ]);
     } else {
@@ -179,7 +179,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
-        item.unitPrice = newProduct.price;
+        item.unitPrice = newProduct.sellingPrice; // Corrected: Use sellingPrice
         
         const originalItem = sale.items.find(i => i.productId === newProduct.id);
         const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
@@ -361,7 +361,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.price.toFixed(2)}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.sellingPrice.toFixed(2)} {/* Corrected */}
                           </SelectItem>
                         );
                     })}
@@ -472,6 +472,3 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     </Dialog>
   );
 }
-
-
-    
