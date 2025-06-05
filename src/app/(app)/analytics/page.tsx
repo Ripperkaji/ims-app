@@ -52,15 +52,21 @@ export default function AnalyticsPage() {
     });
     return Object.entries(salesByCategory)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value); // Sort for consistent color assignment and legend order
-  }, []); // mockSales and mockProducts are from global scope, use empty dep array for this mock setup
+      .sort((a, b) => b.value - a.value); 
+  }, []); 
 
   const categoryChartConfig = useMemo(() => {
     const config: ChartConfig = {};
+    const baseHue = 173; // Starting hue (cyan-ish, related to primary)
+    const hueStep = 47;  // A prime number step for good visual distinction
+    const saturation = 65; // Consistent saturation
+    const lightness = 55;  // Consistent lightness
+
     categorySalesData.forEach((categoryData, index) => {
+      const hue = (baseHue + index * hueStep) % 360;
       config[categoryData.name] = {
         label: categoryData.name,
-        color: `hsl(var(--chart-${(index % 5) + 1}))`, // Cycle through 5 chart colors
+        color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
     return config;
@@ -148,3 +154,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
