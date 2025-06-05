@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { format, subDays } from 'date-fns';
+import { format, subDays, isSameDay } from 'date-fns';
 import type { Sale, LogEntry, Product, SaleItem, Expense } from '@/types';
 import React, { useMemo, useState, useEffect } from 'react';
 import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/FlagSaleDialog";
@@ -22,18 +22,18 @@ import { cn } from "@/lib/utils";
 export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [triggerRefresh, setTriggerRefresh] = useState(0); 
+  const [triggerRefresh, setTriggerRefresh] = useState(0);
 
 
   const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
-  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]); 
-  
+  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]);
+
   const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [triggerRefresh, mockProducts]);
   const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]); 
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]);
 
 
-  const recentSalesForAdmin = useMemo(() => 
+  const recentSalesForAdmin = useMemo(() =>
     [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5)
   , [triggerRefresh, mockSales]);
 
@@ -49,9 +49,9 @@ export default function DashboardPage() {
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentStaffSales(filteredSales);
     } else {
-      setRecentStaffSales([]); 
+      setRecentStaffSales([]);
     }
-  }, [user, triggerRefresh, mockSales]); 
+  }, [user, triggerRefresh, mockSales]);
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const handleCloseFlagDialog = () => {
     setSaleToFlag(null);
   };
-  
+
   const addLogEntry = (action: string, details: string, userName: string) => {
     const newLog: LogEntry = {
       id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -99,7 +99,7 @@ export default function DashboardPage() {
           targetSale.items[saleItemIndex].damageExchangeComment = itemDetail.comment;
           itemDamageSummary += `${itemDetail.productName} (Qty: ${itemDetail.quantitySold}, Comment: ${itemDetail.comment || 'N/A'}); `;
 
-          if (itemDetail.isDamagedExchanged) { 
+          if (itemDetail.isDamagedExchanged) {
             itemsProcessedForDamageExchangeCount++;
             const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
             if (productIndex !== -1) {
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
               const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
-              
+
               const damageExpense: Omit<Expense, 'id'> = {
                 date: new Date().toISOString(),
                 description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                 recordedBy: user.name,
               };
               addSystemExpense(damageExpense);
-              
+
               allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.costPrice).toFixed(2)}. `;
             } else {
                addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
@@ -137,14 +137,14 @@ export default function DashboardPage() {
     if (itemDamageSummary) {
       finalFlaggedComment += `\nDamaged items: ${itemDamageSummary}`;
     }
-    
+
     addLogEntry("Sale Flagged", `Sale ID ${saleId.substring(0,8)}... flagged by ${user.name}. ${finalFlaggedComment}`, user.name);
-    
+
     targetSale.flaggedComment = finalFlaggedComment.trim();
-    targetSale.isFlagged = true; 
+    targetSale.isFlagged = true;
 
     toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged. Reason: ${generalReasonComment}`});
-    
+
     if (itemsProcessedForDamageExchangeCount > 0) {
         toast({ title: "Damage Exchanged & Expense Logged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange. Details: ${allDamageExchangeLogDetails}`});
     }
@@ -153,49 +153,63 @@ export default function DashboardPage() {
     setTriggerRefresh(prev => prev + 1);
   };
 
+  const todaySalesAmount = useMemo(() => {
+    const todayDate = new Date();
+    return mockSales
+      .filter(sale => isSameDay(new Date(sale.date), todayDate))
+      .reduce((sum, sale) => sum + sale.totalAmount, 0);
+  }, [triggerRefresh, mockSales]);
+
 
   if (!user) return null;
 
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold font-headline">Welcome, {user.name}!</h1>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {user.role === 'admin' ? (
           <>
-             <AnalyticsCard 
-              title="Due Payments" 
-              value={dueSalesCount} 
-              icon={AlertTriangle} 
+            <AnalyticsCard
+              title="Today's Sales"
+              value={todaySalesAmount}
+              icon={DollarSign}
+              description="Total sales recorded today"
+              isCurrency={true}
+            />
+            <AnalyticsCard
+              title="Due Payments"
+              value={dueSalesCount}
+              icon={AlertTriangle}
               description={`${dueSalesCount} sale(s) with pending payment`}
               iconClassName={dueSalesCount > 0 ? "text-destructive" : "text-green-500"}
               isCurrency={false}
               href="/due-sales"
             />
-            <AnalyticsCard 
-              title="Flagged Sales" 
-              value={flaggedSalesCount} 
-              icon={Flag} 
+            <AnalyticsCard
+              title="Flagged Sales"
+              value={flaggedSalesCount}
+              icon={Flag}
               description={`${flaggedSalesCount} sale(s) marked for review`}
               iconClassName={flaggedSalesCount > 0 ? "text-destructive" : "text-green-500"}
               isCurrency={false}
               href="/sales"
             />
-             <AnalyticsCard 
-              title="Critical Stock (Qty 1)" 
-              value={criticalStockCount} 
-              icon={AlertTriangle} 
-              description={`${criticalStockCount} product(s) with 1 unit left`}
-              iconClassName={criticalStockCount > 0 ? "text-orange-500" : "text-green-500"}
+            <AnalyticsCard
+              title="Out of Stock Items"
+              value={outOfStockCount}
+              icon={AlertCircle}
+              description={`${outOfStockCount} product(s) with no units`}
+              iconClassName={outOfStockCount > 0 ? "text-destructive" : "text-green-500"}
               isCurrency={false}
               href="/products"
             />
-            <AnalyticsCard 
-              title="Out of Stock Items" 
-              value={outOfStockCount} 
-              icon={AlertCircle} 
-              description={`${outOfStockCount} product(s) with no units`}
-              iconClassName={outOfStockCount > 0 ? "text-destructive" : "text-green-500"}
+            <AnalyticsCard
+              title="Critical Stock (Qty 1)"
+              value={criticalStockCount}
+              icon={AlertTriangle}
+              description={`${criticalStockCount} product(s) with 1 unit left`}
+              iconClassName={criticalStockCount > 0 ? "text-orange-500" : "text-green-500"}
               isCurrency={false}
               href="/products"
             />
@@ -269,7 +283,7 @@ export default function DashboardPage() {
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                           {!sale.isFlagged && sale.flaggedComment && ( 
+                           {!sale.isFlagged && sale.flaggedComment && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -292,7 +306,7 @@ export default function DashboardPage() {
           </Card>
         </div>
       )}
-      
+
       {user.role === 'staff' && (
         <>
           <Card>
@@ -302,7 +316,7 @@ export default function DashboardPage() {
             <CardContent className="grid gap-2 sm:grid-cols-2">
               <Link href="/sales" passHref>
                 <Button variant="outline" className="w-full justify-start gap-2 p-4 h-auto">
-                  <ShoppingCart className="h-5 w-5 text-primary"/> 
+                  <ShoppingCart className="h-5 w-5 text-primary"/>
                   <div>
                     <p className="font-semibold">New Sale</p>
                     <p className="text-xs text-muted-foreground">Start a new transaction</p>
@@ -311,7 +325,7 @@ export default function DashboardPage() {
               </Link>
               <Link href="/products" passHref>
                 <Button variant="outline" className="w-full justify-start gap-2 p-4 h-auto">
-                  <Package className="h-5 w-5 text-primary"/> 
+                  <Package className="h-5 w-5 text-primary"/>
                   <div>
                     <p className="font-semibold">View Products</p>
                     <p className="text-xs text-muted-foreground">Check stock and prices</p>
@@ -381,7 +395,7 @@ export default function DashboardPage() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                          ) : sale.flaggedComment ? ( 
+                          ) : sale.flaggedComment ? (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -394,7 +408,7 @@ export default function DashboardPage() {
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
-                          ) : ( 
+                          ) : (
                             <Button variant="outline" size="sm" onClick={() => handleOpenFlagDialog(sale)}>
                               <Flag className="h-4 w-4 mr-1" /> Flag Sale
                             </Button>
@@ -411,7 +425,7 @@ export default function DashboardPage() {
           </Card>
         </>
       )}
-      {saleToFlag && user && ( 
+      {saleToFlag && user && (
         <FlagSaleDialog
           key={saleToFlag.id}
           sale={saleToFlag}
@@ -432,3 +446,4 @@ function PlaceholderChart() {
     </div>
   )
 }
+
