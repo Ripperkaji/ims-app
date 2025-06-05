@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react"; // Added Wallet
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react"; 
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -93,7 +93,7 @@ export default function AnalyticsPage() {
         </h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"> {/* Changed lg:grid-cols-4 to lg:grid-cols-3 */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <AnalyticsCard title="Total Sales" value={totalSalesAmount} icon={DollarSign} description="All successful transactions" isCurrency={true}/>
         <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
         <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-        <Card className="shadow-lg lg:col-span-1">
+        <Card className="shadow-lg lg:col-span-2">
             <CardHeader>
                 <CardTitle>Product Category Sales Distribution</CardTitle>
                 <CardDescription>Quantity of products sold by category (all time).</CardDescription>
@@ -151,4 +151,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
