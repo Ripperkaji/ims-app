@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { BarChart3, DollarSign, TrendingUp, TrendingDown, Archive } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -57,15 +57,27 @@ export default function AnalyticsPage() {
 
   const categoryChartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    const baseHue = 173; // Starting hue (cyan-ish, related to primary)
-    const hueStep = 47;  // A prime number step for good visual distinction
-    const saturation = 65; // Consistent saturation
-    const lightness = 55;  // Consistent lightness
+    const baseHue = 173; 
+    const hueStep = 47;  
+    const saturation = 65; 
+    const lightness = 55;  
 
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
+      let label: React.ReactNode = categoryData.name;
+      if (categoryData.name === "E-liquid Free Base") {
+        label = <span>E-liquid<br />Free Base</span>;
+      } else if (categoryData.name === "E-liquid Nic Salt") {
+        label = <span>E-liquid<br />Nic Salt</span>;
+      } else if (categoryData.name === "POD/MOD Devices") {
+        label = <span>POD/MOD<br />Devices</span>;
+      } else if (categoryData.name === "Coil Build & Maintenance") {
+        label = <span>Coil Build<br />& Maintenance</span>;
+      }
+
+
       config[categoryData.name] = {
-        label: categoryData.name,
+        label: label,
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
@@ -138,20 +150,7 @@ export default function AnalyticsPage() {
                 )}
             </CardContent>
         </Card>
-        {/* Placeholder for another chart or info card if needed */}
-        {/* 
-        <Card className="shadow-lg lg:col-span-1">
-            <CardHeader>
-                <CardTitle>Placeholder Card</CardTitle>
-                <CardDescription>More analytics coming soon.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[350px] flex items-center justify-center">
-                <p className="text-muted-foreground">Content for placeholder card.</p>
-            </CardContent>
-        </Card> 
-        */}
       </div>
     </div>
   );
 }
-
