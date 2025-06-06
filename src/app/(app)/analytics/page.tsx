@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
     return mockExpenses
       .filter(expense => payableCategories.includes(expense.category))
       .reduce((sum, expense) => sum + expense.amount, 0);
-  }, [payableCategories]); // mockExpenses is intentionally not in deps if it's a stable global ref and refresh is handled elsewhere
+  }, [payableCategories]); 
 
   const categorySalesData = useMemo(() => {
     const salesByCategory: { [category: string]: number } = {};
@@ -72,8 +72,9 @@ export default function AnalyticsPage() {
 
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
+      const label = categoryData.name;
       config[categoryData.name] = {
-        label: categoryData.name,
+        label: label,
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
@@ -121,8 +122,8 @@ export default function AnalyticsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={120}
-                        innerRadius={70}
+                        outerRadius={100} // Slightly reduced radius to give legend more space
+                        innerRadius={60}  // Adjusted inner radius for donut aesthetics
                         labelLine={false}
                     >
                         {categorySalesData.map((entry) => (
@@ -134,9 +135,10 @@ export default function AnalyticsPage() {
                         ))}
                     </Pie>
                     <ChartLegend
-                        content={<ChartLegendContent nameKey="name" className="text-xs" />}
-                        verticalAlign="bottom"
-                        align="center"
+                        content={<ChartLegendContent nameKey="name" className="text-xs flex flex-col items-start gap-1.5" />}
+                        layout="vertical"
+                        verticalAlign="middle"
+                        align="left"
                     />
                     </PieChart>
                 </ChartContainer>
