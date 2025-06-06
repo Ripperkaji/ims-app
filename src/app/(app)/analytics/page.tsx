@@ -138,7 +138,7 @@ export default function AnalyticsPage() {
                 <CardTitle>Product Category Sales Distribution</CardTitle>
                 <CardDescription>Quantity of products sold by category (all time).</CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center">
+            <CardContent>
               {categorySalesData.length > 0 ? (
                 <ChartContainer config={categoryChartConfig} className="mx-auto aspect-square max-h-[350px]">
                     <PieChart>
@@ -185,7 +185,7 @@ export default function AnalyticsPage() {
             <CardTitle>Monthly Sales (Last 3 Months)</CardTitle>
             <CardDescription>Comparison of total sales amounts.</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-center">
+          <CardContent>
             {monthlySalesData.length > 0 && monthlySalesData.some(m => m.totalSales > 0) ? (
               <ChartContainer config={monthlySalesChartConfig} className="mx-auto aspect-video max-h-[350px]">
                 <BarChart data={monthlySalesData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
@@ -220,3 +220,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
