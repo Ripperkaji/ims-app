@@ -138,9 +138,9 @@ export default function AnalyticsPage() {
                 <CardTitle>Product Category Sales Distribution</CardTitle>
                 <CardDescription>Quantity of products sold by category (all time).</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="h-[374px]">
               {categorySalesData.length > 0 ? (
-                <ChartContainer config={categoryChartConfig} className="mx-auto aspect-square max-h-[350px]">
+                <ChartContainer config={categoryChartConfig} className="h-full w-full aspect-square">
                     <PieChart>
                     <ChartTooltip
                         cursor={false}
@@ -173,7 +173,7 @@ export default function AnalyticsPage() {
                     </PieChart>
                 </ChartContainer>
                 ) : (
-                <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+                <div className="flex items-center justify-center h-full text-muted-foreground">
                     No sales data available to display category distribution.
                 </div>
                 )}
@@ -185,9 +185,9 @@ export default function AnalyticsPage() {
             <CardTitle>Monthly Sales (Last 3 Months)</CardTitle>
             <CardDescription>Comparison of total sales amounts.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="h-[374px]">
             {monthlySalesData.length > 0 && monthlySalesData.some(m => m.totalSales > 0) ? (
-              <ChartContainer config={monthlySalesChartConfig} className="mx-auto aspect-video max-h-[350px]">
+              <ChartContainer config={monthlySalesChartConfig} className="h-full w-full">
                 <BarChart data={monthlySalesData} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -210,7 +210,7 @@ export default function AnalyticsPage() {
                 </BarChart>
               </ChartContainer>
             ) : (
-              <div className="flex items-center justify-center h-[350px] text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-muted-foreground">
                 No sales data available for the last 3 months.
               </div>
             )}
