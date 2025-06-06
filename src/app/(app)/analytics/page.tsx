@@ -145,14 +145,14 @@ export default function AnalyticsPage() {
       const tempPrevDate = new Date(prevYear, prevMonth, day);
       if (getMonth(tempPrevDate) === prevMonth) { 
         const dateInPreviousMonth = tempPrevDate;
-        previousMonthDateDisplay = format(dateInPreviousMonth, 'MMM d, yyyy');
+        previousMonthDateDisplay = format(dateInPreviousMonth, 'MMM d, yy');
         salesPreviousMonth = mockSales
           .filter(s => isSameDay(new Date(s.date), dateInPreviousMonth))
           .reduce((acc, s) => acc + s.totalAmount, 0);
       }
       
       tableData.push({
-        currentMonthDateDisplay: format(dateInCurrentMonth, 'MMM d, yyyy'),
+        currentMonthDateDisplay: format(dateInCurrentMonth, 'MMM d, yy'),
         currentMonthSales: salesCurrentMonth,
         previousMonthDateDisplay: previousMonthDateDisplay,
         previousMonthSales: salesPreviousMonth,
