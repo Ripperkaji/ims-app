@@ -9,7 +9,7 @@ import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -114,24 +114,24 @@ export default function AnalyticsPage() {
   }, []);
 
   const monthlySalesChartConfig = {
-    totalSales: {
+    totalSales: { // This config remains for tooltip or potential legend label. Individual bar colors are set by <Cell>.
       label: "Sales",
-      color: "hsl(var(--chart-1))",
+      // color: "hsl(var(--chart-1))", // Main color definition for the series, overridden by Cells below.
     },
   } satisfies ChartConfig;
 
+
   const monthToDateSalesTableData = useMemo((): DailyComparisonRow[] => {
     const tableData: DailyComparisonRow[] = [];
-    const today = new Date(); // Used to determine current month/year
+    const today = new Date(); 
     const currentMonth = getMonth(today);
     const currentYear = getYear(today);
-    const daysInCurrentMonth = getDaysInMonth(new Date(currentYear, currentMonth)); // Get days in current month
+    const daysInCurrentMonth = getDaysInMonth(new Date(currentYear, currentMonth)); 
 
     const firstDayPreviousMonth = startOfMonth(subMonths(today, 1));
     const prevMonth = getMonth(firstDayPreviousMonth);
     const prevYear = getYear(firstDayPreviousMonth);
 
-    // Loop for all days in the current month
     for (let day = 1; day <= daysInCurrentMonth; day++) { 
       const dateInCurrentMonth = new Date(currentYear, currentMonth, day);
       const salesCurrentMonth = mockSales
@@ -141,7 +141,6 @@ export default function AnalyticsPage() {
       let salesPreviousMonth = 0;
       let previousMonthDateDisplay: string | null = null;
       
-      // Check if 'day' is valid for the previous month
       const tempPrevDate = new Date(prevYear, prevMonth, day);
       if (getMonth(tempPrevDate) === prevMonth) { 
         const dateInPreviousMonth = tempPrevDate;
@@ -256,7 +255,18 @@ export default function AnalyticsPage() {
                     cursor={{ fill: "hsl(var(--muted))" }}
                     content={<ChartTooltipContent />}
                   />
-                  <Bar dataKey="totalSales" fill="var(--color-totalSales)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="totalSales" radius={[4, 4, 0, 0]}>
+                    {monthlySalesData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={
+                          index === 0 ? "hsl(var(--chart-1))" : 
+                          index === 1 ? "hsl(var(--chart-2))" : 
+                          "hsl(var(--chart-3))"
+                        } 
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ChartContainer>
             ) : (
