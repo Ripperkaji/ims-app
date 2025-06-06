@@ -152,8 +152,8 @@ export default function AnalyticsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
-                        innerRadius={60}
+                        outerRadius={80} 
+                        innerRadius={50} 
                         labelLine={false}
                     >
                         {categorySalesData.map((entry) => (
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `NRP ${value}`}
+                    tickFormatter={(value) => `${value}`}
                   />
                   <ChartTooltip
                     cursor={{ fill: "hsl(var(--muted))" }}
