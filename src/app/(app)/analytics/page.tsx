@@ -72,7 +72,8 @@ export default function AnalyticsPage() {
 
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
-      const label = categoryData.name;
+      let label: React.ReactNode = categoryData.name;
+      
       config[categoryData.name] = {
         label: label,
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
@@ -122,8 +123,8 @@ export default function AnalyticsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={100} // Slightly reduced radius to give legend more space
-                        innerRadius={60}  // Adjusted inner radius for donut aesthetics
+                        outerRadius={100} 
+                        innerRadius={60}  
                         labelLine={false}
                     >
                         {categorySalesData.map((entry) => (
@@ -135,7 +136,7 @@ export default function AnalyticsPage() {
                         ))}
                     </Pie>
                     <ChartLegend
-                        content={<ChartLegendContent nameKey="name" className="text-xs flex flex-col items-start gap-1.5" />}
+                        content={<ChartLegendContent nameKey="name" className="text-[11px] leading-tight flex flex-col items-start gap-1" />}
                         layout="vertical"
                         verticalAlign="middle"
                         align="left"
