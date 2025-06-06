@@ -5,11 +5,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet, LineChart as LineChartIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -19,7 +19,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getDate, getMonth, getYear, isSameDay } from "date-fns";
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
   const monthlySalesData = useMemo(() => {
     const today = new Date();
     const monthsData: { name: string; totalSales: number }[] = [];
-    for (let i = 2; i >= 0; i--) { // Iterate from 2 months ago to current month
+    for (let i = 2; i >= 0; i--) { 
       const targetMonthDate = subMonths(today, i);
       const monthName = format(targetMonthDate, 'MMM yy');
       const firstDay = startOfMonth(targetMonthDate);
@@ -108,6 +108,48 @@ export default function AnalyticsPage() {
     totalSales: {
       label: "Sales",
       color: "hsl(var(--chart-1))",
+    },
+  } satisfies ChartConfig;
+
+  const monthToDateSalesData = useMemo(() => {
+    const data: { day: string; currentMonthSales: number; previousMonthSales: number }[] = [];
+    const today = new Date();
+    const currentDayInMonth = getDate(today);
+    const firstDayCurrentMonth = startOfMonth(today);
+    const firstDayPreviousMonth = startOfMonth(subMonths(today, 1));
+
+    for (let day = 1; day <= currentDayInMonth; day++) {
+      const dateInCurrentMonth = new Date(getYear(firstDayCurrentMonth), getMonth(firstDayCurrentMonth), day);
+      const salesCurrentMonth = mockSales
+        .filter(s => isSameDay(new Date(s.date), dateInCurrentMonth))
+        .reduce((acc, s) => acc + s.totalAmount, 0);
+
+      let salesPreviousMonth = 0;
+      const dateInPreviousMonth = new Date(getYear(firstDayPreviousMonth), getMonth(firstDayPreviousMonth), day);
+      // Ensure the day exists in the previous month (e.g. Feb 30th is invalid)
+      if (getMonth(dateInPreviousMonth) === getMonth(firstDayPreviousMonth)) {
+        salesPreviousMonth = mockSales
+          .filter(s => isSameDay(new Date(s.date), dateInPreviousMonth))
+          .reduce((acc, s) => acc + s.totalAmount, 0);
+      }
+      
+      data.push({
+        day: day.toString(),
+        currentMonthSales: salesCurrentMonth,
+        previousMonthSales: salesPreviousMonth,
+      });
+    }
+    return data;
+  }, []);
+
+  const monthToDateChartConfig = {
+    currentMonthSales: {
+      label: "Current Month",
+      color: "hsl(var(--chart-1))",
+    },
+    previousMonthSales: {
+      label: "Previous Month",
+      color: "hsl(var(--chart-2))",
     },
   } satisfies ChartConfig;
 
@@ -212,6 +254,68 @@ export default function AnalyticsPage() {
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No sales data available for the last 3 months.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-lg lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+                <LineChartIcon className="h-5 w-5 text-primary" /> Month-to-Date Sales
+            </CardTitle>
+            <CardDescription>Daily sales comparison: Current vs. Previous Month.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[374px]">
+            {monthToDateSalesData.length > 0 && monthToDateSalesData.some(d => d.currentMonthSales > 0 || d.previousMonthSales > 0) ? (
+              <ChartContainer config={monthToDateChartConfig} className="h-full w-full">
+                <LineChart
+                  data={monthToDateSalesData}
+                  margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    tickLine={false}
+                    axisLine={false}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    padding={{ left: 10, right: 10 }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickFormatter={(value) => `NRP ${value / 1000}k`}
+                    allowDecimals={false}
+                  />
+                  <ChartTooltip
+                    cursor={true}
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line
+                    dataKey="currentMonthSales"
+                    type="monotone"
+                    stroke="var(--color-currentMonthSales)"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Current Month"
+                  />
+                  <Line
+                    dataKey="previousMonthSales"
+                    type="monotone"
+                    stroke="var(--color-previousMonthSales)"
+                    strokeWidth={2}
+                    dot={false}
+                    name="Previous Month"
+                  />
+                </LineChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                No sales data available for month-to-date comparison.
               </div>
             )}
           </CardContent>
