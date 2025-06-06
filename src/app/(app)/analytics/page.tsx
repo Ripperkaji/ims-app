@@ -198,11 +198,9 @@ export default function AnalyticsPage() {
                     fontSize={12}
                   />
                   <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
+                    tick={false} 
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `${value}`}
                   />
                   <ChartTooltip
                     cursor={{ fill: "hsl(var(--muted))" }}
@@ -222,3 +220,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
