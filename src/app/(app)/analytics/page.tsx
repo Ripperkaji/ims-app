@@ -5,11 +5,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet, LineChart as LineChartIcon } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,6 +22,13 @@ import {
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getDate, getMonth, getYear, isSameDay } from "date-fns";
+
+interface DailyComparisonRow {
+  currentMonthDateDisplay: string;
+  currentMonthSales: number;
+  previousMonthDateDisplay: string | null;
+  previousMonthSales: number;
+}
 
 export default function AnalyticsPage() {
   const { user } = useAuth();
@@ -111,47 +120,44 @@ export default function AnalyticsPage() {
     },
   } satisfies ChartConfig;
 
-  const monthToDateSalesData = useMemo(() => {
-    const data: { day: string; currentMonthSales: number; previousMonthSales: number }[] = [];
+  const monthToDateSalesTableData = useMemo((): DailyComparisonRow[] => {
+    const tableData: DailyComparisonRow[] = [];
     const today = new Date();
     const currentDayInMonth = getDate(today);
-    const firstDayCurrentMonth = startOfMonth(today);
+    const currentMonth = getMonth(today);
+    const currentYear = getYear(today);
+
     const firstDayPreviousMonth = startOfMonth(subMonths(today, 1));
+    const prevMonth = getMonth(firstDayPreviousMonth);
+    const prevYear = getYear(firstDayPreviousMonth);
 
     for (let day = 1; day <= currentDayInMonth; day++) {
-      const dateInCurrentMonth = new Date(getYear(firstDayCurrentMonth), getMonth(firstDayCurrentMonth), day);
+      const dateInCurrentMonth = new Date(currentYear, currentMonth, day);
       const salesCurrentMonth = mockSales
         .filter(s => isSameDay(new Date(s.date), dateInCurrentMonth))
         .reduce((acc, s) => acc + s.totalAmount, 0);
 
       let salesPreviousMonth = 0;
-      const dateInPreviousMonth = new Date(getYear(firstDayPreviousMonth), getMonth(firstDayPreviousMonth), day);
-      // Ensure the day exists in the previous month (e.g. Feb 30th is invalid)
-      if (getMonth(dateInPreviousMonth) === getMonth(firstDayPreviousMonth)) {
+      let previousMonthDateDisplay: string | null = null;
+      
+      const tempPrevDate = new Date(prevYear, prevMonth, day);
+      if (getMonth(tempPrevDate) === prevMonth) { 
+        const dateInPreviousMonth = tempPrevDate;
+        previousMonthDateDisplay = format(dateInPreviousMonth, 'MMM d, yyyy');
         salesPreviousMonth = mockSales
           .filter(s => isSameDay(new Date(s.date), dateInPreviousMonth))
           .reduce((acc, s) => acc + s.totalAmount, 0);
       }
       
-      data.push({
-        day: day.toString(),
+      tableData.push({
+        currentMonthDateDisplay: format(dateInCurrentMonth, 'MMM d, yyyy'),
         currentMonthSales: salesCurrentMonth,
+        previousMonthDateDisplay: previousMonthDateDisplay,
         previousMonthSales: salesPreviousMonth,
       });
     }
-    return data;
+    return tableData;
   }, []);
-
-  const monthToDateChartConfig = {
-    currentMonthSales: {
-      label: "Current Month",
-      color: "hsl(var(--chart-1))",
-    },
-    previousMonthSales: {
-      label: "Previous Month",
-      color: "hsl(var(--chart-2))",
-    },
-  } satisfies ChartConfig;
 
 
   if (!user || user.role !== 'admin') {
@@ -194,8 +200,8 @@ export default function AnalyticsPage() {
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={80} 
-                        innerRadius={50} 
+                        outerRadius={70} 
+                        innerRadius={40} 
                         labelLine={false}
                     >
                         {categorySalesData.map((entry) => (
@@ -261,58 +267,35 @@ export default function AnalyticsPage() {
         
         <Card className="shadow-lg lg:col-span-1">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-                <LineChartIcon className="h-5 w-5 text-primary" /> Month-to-Date Sales
-            </CardTitle>
+            <CardTitle>Month-to-Date Sales</CardTitle>
             <CardDescription>Daily sales comparison: Current vs. Previous Month.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[374px]">
-            {monthToDateSalesData.length > 0 && monthToDateSalesData.some(d => d.currentMonthSales > 0 || d.previousMonthSales > 0) ? (
-              <ChartContainer config={monthToDateChartConfig} className="h-full w-full">
-                <LineChart
-                  data={monthToDateSalesData}
-                  margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="day"
-                    tickLine={false}
-                    axisLine={false}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    padding={{ left: 10, right: 10 }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={12}
-                    tickFormatter={(value) => `NRP ${value / 1000}k`}
-                    allowDecimals={false}
-                  />
-                  <ChartTooltip
-                    cursor={true}
-                    content={<ChartTooltipContent indicator="line" />}
-                  />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Line
-                    dataKey="currentMonthSales"
-                    type="monotone"
-                    stroke="var(--color-currentMonthSales)"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Current Month"
-                  />
-                  <Line
-                    dataKey="previousMonthSales"
-                    type="monotone"
-                    stroke="var(--color-previousMonthSales)"
-                    strokeWidth={2}
-                    dot={false}
-                    name="Previous Month"
-                  />
-                </LineChart>
-              </ChartContainer>
+          <CardContent className="h-[374px] p-0">
+            {monthToDateSalesTableData.length > 0 && monthToDateSalesTableData.some(d => d.currentMonthSales > 0 || d.previousMonthSales > 0) ? (
+              <ScrollArea className="h-full">
+                <Table className="text-xs">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-3 py-2">Date (Current)</TableHead>
+                      <TableHead className="text-right px-3 py-2">Amount (Current)</TableHead>
+                      <TableHead className="px-3 py-2">Date (Prev.)</TableHead>
+                      <TableHead className="text-right px-3 py-2">Amount (Prev.)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {monthToDateSalesTableData.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="px-3 py-1.5">{row.currentMonthDateDisplay}</TableCell>
+                        <TableCell className="text-right px-3 py-1.5 font-medium">NRP {row.currentMonthSales.toFixed(2)}</TableCell>
+                        <TableCell className="px-3 py-1.5">{row.previousMonthDateDisplay || '-'}</TableCell>
+                        <TableCell className="text-right px-3 py-1.5 font-medium">
+                          {row.previousMonthDateDisplay ? `NRP ${row.previousMonthSales.toFixed(2)}` : '-'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             ) : (
               <div className="flex items-center justify-center h-full text-muted-foreground">
                 No sales data available for month-to-date comparison.
@@ -324,4 +307,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
