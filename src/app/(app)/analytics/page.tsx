@@ -21,7 +21,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getDate, getMonth, getYear, isSameDay } from "date-fns";
+import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getDate, getMonth, getYear, isSameDay, getDaysInMonth } from "date-fns";
 
 interface DailyComparisonRow {
   currentMonthDateDisplay: string;
@@ -122,16 +122,17 @@ export default function AnalyticsPage() {
 
   const monthToDateSalesTableData = useMemo((): DailyComparisonRow[] => {
     const tableData: DailyComparisonRow[] = [];
-    const today = new Date();
-    const currentDayInMonth = getDate(today);
+    const today = new Date(); // Used to determine current month/year
     const currentMonth = getMonth(today);
     const currentYear = getYear(today);
+    const daysInCurrentMonth = getDaysInMonth(new Date(currentYear, currentMonth)); // Get days in current month
 
     const firstDayPreviousMonth = startOfMonth(subMonths(today, 1));
     const prevMonth = getMonth(firstDayPreviousMonth);
     const prevYear = getYear(firstDayPreviousMonth);
 
-    for (let day = 1; day <= currentDayInMonth; day++) {
+    // Loop for all days in the current month
+    for (let day = 1; day <= daysInCurrentMonth; day++) { 
       const dateInCurrentMonth = new Date(currentYear, currentMonth, day);
       const salesCurrentMonth = mockSales
         .filter(s => isSameDay(new Date(s.date), dateInCurrentMonth))
@@ -140,6 +141,7 @@ export default function AnalyticsPage() {
       let salesPreviousMonth = 0;
       let previousMonthDateDisplay: string | null = null;
       
+      // Check if 'day' is valid for the previous month
       const tempPrevDate = new Date(prevYear, prevMonth, day);
       if (getMonth(tempPrevDate) === prevMonth) { 
         const dateInPreviousMonth = tempPrevDate;
@@ -307,3 +309,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
