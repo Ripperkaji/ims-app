@@ -1,33 +1,46 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { mockProducts, mockLogEntries, mockSales } from "@/lib/data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter, Landmark, AlertTriangle, InfoIcon } from "lucide-react";
+import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
-import AddStockDialog from "@/components/products/AddStockDialog";
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
 import HandleExistingProductDialog, { type ResolutionData, type AttemptedProductData } from "@/components/products/HandleExistingProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { format, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
 
+// Helper to calculate current stock for a product
+export const calculateCurrentStock = (product: Product | undefined): number => {
+  if (!product || !product.acquisitionHistory) return 0;
+  const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
+  
+  const totalSold = mockSales
+    .flatMap(sale => sale.items)
+    .filter(item => item.productId === product.id)
+    .reduce((sum, item) => sum + item.quantity, 0);
+    
+  return totalAcquired - totalSold - (product.damagedQuantity || 0) - (product.testerQuantity || 0);
+};
 
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [currentProducts, setCurrentProducts] = useState<Product[]>(() => [...mockProducts].sort((a,b) => a.name.localeCompare(b.name)));
-  const [productToRestock, setProductToRestock] = useState<Product | null>(null);
+  
+  const [productsWithCalculatedStock, setProductsWithCalculatedStock] = useState<Array<Product & { currentDisplayStock: number }>>([]);
+  
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
@@ -35,6 +48,15 @@ export default function ProductsPage() {
 
   const [productConflictData, setProductConflictData] = useState<{ existingProduct: Product; attemptedData: AttemptedProductData } | null>(null);
   const [isHandleExistingProductDialogOpen, setIsHandleExistingProductDialogOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const updatedProducts = mockProducts.map(p => ({
+      ...p,
+      currentDisplayStock: calculateCurrentStock(p)
+    })).sort((a,b) => a.name.localeCompare(b.name));
+    setProductsWithCalculatedStock(updatedProducts);
+  }, [refreshTrigger]); // Removed mockProducts, mockSales as direct deps if they are stable refs to mutable arrays
 
 
   const addLog = (action: string, details: string) => {
@@ -50,23 +72,13 @@ export default function ProductsPage() {
     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
-  const calculatedSoldQuantities = useMemo(() => {
-    const salesMap = new Map<string, number>();
-    mockSales.forEach(sale => {
-      sale.items.forEach(item => {
-        salesMap.set(item.productId, (salesMap.get(item.productId) || 0) + item.quantity);
-      });
-    });
-    return salesMap;
-  }, [mockSales, currentProducts]); 
-
   const displayedProducts = useMemo(() => {
-    return currentProducts
+    return productsWithCalculatedStock
       .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
-  }, [currentProducts, selectedCategoryFilter]);
+  }, [productsWithCalculatedStock, selectedCategoryFilter]);
 
   const handleOpenEditProductDialog = (productId: string) => {
-    const product = currentProducts.find(p => p.id === productId);
+    const product = mockProducts.find(p => p.id === productId);
     if (product) {
       setProductToEdit(product);
       setIsEditProductDialogOpen(true);
@@ -94,23 +106,17 @@ export default function ProductsPage() {
         }
       }
 
-      const updatedProduct = {
-        ...originalProduct,
-        name: updatedDetails.name,
-        category: updatedDetails.category,
-        sellingPrice: updatedDetails.sellingPrice,
-        costPrice: updatedDetails.costPrice,
-      };
-      mockProducts[productIndexGlobal] = updatedProduct;
+      mockProducts[productIndexGlobal].name = updatedDetails.name;
+      mockProducts[productIndexGlobal].category = updatedDetails.category;
+      mockProducts[productIndexGlobal].currentSellingPrice = updatedDetails.sellingPrice;
+      mockProducts[productIndexGlobal].currentCostPrice = updatedDetails.costPrice;
       
-      setCurrentProducts(prev =>
-        [...mockProducts].sort((a,b) => a.name.localeCompare(b.name))
-      );
+      setRefreshTrigger(prev => prev + 1);
 
-      addLog("Product Details Updated", `Details for product '${updatedProduct.name}' (ID: ${updatedProduct.id.substring(0,8)}...) updated by ${user?.name || 'N/A'}. Name: ${updatedProduct.name}, Category: ${updatedProduct.category}, Cost: ${updatedProduct.costPrice.toFixed(2)}, Selling: ${updatedProduct.sellingPrice.toFixed(2)}.`);
+      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
       toast({
         title: "Product Updated",
-        description: `Details for ${updatedProduct.name} have been successfully updated.`,
+        description: `Details for ${updatedDetails.name} have been successfully updated.`,
       });
     } else {
       toast({ title: "Error", description: "Could not find product to update.", variant: "destructive"});
@@ -118,7 +124,6 @@ export default function ProductsPage() {
     setIsEditProductDialogOpen(false);
     setProductToEdit(null);
   };
-
 
   const handleAddNewProductClick = () => {
     setIsAddProductDialogOpen(true);
@@ -157,122 +162,111 @@ export default function ProductsPage() {
       return; 
     }
 
+    const newProductId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const firstBatch: AcquisitionBatch = {
+      batchId: `batch-${newProductId}-${Date.now()}`,
+      date: new Date().toISOString(),
+      condition: "Product Added",
+      supplierName: newProductData.supplierName,
+      quantityAdded: newProductData.totalAcquiredStock,
+      costPricePerUnit: newProductData.costPrice,
+      sellingPricePerUnitAtAcquisition: newProductData.sellingPrice,
+      paymentMethod: newProductData.acquisitionPaymentDetails.method,
+      totalBatchCost: newProductData.acquisitionPaymentDetails.totalAcquisitionCost,
+      cashPaid: newProductData.acquisitionPaymentDetails.cashPaid,
+      digitalPaid: newProductData.acquisitionPaymentDetails.digitalPaid,
+      dueToSupplier: newProductData.acquisitionPaymentDetails.dueAmount,
+    };
+
     const newProduct: Product = {
-      id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: newProductId,
       name: newProductData.name,
       category: newProductData.category,
-      sellingPrice: newProductData.sellingPrice,
-      costPrice: newProductData.costPrice,
-      totalAcquiredStock: newProductData.totalAcquiredStock,
-      stock: newProductData.totalAcquiredStock,
+      currentSellingPrice: newProductData.sellingPrice,
+      currentCostPrice: newProductData.costPrice,
+      acquisitionHistory: [firstBatch],
       damagedQuantity: 0,
       testerQuantity: 0, 
-      lastAcquisitionPaymentMethod: newProductData.acquisitionPaymentDetails.method,
-      lastAcquisitionTotalCost: newProductData.acquisitionPaymentDetails.totalAcquisitionCost,
-      lastAcquisitionCashPaid: newProductData.acquisitionPaymentDetails.cashPaid,
-      lastAcquisitionDigitalPaid: newProductData.acquisitionPaymentDetails.digitalPaid,
-      lastAcquisitionDueToSupplier: newProductData.acquisitionPaymentDetails.dueAmount,
-      // New fields for last acquisition context
-      lastAcquisitionCondition: 'Product Added',
-      lastAcquisitionSupplierName: newProductData.supplierName,
-      lastAcquisitionBatchCostPrice: newProductData.costPrice,
-      lastAcquisitionBatchMRP: newProductData.sellingPrice,
-      lastAcquisitionBatchQuantity: newProductData.totalAcquiredStock,
     };
     
     mockProducts.push(newProduct);
-    setCurrentProducts(prevProducts => [...mockProducts].sort((a,b) => a.name.localeCompare(b.name)));
+    setRefreshTrigger(prev => prev + 1);
 
-    let logDetails = `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added by ${user?.name || 'N/A'}. Category: ${newProduct.category}, Cost: NRP ${newProduct.costPrice.toFixed(2)}, Selling: NRP ${newProduct.sellingPrice.toFixed(2)}, Initial Stock: ${newProduct.totalAcquiredStock}.`;
-    if (newProductData.supplierName) {
-      logDetails += ` Supplier: ${newProductData.supplierName}.`;
-    }
-    if (newProductData.acquisitionPaymentDetails.totalAcquisitionCost > 0 && newProductData.totalAcquiredStock > 0) {
-      const { method, cashPaid, digitalPaid, dueAmount, totalAcquisitionCost } = newProductData.acquisitionPaymentDetails;
-      logDetails += ` Acquired batch for NRP ${totalAcquisitionCost.toFixed(2)} via ${method}.`;
-      if (method === 'Hybrid') {
-        logDetails += ` (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${dueAmount.toFixed(2)})`;
-      } else if (method === 'Due') {
-        logDetails += ` (Due: NRP ${dueAmount.toFixed(2)})`;
+    let logDetails = `Product '${newProduct.name}' added. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
+    if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
+    if (firstBatch.totalBatchCost > 0) {
+      logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
+      if (firstBatch.paymentMethod === 'Hybrid') {
+        logDetails += ` (Cash: ${firstBatch.cashPaid.toFixed(2)}, Digital: ${firstBatch.digitalPaid.toFixed(2)}, Due: ${firstBatch.dueToSupplier.toFixed(2)})`;
+      } else if (firstBatch.paymentMethod === 'Due') {
+        logDetails += ` (Due: ${firstBatch.dueToSupplier.toFixed(2)})`;
       }
     }
-    
     addLog("Product Added", logDetails);
-    toast({
-      title: "Product Added",
-      description: `${newProduct.name} has been successfully added to the inventory.`,
-    });
+    toast({ title: "Product Added", description: `${newProduct.name} successfully added.`});
     setIsAddProductDialogOpen(false);
   };
   
   const handleProductConflictResolution = (resolutionData: ResolutionData) => {
     const productIndex = mockProducts.findIndex(p => p.id === resolutionData.existingProductId);
     if (productIndex === -1) {
-      toast({ title: "Error", description: "Could not find existing product to update.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not find existing product.", variant: "destructive" });
       setIsHandleExistingProductDialogOpen(false);
       return;
     }
 
-    const productToUpdate = { ...mockProducts[productIndex] }; 
+    const productToUpdate = mockProducts[productIndex];
     let logAction = "Product Restocked";
-    let logDetails = `Product '${productToUpdate.name}' (ID: ${productToUpdate.id.substring(0,8)}...) restocked by ${user?.name || 'N/A'}. `;
+    let logDetails = `Product '${productToUpdate.name}' restocked. `;
 
-    if (resolutionData.quantityAdded > 0) {
-        productToUpdate.stock += resolutionData.quantityAdded;
-        productToUpdate.totalAcquiredStock += resolutionData.quantityAdded;
-        logDetails += `Quantity Added: ${resolutionData.quantityAdded}. New Stock: ${productToUpdate.stock}. `;
-    } else {
-        logDetails += `No new stock added. `;
-    }
+    const newBatch: AcquisitionBatch = {
+      batchId: `batch-${productToUpdate.id}-${Date.now()}`,
+      date: new Date().toISOString(),
+      condition: resolutionData.condition,
+      quantityAdded: resolutionData.quantityAdded,
+      costPricePerUnit: 0, 
+      sellingPricePerUnitAtAcquisition: productToUpdate.currentSellingPrice,
+      paymentMethod: resolutionData.paymentDetails.method,
+      totalBatchCost: resolutionData.paymentDetails.totalAcquisitionCost,
+      cashPaid: resolutionData.paymentDetails.cashPaid,
+      digitalPaid: resolutionData.paymentDetails.digitalPaid,
+      dueToSupplier: resolutionData.paymentDetails.dueAmount,
+    };
 
-    const { paymentDetails } = resolutionData;
-    const costForThisBatch = resolutionData.quantityAdded > 0 ? (paymentDetails.totalAcquisitionCost / resolutionData.quantityAdded) : 0;
-
-    productToUpdate.lastAcquisitionBatchQuantity = resolutionData.quantityAdded;
+    logDetails += `Qty Added: ${resolutionData.quantityAdded}. `;
 
     if (resolutionData.condition === 'condition1') {
       logAction = "Restock (Same Supplier/Price)";
-      productToUpdate.lastAcquisitionCondition = logAction;
-      productToUpdate.lastAcquisitionBatchCostPrice = productToUpdate.costPrice; // Uses existing cost
-      productToUpdate.lastAcquisitionBatchMRP = productToUpdate.sellingPrice;
-      // Supplier name remains from previous or is undefined
-      logDetails += `Using existing cost price: NRP ${productToUpdate.costPrice.toFixed(2)}. `;
+      newBatch.condition = logAction;
+      newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
+      logDetails += `Using existing cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition2') {
       logAction = "Restock (Same Supplier, New Price)";
-      productToUpdate.costPrice = resolutionData.newCostPrice;
-      productToUpdate.sellingPrice = resolutionData.newSellingPrice;
-      productToUpdate.lastAcquisitionCondition = logAction;
-      productToUpdate.lastAcquisitionBatchCostPrice = resolutionData.newCostPrice;
-      productToUpdate.lastAcquisitionBatchMRP = resolutionData.newSellingPrice;
-      logDetails += `Prices updated - New Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. `;
+      newBatch.condition = logAction;
+      productToUpdate.currentCostPrice = resolutionData.newCostPrice;
+      productToUpdate.currentSellingPrice = resolutionData.newSellingPrice;
+      newBatch.costPricePerUnit = resolutionData.newCostPrice;
+      newBatch.sellingPricePerUnitAtAcquisition = resolutionData.newSellingPrice;
+      logDetails += `Prices updated - New Current Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New Current MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition3') {
       logAction = "Restock (New Supplier)";
-      productToUpdate.lastAcquisitionCondition = logAction;
-      productToUpdate.lastAcquisitionSupplierName = resolutionData.newSupplierName;
-      productToUpdate.lastAcquisitionBatchCostPrice = productToUpdate.costPrice; // Uses existing cost for this batch
-      productToUpdate.lastAcquisitionBatchMRP = productToUpdate.sellingPrice;
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Using existing product cost price for this batch: NRP ${productToUpdate.costPrice.toFixed(2)}. `;
-    }
-
-    if (paymentDetails.totalAcquisitionCost > 0 && resolutionData.quantityAdded > 0) {
-        logDetails += `Batch acquisition cost: NRP ${paymentDetails.totalAcquisitionCost.toFixed(2)} (NRP ${costForThisBatch.toFixed(2)}/unit). Paid via ${paymentDetails.method}.`;
-        if (paymentDetails.method === 'Hybrid') {
-            logDetails += ` (Cash: NRP ${paymentDetails.cashPaid.toFixed(2)}, Digital: NRP ${paymentDetails.digitalPaid.toFixed(2)}, Due: NRP ${paymentDetails.dueAmount.toFixed(2)})`;
-        } else if (paymentDetails.method === 'Due') {
-            logDetails += ` (Due: NRP ${paymentDetails.dueAmount.toFixed(2)})`;
-        }
-    } else if (resolutionData.quantityAdded > 0) {
-        logDetails += `Batch acquired with no cost recorded.`;
+      newBatch.condition = logAction;
+      newBatch.supplierName = resolutionData.newSupplierName;
+      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; // Uses existing cost for this batch
+      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
     }
     
-    productToUpdate.lastAcquisitionPaymentMethod = paymentDetails.method;
-    productToUpdate.lastAcquisitionTotalCost = paymentDetails.totalAcquisitionCost;
-    productToUpdate.lastAcquisitionCashPaid = paymentDetails.cashPaid;
-    productToUpdate.lastAcquisitionDigitalPaid = paymentDetails.digitalPaid;
-    productToUpdate.lastAcquisitionDueToSupplier = paymentDetails.dueAmount;
-
-    mockProducts[productIndex] = productToUpdate;
-    setCurrentProducts([...mockProducts].sort((a,b) => a.name.localeCompare(b.name)));
+    if (newBatch.totalBatchCost > 0 && newBatch.quantityAdded > 0) {
+        logDetails += `Batch Cost: NRP ${newBatch.totalBatchCost.toFixed(2)} via ${newBatch.paymentMethod}.`;
+        if (newBatch.paymentMethod === 'Hybrid') {
+            logDetails += ` (Cash: ${newBatch.cashPaid.toFixed(2)}, Digital: ${newBatch.digitalPaid.toFixed(2)}, Due: ${newBatch.dueToSupplier.toFixed(2)})`;
+        } else if (newBatch.paymentMethod === 'Due') {
+            logDetails += ` (Due: ${newBatch.dueToSupplier.toFixed(2)})`;
+        }
+    }
+    
+    productToUpdate.acquisitionHistory.push(newBatch);
+    setRefreshTrigger(prev => prev + 1);
     
     addLog(logAction, logDetails);
     toast({ title: "Product Update Successful", description: `${productToUpdate.name} has been updated.` });
@@ -280,100 +274,25 @@ export default function ProductsPage() {
     setProductConflictData(null);
   };
 
-
-  const handleOpenAddStockDialog = (product: Product) => {
-    setProductToRestock(product);
+  const formatAcquisitionConditionForDisplay = (conditionKey?: string) => {
+    if (!conditionKey) return 'N/A';
+    const map: Record<string, string> = {
+        'condition1': 'Restock (Same Supplier/Price)',
+        'condition2': 'Restock (Same Supplier, New Price)',
+        'condition3': 'Restock (New Supplier)'
+    };
+    return map[conditionKey] || conditionKey;
   };
-
-  const handleConfirmAddStock = (productId: string, quantityToAdd: number) => {
-    const productIndexGlobal = mockProducts.findIndex(p => p.id === productId);
-    if (productIndexGlobal === -1) {
-        toast({ title: "Error", description: "Product not found to add stock.", variant: "destructive" });
-        return;
-    }
-
-    const product = mockProducts[productIndexGlobal];
-    const newStockLevel = product.stock + quantityToAdd;
-    const newTotalAcquiredStock = product.totalAcquiredStock + quantityToAdd;
-
-    mockProducts[productIndexGlobal].stock = newStockLevel;
-    mockProducts[productIndexGlobal].totalAcquiredStock = newTotalAcquiredStock;
-    
-    mockProducts[productIndexGlobal].lastAcquisitionPaymentMethod = 'Cash';
-    mockProducts[productIndexGlobal].lastAcquisitionTotalCost = product.costPrice * quantityToAdd; 
-    mockProducts[productIndexGlobal].lastAcquisitionCashPaid = product.costPrice * quantityToAdd;
-    mockProducts[productIndexGlobal].lastAcquisitionDigitalPaid = 0;
-    mockProducts[productIndexGlobal].lastAcquisitionDueToSupplier = 0;
-
-    mockProducts[productIndexGlobal].lastAcquisitionCondition = 'Quick Stock Add';
-    mockProducts[productIndexGlobal].lastAcquisitionBatchQuantity = quantityToAdd;
-    mockProducts[productIndexGlobal].lastAcquisitionBatchCostPrice = product.costPrice;
-    mockProducts[productIndexGlobal].lastAcquisitionBatchMRP = product.sellingPrice;
-    // lastAcquisitionSupplierName remains unchanged from previous
-
-
-    setCurrentProducts(prevProducts =>
-      [...mockProducts].sort((a, b) => a.name.localeCompare(b.name))
-    );
-    
-    addLog("Product Stock Added (Quick Add)", `${quantityToAdd} units of stock added to product '${product.name}' (ID: ${productId.substring(0,8)}...) by ${user?.name || 'N/A'}. New Remaining Stock: ${newStockLevel}, New Total Acquired: ${newTotalAcquiredStock}. Cost not specified in this quick add.`);
-    toast({
-      title: "Stock Added",
-      description: `${quantityToAdd} units added to ${product.name}. New Remaining Stock: ${newStockLevel}.`
-    });
-    setProductToRestock(null);
-  };
-
-  const getLastAcquisitionStatus = (product: Product): { badgeText: string; badgeVariant: "default" | "destructive" | "secondary"; tooltipContent: string } => {
-    const due = product.lastAcquisitionDueToSupplier ?? 0;
-    let badgeText = "Paid";
-    let badgeVariant: "default" | "destructive" | "secondary" = "default";
-    let tooltipContent = `Last Batch (Qty: ${product.lastAcquisitionBatchQuantity || 'N/A'}) acquired via ${product.lastAcquisitionPaymentMethod || 'N/A'}.`;
-
-    if (due > 0) {
-        badgeText = "Due";
-        badgeVariant = "destructive";
-    }
-    
-    const method = product.lastAcquisitionPaymentMethod;
-    const totalCost = product.lastAcquisitionTotalCost ?? 0;
-    const cashPaid = product.lastAcquisitionCashPaid ?? 0;
-    const digitalPaid = product.lastAcquisitionDigitalPaid ?? 0;
-
-    let paymentDetails = `Method: ${method || 'N/A'}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
-    if (method === 'Hybrid') {
-      paymentDetails += ` (Paid Cash: NRP ${cashPaid.toFixed(2)}, Paid Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)})`;
-    } else if (method === 'Due') {
-      paymentDetails += ` (Outstanding Due: NRP ${due.toFixed(2)})`;
-    } else if (method === 'Cash' || method === 'Digital') {
-      paymentDetails += ` (Fully Paid via ${method})`;
-    } else {
-      paymentDetails = "Last acquisition payment details not fully available.";
-    }
-    tooltipContent = paymentDetails;
-    
-    return { badgeText, badgeVariant, tooltipContent };
-  };
-
-
-  const formatAcquisitionCondition = (condition?: string) => {
-    if (!condition) return 'N/A';
-    if (condition === 'condition1') return 'Restock (Same Supplier/Price)';
-    if (condition === 'condition2') return 'Restock (Same Supplier, New Price)';
-    if (condition === 'condition3') return 'Restock (New Supplier)';
-    return condition; // For "Product Added", "Initial Stock", "Quick Stock Add"
-  };
-
 
   if (!user) return null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold font-headline">Product Management</h1>
+        <h1 className="text-3xl font-bold font-headline flex items-center gap-2"><PackageSearch />Product Inventory</h1>
         {user.role === 'admin' && (
           <Button onClick={handleAddNewProductClick}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Product
+            <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
           </Button>
         )}
       </div>
@@ -400,125 +319,118 @@ export default function ProductsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Product Inventory Overview</CardTitle>
-          <CardDescription>Detailed list of products, stock levels, and related data. {selectedCategoryFilter && `(Showing: ${selectedCategoryFilter})`}</CardDescription>
+          <CardTitle>Product List & Acquisition History</CardTitle>
+          <CardDescription>
+            Overview of products. Expand <ChevronsUpDown className="inline-block h-3 w-3 text-muted-foreground mx-0.5"/> to see acquisition history and edit options.
+            {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Cost Price</TableHead>
-                <TableHead>MRP</TableHead>
-                <TableHead>Total Stock</TableHead>
-                <TableHead>Remaining</TableHead>
-                <TableHead>Stock Status</TableHead>
-                <TableHead>Last Batch Pmt.</TableHead>
-                {user.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayedProducts.map((product) => {
-                const { badgeText, badgeVariant, tooltipContent } = getLastAcquisitionStatus(product);
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-1">
-                        {product.name}
-                        {(product.lastAcquisitionBatchQuantity !== undefined && product.lastAcquisitionBatchQuantity !== null) && (
-                           <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <InfoIcon className="h-3.5 w-3.5 text-muted-foreground cursor-pointer" />
-                              </TooltipTrigger>
-                              <TooltipContent className="w-auto max-w-xs text-xs" side="top">
-                                <p className="font-semibold mb-1">Last Acquisition Details:</p>
-                                <ul className="list-disc list-inside space-y-0.5">
-                                  <li>Condition: {formatAcquisitionCondition(product.lastAcquisitionCondition)}</li>
-                                  {product.lastAcquisitionSupplierName && <li>Supplier: {product.lastAcquisitionSupplierName}</li>}
-                                  <li>Batch Qty: {product.lastAcquisitionBatchQuantity}</li>
-                                  <li>Batch Cost: NRP {product.lastAcquisitionBatchCostPrice?.toFixed(2) || 'N/A'}</li>
-                                  {(product.lastAcquisitionCondition === 'Restock (Same Supplier, New Price)' || product.lastAcquisitionCondition === 'Product Added' || product.lastAcquisitionCondition === 'Initial Stock') &&
-                                    <li>Batch MRP: NRP {product.lastAcquisitionBatchMRP?.toFixed(2) || 'N/A'}</li>
-                                  }
-                                </ul>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
+        <CardContent className="p-0 sm:p-2">
+          {displayedProducts.length > 0 ? (
+            <Accordion type="multiple" className="w-full">
+              {displayedProducts.map((product) => (
+                <AccordionItem value={product.id} key={product.id} className="border-b">
+                  <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
+                      <span className="font-medium truncate col-span-full sm:col-span-1">{product.name}</span>
+                      <span className="text-xs text-muted-foreground ">{product.category}</span>
+                      <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
+                      <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
+                      <span className="text-xs font-semibold">
+                        Stock: {product.currentDisplayStock}
+                        {product.currentDisplayStock <= 10 && product.currentDisplayStock > 0 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                        {product.currentDisplayStock === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                      </span>
+                      {user.role === 'admin' && (
+                          <div className="justify-self-end sm:justify-self-auto hidden sm:block"> 
+                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => {e.stopPropagation(); handleOpenEditProductDialog(product.id);}} title="Edit Product Details">
+                                <Edit className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                      )}
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-1.5 pt-2 pb-3 bg-muted/20 rounded-b-md">
+                    <div className="flex justify-between items-center mb-1.5 px-2">
+                        <h4 className="text-xs font-semibold text-muted-foreground">Acquisition History ({product.acquisitionHistory.length} batches):</h4>
+                        {user.role === 'admin' && (
+                            <Button variant="outline" size="sm" className="h-7 sm:hidden" onClick={() => handleOpenEditProductDialog(product.id)}>
+                                <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Main
+                            </Button>
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>NRP {product.costPrice.toFixed(2)}</TableCell>
-                    <TableCell>NRP {product.sellingPrice.toFixed(2)}</TableCell>
-                    <TableCell>{product.totalAcquiredStock}</TableCell>
-                    <TableCell>{product.stock}</TableCell>
-                    <TableCell>
-                      <Badge variant={product.stock > 10 ? 'default' : (product.stock > 0 ? 'secondary' : 'destructive')}
-                            className={cn(
-                                product.stock > 10 ? 'bg-green-500 hover:bg-green-600' : 
-                                (product.stock > 0 ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 
-                                'bg-red-500 hover:bg-red-600'),
-                                "text-xs"
-                                )}>
-                        {product.stock > 10 ? 'In Stock' : (product.stock > 0 ? 'Low Stock' : 'Out of Stock')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                       <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Badge variant={badgeVariant} className={cn(
-                                badgeVariant === "default" ? "bg-green-500 hover:bg-green-600" :
-                                badgeVariant === "destructive" ? "bg-red-500 hover:bg-red-600" :
-                                "bg-slate-500 hover:bg-slate-600",
-                                "text-xs cursor-default"
-                            )}>
-                              {badgeText}
-                               {(product.lastAcquisitionDueToSupplier ?? 0) > 0 && (
-                                <AlertTriangle className="ml-1 h-3 w-3" />
-                              )}
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p className="max-w-xs whitespace-pre-wrap">{tooltipContent}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    {user.role === 'admin' && (
-                      <TableCell className="text-right space-x-1">
-                        <Button variant="outline" size="icon" onClick={() => handleOpenAddStockDialog(product)} title="Add Stock (Quick)">
-                          <PackagePlus className="h-4 w-4" />
-                          <span className="sr-only">Add Stock (Quick)</span>
-                        </Button>
-                        <Button variant="outline" size="icon" onClick={() => handleOpenEditProductDialog(product.id)} title="Edit Product">
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit Product</span>
-                        </Button>
-                      </TableCell>
+                    </div>
+                    {product.acquisitionHistory.length > 0 ? (
+                       <div className="overflow-x-auto">
+                           <Table className="text-xs min-w-[600px]">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="h-7 px-2 py-1">Date</TableHead>
+                                <TableHead className="h-7 px-2 py-1">Condition</TableHead>
+                                <TableHead className="h-7 px-2 py-1">Supplier</TableHead>
+                                <TableHead className="h-7 px-2 py-1 text-center">Qty</TableHead>
+                                <TableHead className="h-7 px-2 py-1 text-right">Cost/U</TableHead>
+                                <TableHead className="h-7 px-2 py-1 text-right">Batch MRP</TableHead>
+                                <TableHead className="h-7 px-2 py-1">Payment</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {product.acquisitionHistory.slice().sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
+                                <TableRow key={batch.batchId}>
+                                  <TableCell className="px-2 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell>
+                                  <TableCell className="px-2 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell>
+                                  <TableCell className="px-2 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell>
+                                  <TableCell className="px-2 py-1 text-center">{batch.quantityAdded}</TableCell>
+                                  <TableCell className="px-2 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell>
+                                  <TableCell className="px-2 py-1 text-right">NRP {batch.sellingPricePerUnitAtAcquisition?.toFixed(2) || product.currentSellingPrice.toFixed(2)}</TableCell>
+                                  <TableCell className="px-2 py-1">
+                                     <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge 
+                                            variant={batch.dueToSupplier > 0 ? "destructive" : "default"}
+                                            className={cn(
+                                                batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600",
+                                                "text-xs cursor-default px-1.5 py-0.5"
+                                            )}
+                                          >
+                                            {batch.dueToSupplier > 0 ? "Due" : "Paid"}
+                                            {batch.dueToSupplier > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top" className="text-xs max-w-xs">
+                                          <p>Method: {batch.paymentMethod}</p>
+                                          <p>Batch Cost: NRP {batch.totalBatchCost.toFixed(2)}</p>
+                                          {batch.paymentMethod === 'Hybrid' && (
+                                            <>
+                                              <p>Cash: NRP {batch.cashPaid.toFixed(2)}</p>
+                                              <p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p>
+                                            </>
+                                          )}
+                                          {batch.dueToSupplier > 0 && <p className="font-semibold">Due: NRP {batch.dueToSupplier.toFixed(2)}</p>}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                           </Table>
+                       </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground px-2 py-4 text-center">No acquisition history recorded for this product.</p>
                     )}
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-          {displayedProducts.length === 0 && (
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
              <div className="text-center py-8 text-muted-foreground">
               {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
             </div>
           )}
         </CardContent>
       </Card>
-      {productToRestock && (
-        <AddStockDialog
-          product={productToRestock}
-          isOpen={!!productToRestock}
-          onClose={() => setProductToRestock(null)}
-          onConfirmAddStock={handleConfirmAddStock}
-        />
-      )}
+      
       {isAddProductDialogOpen && (
         <AddProductDialog
           isOpen={isAddProductDialogOpen}
@@ -549,5 +461,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    

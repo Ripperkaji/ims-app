@@ -14,30 +14,32 @@ export const ALL_PRODUCT_TYPES = [
 export type ProductType = typeof ALL_PRODUCT_TYPES[number];
 export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
+export interface AcquisitionBatch {
+  batchId: string;
+  date: string;
+  condition: string; // e.g., "Initial Stock", "Product Added", "Restock (Same Supplier/Price)", "Restock (Same Supplier, New Price)", "Restock (New Supplier)"
+  supplierName?: string;
+  quantityAdded: number;
+  costPricePerUnit: number;
+  sellingPricePerUnitAtAcquisition?: number; // MRP at the time of this batch's acquisition if it was set/changed
+  paymentMethod: AcquisitionPaymentMethod;
+  totalBatchCost: number;
+  cashPaid: number;
+  digitalPaid: number;
+  dueToSupplier: number;
+}
+
 export interface Product {
   id: string;
-  name: string;          // Product Name
-  category: ProductType; // Category
-  sellingPrice: number;  // Selling price to customer
-  costPrice: number;     // Cost price per unit for the business
-  totalAcquiredStock: number; // Cumulative total stock ever acquired/added
-  damagedQuantity: number;    // Quantity marked as damaged
-  stock: number;         // Current remaining stock (totalAcquiredStock - sold - damaged)
+  name: string;
+  category: ProductType;
+  currentSellingPrice: number; // Current effective selling price
+  currentCostPrice: number;    // Current effective cost price (e.g., from last batch or weighted average)
+  
+  acquisitionHistory: AcquisitionBatch[];
+  
+  damagedQuantity: number;    // Overall damaged quantity for this product
   testerQuantity: number; // Number of units designated as testers
-
-  // Fields for last acquisition payment details
-  lastAcquisitionPaymentMethod?: AcquisitionPaymentMethod;
-  lastAcquisitionTotalCost?: number;
-  lastAcquisitionCashPaid?: number;
-  lastAcquisitionDigitalPaid?: number;
-  lastAcquisitionDueToSupplier?: number;
-
-  // New fields for last acquisition context
-  lastAcquisitionCondition?: string; // e.g., "Product Added", "Restock (Same Supplier/Price)", "condition1", "condition2", "condition3"
-  lastAcquisitionSupplierName?: string;
-  lastAcquisitionBatchCostPrice?: number;
-  lastAcquisitionBatchMRP?: number;
-  lastAcquisitionBatchQuantity?: number;
 }
 
 export interface SaleItem {
@@ -46,8 +48,8 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number; // This is sellingPrice at the time of sale
   totalPrice: number;
-  isFlaggedForDamageExchange?: boolean; // New: For item-specific damage flag
-  damageExchangeComment?: string;      // New: Comment for item-specific damage
+  isFlaggedForDamageExchange?: boolean;
+  damageExchangeComment?: string;
 }
 
 export interface Sale {
@@ -66,8 +68,8 @@ export interface Sale {
   date: string;
   status: 'Paid' | 'Due';
   createdBy: string;
-  isFlagged?: boolean; // General flag for the sale
-  flaggedComment?: string; // General comment for the sale, can summarize item flags
+  isFlagged?: boolean;
+  flaggedComment?: string;
   saleOrigin: 'store' | 'online';
 }
 
@@ -87,5 +89,3 @@ export interface LogEntry {
   action: string;
   details: string;
 }
-
-    
