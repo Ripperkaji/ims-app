@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react'; // Removed useMemo as calculations are now direct
+import { useEffect, useState } from 'react'; 
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -30,8 +30,8 @@ interface ExpenseDueItem {
   totalAmount: number;
   cashPaid?: number;
   digitalPaid?: number;
-  dueAmount: number; // Outstanding due amount
-  paymentMethod: string; // "Hybrid" or "Due"
+  dueAmount: number; 
+  paymentMethod: string; 
   date: string;
 }
 
@@ -64,44 +64,43 @@ export default function AccountsPage() {
 
   supplierDueLogs.forEach(log => {
     let dueAmount = 0;
-    // Match product name using a more general pattern that might appear in different log actions
     const productNameMatch = log.details.match(/Product '([^']*)'|Item '([^']*)'/);
     const productActualName = productNameMatch ? (productNameMatch[1] || productNameMatch[2] || "Unknown Product") : "Unknown Product";
 
     const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\.|New Supplier: ([^.]+)\./);
     const supplierActualName = supplierNameMatch ? (supplierNameMatch[1] || supplierNameMatch[2]) : undefined;
 
-    // Try to get due amount from Hybrid payment first (common for all relevant actions if hybrid was used)
-    // Regex looks for the full hybrid payment details block and extracts the Due part.
-    const hybridPaymentDetailsMatch = log.details.match(/\(Cash: NRP [\d.]+(?:,\s*Digital: NRP [\d.]+)??(?:,\s*Due: NRP ([\d.]+))?\)|Paid via Hybrid.*Due: NRP ([\d.]+)/i);
-
-    if (hybridPaymentDetailsMatch) {
-        const dueMatchGroup1 = hybridPaymentDetailsMatch[1]; // Due from (Cash..., Digital..., Due...)
-        const dueMatchGroup2 = hybridPaymentDetailsMatch[2]; // Due from Paid via Hybrid ... Due...
-        if (dueMatchGroup1) {
-            dueAmount = parseFloat(dueMatchGroup1);
-        } else if (dueMatchGroup2) {
-            dueAmount = parseFloat(dueMatchGroup2);
+    const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i); // Matches "... via Hybrid. (details...)"
+    if (hybridEntryMatch) {
+        const detailsStr = hybridEntryMatch[1]; // e.g., "Cash: NRP C, Digital: NRP D, Due: NRP E"
+        const duePartMatch = detailsStr.match(/Due: NRP ([\d.]+)/i);
+        if (duePartMatch && duePartMatch[1]) {
+            dueAmount = parseFloat(duePartMatch[1]);
         }
     } else {
-      // If not hybrid, check if it was fully paid by "Due"
-      // Check for "Product Added" action specifically for its "Acquired batch for NRP X via Due"
-      if (log.action === "Product Added") {
-        const productAddedFullDueMatch = log.details.match(/Acquired batch for NRP ([\d.]+) via Due\./i);
-        if (productAddedFullDueMatch && productAddedFullDueMatch[1]) {
-          dueAmount = parseFloat(productAddedFullDueMatch[1]);
+        // Not a hybrid payment, or hybrid but not matching the specific pattern above.
+        // Check for full 'Due' payments
+        if (log.action === "Product Added" && log.details.includes("via Due.")) {
+            const directDueInParenMatch = log.details.match(/\(Due: NRP ([\d.]+)\)/i);
+            if (directDueInParenMatch && directDueInParenMatch[1]) {
+                dueAmount = parseFloat(directDueInParenMatch[1]);
+            } else {
+                const productAddedFullDueMatch = log.details.match(/Acquired batch for NRP ([\d.]+) via Due\./i);
+                if (productAddedFullDueMatch && productAddedFullDueMatch[1]) {
+                    dueAmount = parseFloat(productAddedFullDueMatch[1]);
+                }
+            }
+        } else if (relevantSupplierLogActions.slice(1).includes(log.action) && log.details.includes("Paid via Due.")) {
+            const directDueInParenMatch = log.details.match(/\(Due: NRP ([\d.]+)\)/i);
+            if (directDueInParenMatch && directDueInParenMatch[1]) {
+                dueAmount = parseFloat(directDueInParenMatch[1]);
+            } else {
+                const restockTotalCostMatch = log.details.match(/Batch acquisition cost: NRP ([\d.]+)/i);
+                if (restockTotalCostMatch && restockTotalCostMatch[1]) {
+                    dueAmount = parseFloat(restockTotalCostMatch[1]);
+                }
+            }
         }
-      } else if (relevantSupplierLogActions.slice(1).includes(log.action)) { // Restock actions
-        // For restock actions, check if "Paid via Due." is present
-        const restockPaidViaDueMatch = log.details.match(/Paid via Due\./i);
-        if (restockPaidViaDueMatch) {
-          // If paid via Due, the due amount is the "Batch acquisition cost"
-          const restockTotalCostMatch = log.details.match(/Batch acquisition cost: NRP ([\d.]+)/i);
-          if (restockTotalCostMatch && restockTotalCostMatch[1]) {
-            dueAmount = parseFloat(restockTotalCostMatch[1]);
-          }
-        }
-      }
     }
 
     if (dueAmount > 0) {
@@ -134,7 +133,8 @@ export default function AccountsPage() {
     let paymentMethod = "";
 
     const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./i);
-    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
+    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i); // For full due
+    const paidViaDueMatch = log.details.includes("Paid via Due."); // Alternative for full due logging
 
     if (hybridPaymentMatch) {
       const partsStr = hybridPaymentMatch[1];
@@ -151,6 +151,10 @@ export default function AccountsPage() {
     } else if (markedAsDueMatch) {
       outstandingDue = parseFloat(markedAsDueMatch[1]);
       paymentMethod = "Due";
+    } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { // Handle older "Paid via Due." for expenses
+        // If "Paid via Due." is present, the due amount is the total amount of the expense.
+        outstandingDue = totalAmount;
+        paymentMethod = "Due";
     }
     
     if (outstandingDue > 0) {
@@ -259,8 +263,8 @@ export default function AccountsPage() {
                         {item.paymentMethod === "Hybrid" ? (
                           <span className="text-xs">
                             Hybrid (
-                            {item.cashPaid !== undefined && `Cash: NRP ${item.cashPaid.toFixed(2)}, `}
-                            {item.digitalPaid !== undefined && `Digital: NRP ${item.digitalPaid.toFixed(2)}, `}
+                            {item.cashPaid !== undefined && item.cashPaid > 0 && `Cash: NRP ${item.cashPaid.toFixed(2)}, `}
+                            {item.digitalPaid !== undefined && item.digitalPaid > 0 && `Digital: NRP ${item.digitalPaid.toFixed(2)}, `}
                             Due: NRP {item.dueAmount.toFixed(2)}
                             )
                           </span>
