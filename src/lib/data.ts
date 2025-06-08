@@ -1,8 +1,7 @@
 
-import type { Product, Sale, Expense, LogEntry, ProductType } from '@/types';
+import type { Product, Sale, Expense, LogEntry, ProductType, AcquisitionPaymentMethod } from '@/types';
 
 export const mockProducts: Product[] = [
-  // Existing Products (some details might be slightly adjusted for variety)
   {
     id: 'prod1',
     name: 'Vape Juice - Mango Tango',
@@ -12,7 +11,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 70,
     damagedQuantity: 2,
     stock: 50,
-    testerQuantity: 1
+    testerQuantity: 1,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 9.50 * 70,
+    lastAcquisitionCashPaid: 9.50 * 70,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'prod2',
@@ -23,18 +27,28 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 35,
     damagedQuantity: 1,
     stock: 25,
-    testerQuantity: 1
+    testerQuantity: 1,
+    lastAcquisitionPaymentMethod: 'Digital',
+    lastAcquisitionTotalCost: 30.00 * 35,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 30.00 * 35,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'prod3',
-    name: 'Coils - Standard Pack (5pcs)', // Renamed for clarity
+    name: 'Coils - Standard Pack (5pcs)',
     category: 'Coils',
     sellingPrice: 9.99,
     costPrice: 5.00,
     totalAcquiredStock: 120,
     damagedQuantity: 0,
     stock: 100,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 5.00 * 120,
+    lastAcquisitionCashPaid: 5.00 * 120,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'prod4',
@@ -45,7 +59,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 100,
     damagedQuantity: 5,
     stock: 75,
-    testerQuantity: 1
+    testerQuantity: 1,
+    lastAcquisitionPaymentMethod: 'Hybrid',
+    lastAcquisitionTotalCost: 3.75 * 100,
+    lastAcquisitionCashPaid: 3.75 * 50,
+    lastAcquisitionDigitalPaid: 3.75 * 30,
+    lastAcquisitionDueToSupplier: 3.75 * 20,
   },
   {
     id: 'prod5',
@@ -56,10 +75,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 40,
     damagedQuantity: 0,
     stock: 30,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Due',
+    lastAcquisitionTotalCost: 18.00 * 40,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 18.00 * 40,
   },
-
-  // Category: Disposables (Ensuring at least 3)
   {
     id: 'disp1',
     name: 'Disposable - Watermelon Chill',
@@ -69,7 +91,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 150,
     damagedQuantity: 3,
     stock: 120,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 4.00 * 150,
+    lastAcquisitionCashPaid: 4.00 * 150,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'disp2',
@@ -80,11 +107,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 120,
     damagedQuantity: 2,
     stock: 90,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 3.80 * 120,
+    lastAcquisitionCashPaid: 3.80 * 120,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
-  // prod4 is already a disposable
-
-  // Category: E-liquid Nic Salt (Ensuring at least 3)
   {
     id: 'nicsalt1',
     name: 'Nic Salt - Strawberry Kiwi',
@@ -94,7 +123,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 80,
     damagedQuantity: 1,
     stock: 60,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Digital',
+    lastAcquisitionTotalCost: 10.00 * 80,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 10.00 * 80,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'nicsalt2',
@@ -105,11 +139,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 90,
     damagedQuantity: 4,
     stock: 70,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 9.75 * 90,
+    lastAcquisitionCashPaid: 9.75 * 90,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
-  // prod1 is already a nic salt
-
-  // Category: E-liquid Free Base (Ensuring at least 3)
   {
     id: 'freebase1',
     name: 'Freebase - Classic Tobacco',
@@ -119,7 +155,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 60,
     damagedQuantity: 0,
     stock: 45,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 8.00 * 60,
+    lastAcquisitionCashPaid: 8.00 * 60,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'freebase2',
@@ -130,7 +171,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 75,
     damagedQuantity: 2,
     stock: 55,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 8.50 * 75,
+    lastAcquisitionCashPaid: 8.50 * 75,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'freebase3',
@@ -141,10 +187,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 65,
     damagedQuantity: 1,
     stock: 50,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Digital',
+    lastAcquisitionTotalCost: 8.25 * 65,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 8.25 * 65,
+    lastAcquisitionDueToSupplier: 0,
   },
-
-  // Category: Coils (Ensuring at least 3)
   {
     id: 'coil1',
     name: 'Mesh Coils - 0.4ohm (3 Pk)',
@@ -154,7 +203,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 100,
     damagedQuantity: 3,
     stock: 80,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 6.50 * 100,
+    lastAcquisitionCashPaid: 6.50 * 100,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'coil2',
@@ -165,11 +219,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 150,
     damagedQuantity: 5,
     stock: 120,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 6.00 * 150,
+    lastAcquisitionCashPaid: 6.00 * 150,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
-  // prod3 is already a coil
-
-  // Category: POD/MOD Devices (Ensuring at least 3)
   {
     id: 'podmod1',
     name: 'Compact Pod System - Caliburn G',
@@ -179,7 +235,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 50,
     damagedQuantity: 2,
     stock: 35,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Due',
+    lastAcquisitionTotalCost: 22.00 * 50,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 22.00 * 50,
   },
   {
     id: 'podmod2',
@@ -190,11 +251,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 30,
     damagedQuantity: 0,
     stock: 20,
-    testerQuantity: 1
+    testerQuantity: 1,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 40.00 * 30,
+    lastAcquisitionCashPaid: 40.00 * 30,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
-  // prod2 and prod5 are already POD/MOD devices, so we have more than 3
-
-  // Category: Cotton (Ensuring at least 3)
   {
     id: 'cotton1',
     name: 'Organic Vape Cotton - Premium Strips',
@@ -204,7 +267,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 200,
     damagedQuantity: 5,
     stock: 150,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 2.50 * 200,
+    lastAcquisitionCashPaid: 2.50 * 200,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'cotton2',
@@ -215,7 +283,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 180,
     damagedQuantity: 3,
     stock: 140,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Hybrid',
+    lastAcquisitionTotalCost: 3.00 * 180,
+    lastAcquisitionCashPaid: 3.00 * 100,
+    lastAcquisitionDigitalPaid: 3.00 * 50,
+    lastAcquisitionDueToSupplier: 3.00 * 30,
   },
   {
     id: 'cotton3',
@@ -226,10 +299,13 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 160,
     damagedQuantity: 2,
     stock: 130,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 3.50 * 160,
+    lastAcquisitionCashPaid: 3.50 * 160,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
-
-  // Category: Coil Build & Maintenance (Ensuring at least 3)
   {
     id: 'build1',
     name: 'Coil Building Toolkit - Basic',
@@ -239,7 +315,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 30,
     damagedQuantity: 1,
     stock: 20,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Digital',
+    lastAcquisitionTotalCost: 15.00 * 30,
+    lastAcquisitionCashPaid: 0,
+    lastAcquisitionDigitalPaid: 15.00 * 30,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'build2',
@@ -250,7 +331,12 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 80,
     damagedQuantity: 0,
     stock: 60,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 4.50 * 80,
+    lastAcquisitionCashPaid: 4.50 * 80,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   },
   {
     id: 'build3',
@@ -261,13 +347,25 @@ export const mockProducts: Product[] = [
     totalAcquiredStock: 50,
     damagedQuantity: 1,
     stock: 40,
-    testerQuantity: 0
+    testerQuantity: 0,
+    lastAcquisitionPaymentMethod: 'Cash',
+    lastAcquisitionTotalCost: 6.00 * 50,
+    lastAcquisitionCashPaid: 6.00 * 50,
+    lastAcquisitionDigitalPaid: 0,
+    lastAcquisitionDueToSupplier: 0,
   }
 ];
-// Initialize testerQuantity for all products if not present (for safety)
+
 mockProducts.forEach(p => {
   if (p.testerQuantity === undefined) {
     p.testerQuantity = 0;
+  }
+  if (p.lastAcquisitionPaymentMethod === undefined) {
+    p.lastAcquisitionPaymentMethod = 'Cash';
+    p.lastAcquisitionTotalCost = p.costPrice * p.totalAcquiredStock;
+    p.lastAcquisitionCashPaid = p.lastAcquisitionTotalCost;
+    p.lastAcquisitionDigitalPaid = 0;
+    p.lastAcquisitionDueToSupplier = 0;
   }
 });
 
@@ -569,7 +667,7 @@ const initialMockLogEntries: LogEntry[] = [
     timestamp: new Date(Date.now() - 20*60*1000).toISOString(),
     user: 'admin_user',
     action: 'Product Added',
-    details: "Product 'Vape Pen Kit - Starter' (ID: prod5...) added. Category: POD/MOD Devices, Cost: NRP 18.00, Selling Price: NRP 29.99, Initial Stock: 40."
+    details: "Product 'Vape Pen Kit - Starter' (ID: prod5...) added. Category: POD/MOD Devices, Cost: NRP 18.00, Selling Price: NRP 29.99, Initial Stock: 40. Supplier: Vape Supplies Co. Acquired batch for NRP 720.00 via Due."
   },
   ...initialDamageLogEntries // Add the comprehensive damage logs here
 ];
@@ -811,7 +909,7 @@ export const mockExpenses: Expense[] = [
 ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
-export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 // Ensure all sales items have the new fields
 mockSales.forEach(sale => {
@@ -850,3 +948,4 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
     
     
     
+

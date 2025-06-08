@@ -12,6 +12,7 @@ export const ALL_PRODUCT_TYPES = [
 ] as const;
 
 export type ProductType = typeof ALL_PRODUCT_TYPES[number];
+export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export interface Product {
   id: string;
@@ -23,6 +24,13 @@ export interface Product {
   damagedQuantity: number;    // Quantity marked as damaged
   stock: number;         // Current remaining stock (totalAcquiredStock - sold - damaged)
   testerQuantity: number; // Number of units designated as testers
+
+  // Fields for last acquisition payment details
+  lastAcquisitionPaymentMethod?: AcquisitionPaymentMethod;
+  lastAcquisitionTotalCost?: number;
+  lastAcquisitionCashPaid?: number;
+  lastAcquisitionDigitalPaid?: number;
+  lastAcquisitionDueToSupplier?: number;
 }
 
 export interface SaleItem {
@@ -72,3 +80,4 @@ export interface LogEntry {
   action: string;
   details: string;
 }
+

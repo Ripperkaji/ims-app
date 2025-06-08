@@ -8,10 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter } from "lucide-react";
+import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter, Landmark, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddStockDialog from "@/components/products/AddStockDialog";
 import AddProductDialog from "@/components/products/AddProductDialog";
@@ -19,8 +19,9 @@ import EditProductDialog from "@/components/products/EditProductDialog";
 import HandleExistingProductDialog, { type ResolutionData, type AttemptedProductData } from "@/components/products/HandleExistingProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
-type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -58,7 +59,7 @@ export default function ProductsPage() {
       });
     });
     return salesMap;
-  }, [mockSales, currentProducts]); // Added currentProducts to re-calculate if products change, e.g. stock
+  }, [mockSales, currentProducts]); 
 
   const displayedProducts = useMemo(() => {
     return currentProducts
@@ -86,7 +87,6 @@ export default function ProductsPage() {
     if (productIndexGlobal !== -1) {
       const originalProduct = mockProducts[productIndexGlobal];
       
-      // Check for name conflict if name is changed
       if (updatedDetails.name.toLowerCase() !== originalProduct.name.toLowerCase()) {
         const existingProductWithNewName = mockProducts.find(p => p.name.toLowerCase() === updatedDetails.name.toLowerCase() && p.id !== updatedDetails.id);
         if (existingProductWithNewName) {
@@ -150,12 +150,12 @@ export default function ProductsPage() {
             category: newProductData.category,
             sellingPrice: newProductData.sellingPrice,
             costPrice: newProductData.costPrice,
-            totalAcquiredStock: newProductData.totalAcquiredStock // This is the quantity to add
+            totalAcquiredStock: newProductData.totalAcquiredStock
         }
       });
       setIsHandleExistingProductDialogOpen(true);
-      setIsAddProductDialogOpen(false); // Close the add product dialog
-      return; // Stop further processing
+      setIsAddProductDialogOpen(false); 
+      return; 
     }
 
     const newProduct: Product = {
@@ -168,6 +168,11 @@ export default function ProductsPage() {
       stock: newProductData.totalAcquiredStock,
       damagedQuantity: 0,
       testerQuantity: 0, 
+      lastAcquisitionPaymentMethod: newProductData.acquisitionPaymentDetails.method,
+      lastAcquisitionTotalCost: newProductData.acquisitionPaymentDetails.totalAcquisitionCost,
+      lastAcquisitionCashPaid: newProductData.acquisitionPaymentDetails.cashPaid,
+      lastAcquisitionDigitalPaid: newProductData.acquisitionPaymentDetails.digitalPaid,
+      lastAcquisitionDueToSupplier: newProductData.acquisitionPaymentDetails.dueAmount,
     };
     
     mockProducts.push(newProduct);
@@ -181,7 +186,9 @@ export default function ProductsPage() {
       const { method, cashPaid, digitalPaid, dueAmount, totalAcquisitionCost } = newProductData.acquisitionPaymentDetails;
       logDetails += ` Acquired batch for NRP ${totalAcquisitionCost.toFixed(2)} via ${method}.`;
       if (method === 'Hybrid') {
-        logDetails += ` (Cash: ${cashPaid.toFixed(2)}, Digital: ${digitalPaid.toFixed(2)}, Due: ${dueAmount.toFixed(2)})`;
+        logDetails += ` (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${dueAmount.toFixed(2)})`;
+      } else if (method === 'Due') {
+        logDetails += ` (Due: NRP ${dueAmount.toFixed(2)})`;
       }
     }
     
@@ -201,7 +208,7 @@ export default function ProductsPage() {
       return;
     }
 
-    const productToUpdate = { ...mockProducts[productIndex] }; // Create a mutable copy
+    const productToUpdate = { ...mockProducts[productIndex] }; 
     let logAction = "Product Restocked";
     let logDetails = `Product '${productToUpdate.name}' (ID: ${productToUpdate.id.substring(0,8)}...) restocked by ${user?.name || 'N/A'}. `;
 
@@ -213,9 +220,8 @@ export default function ProductsPage() {
         logDetails += `No new stock added. `;
     }
 
-
     const { paymentDetails } = resolutionData;
-    const costForThisBatch = paymentDetails.totalAcquisitionCost / (resolutionData.quantityAdded || 1); // Avoid division by zero
+    const costForThisBatch = paymentDetails.totalAcquisitionCost / (resolutionData.quantityAdded || 1); 
 
     if (resolutionData.condition === 'condition1') {
       logAction = "Restock (Same Supplier/Price)";
@@ -233,12 +239,19 @@ export default function ProductsPage() {
     if (paymentDetails.totalAcquisitionCost > 0 && resolutionData.quantityAdded > 0) {
         logDetails += `Batch acquisition cost: NRP ${paymentDetails.totalAcquisitionCost.toFixed(2)} (NRP ${costForThisBatch.toFixed(2)}/unit). Paid via ${paymentDetails.method}.`;
         if (paymentDetails.method === 'Hybrid') {
-            logDetails += ` (Cash: ${paymentDetails.cashPaid.toFixed(2)}, Digital: ${paymentDetails.digitalPaid.toFixed(2)}, Due: ${paymentDetails.dueAmount.toFixed(2)})`;
+            logDetails += ` (Cash: NRP ${paymentDetails.cashPaid.toFixed(2)}, Digital: NRP ${paymentDetails.digitalPaid.toFixed(2)}, Due: NRP ${paymentDetails.dueAmount.toFixed(2)})`;
+        } else if (paymentDetails.method === 'Due') {
+            logDetails += ` (Due: NRP ${paymentDetails.dueAmount.toFixed(2)})`;
         }
     } else if (resolutionData.quantityAdded > 0) {
         logDetails += `Batch acquired with no cost recorded.`;
     }
-
+    
+    productToUpdate.lastAcquisitionPaymentMethod = paymentDetails.method;
+    productToUpdate.lastAcquisitionTotalCost = paymentDetails.totalAcquisitionCost;
+    productToUpdate.lastAcquisitionCashPaid = paymentDetails.cashPaid;
+    productToUpdate.lastAcquisitionDigitalPaid = paymentDetails.digitalPaid;
+    productToUpdate.lastAcquisitionDueToSupplier = paymentDetails.dueAmount;
 
     mockProducts[productIndex] = productToUpdate;
     setCurrentProducts([...mockProducts].sort((a,b) => a.name.localeCompare(b.name)));
@@ -268,6 +281,14 @@ export default function ProductsPage() {
     mockProducts[productIndexGlobal].stock = newStockLevel;
     mockProducts[productIndexGlobal].totalAcquiredStock = newTotalAcquiredStock;
     
+    // For quick add, assume it was a cash purchase and fully paid for simplicity or mark as unknown
+    mockProducts[productIndexGlobal].lastAcquisitionPaymentMethod = 'Cash'; // Or undefined
+    mockProducts[productIndexGlobal].lastAcquisitionTotalCost = product.costPrice * quantityToAdd; // Estimate
+    mockProducts[productIndexGlobal].lastAcquisitionCashPaid = product.costPrice * quantityToAdd;
+    mockProducts[productIndexGlobal].lastAcquisitionDigitalPaid = 0;
+    mockProducts[productIndexGlobal].lastAcquisitionDueToSupplier = 0;
+
+
     setCurrentProducts(prevProducts =>
       [...mockProducts].sort((a, b) => a.name.localeCompare(b.name))
     );
@@ -278,6 +299,53 @@ export default function ProductsPage() {
       description: `${quantityToAdd} units added to ${product.name}. New Remaining Stock: ${newStockLevel}.`
     });
     setProductToRestock(null);
+  };
+
+  const getLastAcquisitionStatus = (product: Product): { badgeText: string; badgeVariant: "default" | "destructive" | "secondary"; tooltipContent: string } => {
+    const method = product.lastAcquisitionPaymentMethod;
+    const due = product.lastAcquisitionDueToSupplier ?? 0;
+    const totalCost = product.lastAcquisitionTotalCost ?? 0;
+    const cashPaid = product.lastAcquisitionCashPaid ?? 0;
+    const digitalPaid = product.lastAcquisitionDigitalPaid ?? 0;
+
+    let badgeText = "Paid";
+    let badgeVariant: "default" | "destructive" | "secondary" = "default";
+    let tooltipContent = `Last Batch Cost: NRP ${totalCost.toFixed(2)}. `;
+
+    if (method === 'Due' && due > 0) {
+        badgeText = "Due";
+        badgeVariant = "destructive";
+        tooltipContent += `Paid via Due. Outstanding: NRP ${due.toFixed(2)}.`;
+    } else if (method === 'Hybrid') {
+        if (due > 0) {
+            badgeText = "Hybrid (Due)";
+            badgeVariant = "destructive";
+        } else {
+            badgeText = "Paid (Hybrid)";
+            badgeVariant = "default";
+        }
+        tooltipContent += `Hybrid Pmt (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)}).`;
+    } else if (due > 0) { // Should ideally be covered by method === 'Due' or 'Hybrid'
+        badgeText = "Due";
+        badgeVariant = "destructive";
+        tooltipContent += `Paid via ${method || 'Unknown'}. Outstanding: NRP ${due.toFixed(2)}.`;
+    } else { // Fully paid by Cash or Digital
+        badgeText = "Paid";
+        badgeVariant = "default";
+        tooltipContent += `Paid via ${method || 'Cash'}.`;
+    }
+    
+    if (method === 'Cash' && due === 0) badgeVariant = 'default'; // e.g. green-like
+    else if (method === 'Digital' && due === 0) badgeVariant = 'default';
+    
+    if (!method) { // If no payment method is logged for some reason
+        badgeText = "N/A";
+        badgeVariant = "secondary";
+        tooltipContent = "Last acquisition payment details not available.";
+    }
+
+
+    return { badgeText, badgeVariant, tooltipContent };
   };
 
 
@@ -325,40 +393,58 @@ export default function ProductsPage() {
               <TableRow>
                 <TableHead>Product Name</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Cost Price</TableHead>
+                <TableHead>MRP</TableHead>
                 <TableHead>Total Stock</TableHead>
-                <TableHead>Cost Price/Unit</TableHead>
-                <TableHead>MRP/Unit</TableHead>
-                <TableHead>Sold</TableHead>
-                <TableHead>Damage</TableHead>
-                <TableHead>Testers</TableHead>
-                <TableHead>Remaining Stock</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Remaining</TableHead>
+                <TableHead>Stock Status</TableHead>
+                <TableHead>Last Batch Pmt.</TableHead>
                 {user.role === 'admin' && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayedProducts.map((product) => {
-                const soldQty = calculatedSoldQuantities.get(product.id) || 0;
+                const { badgeText, badgeVariant, tooltipContent } = getLastAcquisitionStatus(product);
                 return (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.category}</TableCell>
-                    <TableCell>{product.totalAcquiredStock}</TableCell>
                     <TableCell>NRP {product.costPrice.toFixed(2)}</TableCell>
                     <TableCell>NRP {product.sellingPrice.toFixed(2)}</TableCell>
-                    <TableCell>{soldQty}</TableCell>
-                    <TableCell>
-                      {product.damagedQuantity}
-                    </TableCell>
-                    <TableCell>{product.testerQuantity || 0}</TableCell>
-                    <TableCell>
-                      {product.stock}
-                    </TableCell>
+                    <TableCell>{product.totalAcquiredStock}</TableCell>
+                    <TableCell>{product.stock}</TableCell>
                     <TableCell>
                       <Badge variant={product.stock > 10 ? 'default' : (product.stock > 0 ? 'secondary' : 'destructive')}
-                            className={product.stock > 10 ? 'bg-green-500 hover:bg-green-600' : (product.stock > 0 ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 'bg-red-500 hover:bg-red-600')}>
+                            className={cn(
+                                product.stock > 10 ? 'bg-green-500 hover:bg-green-600' : 
+                                (product.stock > 0 ? 'bg-yellow-500 hover:bg-yellow-600 text-black' : 
+                                'bg-red-500 hover:bg-red-600'),
+                                "text-xs"
+                                )}>
                         {product.stock > 10 ? 'In Stock' : (product.stock > 0 ? 'Low Stock' : 'Out of Stock')}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                       <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant={badgeVariant} className={cn(
+                                badgeVariant === "default" ? "bg-green-500 hover:bg-green-600" :
+                                badgeVariant === "destructive" ? "bg-red-500 hover:bg-red-600" :
+                                "bg-slate-500 hover:bg-slate-600",
+                                "text-xs cursor-default"
+                            )}>
+                              {badgeText}
+                               {product.lastAcquisitionDueToSupplier && product.lastAcquisitionDueToSupplier > 0 && (
+                                <AlertTriangle className="ml-1 h-3 w-3" />
+                              )}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs whitespace-pre-wrap">{tooltipContent}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
                     {user.role === 'admin' && (
                       <TableCell className="text-right space-x-1">
