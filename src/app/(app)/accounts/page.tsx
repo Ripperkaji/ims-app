@@ -9,8 +9,8 @@ import { Users, Landmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockLogEntries, mockProducts } from "@/lib/data"; // Added mockProducts
-import type { LogEntry, Product, AcquisitionPaymentMethod } from "@/types"; // Added Product and AcquisitionPaymentMethod
+import { mockLogEntries, mockProducts } from "@/lib/data";
+import type { LogEntry, Product, AcquisitionPaymentMethod } from "@/types";
 import { format } from 'date-fns';
 
 type PayableType = 'supplier' | 'expense' | '';
@@ -23,6 +23,7 @@ interface SupplierDueItem {
   lastAcquisitionTotalCost?: number;
   lastAcquisitionCashPaid?: number;
   lastAcquisitionDigitalPaid?: number;
+  date: string; // Date of the last acquisition log entry
 }
 
 interface ExpenseDueItem {
@@ -54,10 +55,29 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  // Calculate supplierDueItems directly from mockProducts
-  const supplierDueItems: SupplierDueItem[] = mockProducts
-    .filter(product => (product.lastAcquisitionDueToSupplier ?? 0) > 0)
-    .map(product => ({
+  // Calculate supplierDueItems by filtering products with due amounts
+  // and then finding the most recent relevant log entry for the acquisition date.
+  const productsWithDue = mockProducts.filter(
+    (product) => (product.lastAcquisitionDueToSupplier ?? 0) > 0
+  );
+
+  const supplierDueItems: SupplierDueItem[] = productsWithDue.map((product) => {
+    const relevantAcquisitionLogs = mockLogEntries
+      .filter(
+        (log) =>
+          (log.action === "Product Added" ||
+            log.action === "Restock (Same Supplier/Price)" ||
+            log.action === "Restock (Same Supplier, New Price)" ||
+            log.action === "Restock (New Supplier)") &&
+          log.details.includes(product.name) 
+      )
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    const lastAcquisitionDate = relevantAcquisitionLogs.length > 0
+      ? format(new Date(relevantAcquisitionLogs[0].timestamp), 'MMM dd, yyyy HH:mm')
+      : 'N/A';
+
+    return {
       id: product.id,
       productName: product.name,
       dueAmount: product.lastAcquisitionDueToSupplier ?? 0,
@@ -65,8 +85,10 @@ export default function AccountsPage() {
       lastAcquisitionTotalCost: product.lastAcquisitionTotalCost,
       lastAcquisitionCashPaid: product.lastAcquisitionCashPaid,
       lastAcquisitionDigitalPaid: product.lastAcquisitionDigitalPaid,
-    }))
-    .sort((a, b) => a.productName.localeCompare(b.productName));
+      date: lastAcquisitionDate,
+    };
+  })
+  .sort((a, b) => a.productName.localeCompare(b.productName));
 
 
   // Calculate expenseDueItems directly without useMemo
@@ -85,27 +107,30 @@ export default function AccountsPage() {
     let digitalPaid: number | undefined = undefined;
     let paymentMethod = "";
 
-    const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./i);
-    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i); 
-    const paidViaDueMatch = log.details.includes("Paid via Due."); 
+    // Regex to find hybrid payment details like (Cash: NRP X, Digital: NRP Y, Due: NRP Z)
+    const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i);
+    const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
+    const paidViaDueMatch = log.details.includes("Paid via Due."); // For older simple "Due" logs if any
 
-    if (hybridPaymentMatch && hybridPaymentMatch[1]) {
-      const partsStr = hybridPaymentMatch[1];
-      const cashMatch = partsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
-      const digitalMatch = partsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
-      const dueMatch = partsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
 
-      if (dueMatch && dueMatch[1]) {
-        outstandingDue = parseFloat(dueMatch[1]);
-        paymentMethod = "Hybrid";
-        if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
-        if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
-      }
-    } else if (markedAsDueMatch && markedAsDueMatch[1]) {
-      outstandingDue = parseFloat(markedAsDueMatch[1]);
-      paymentMethod = "Due";
+    if (hybridEntryMatch && hybridEntryMatch[1]) {
+        const detailsStr = hybridEntryMatch[1]; // Content within parentheses
+        const cashMatch = detailsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
+        const digitalMatch = detailsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
+        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
+
+        if (duePartMatch && duePartMatch[1]) {
+            outstandingDue = parseFloat(duePartMatch[1]);
+            paymentMethod = "Hybrid";
+            if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
+            if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
+        }
+    } else if (directDueMatch && directDueMatch[1]) {
+        outstandingDue = parseFloat(directDueMatch[1]);
+        paymentMethod = "Due";
     } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { 
-        outstandingDue = totalAmount;
+        // Fallback for simpler "Paid via Due" if specific due amount isn't in the directDueMatch format
+        outstandingDue = totalAmount; // Assume full amount is due if no specific due amount is logged
         paymentMethod = "Due";
     }
     
@@ -141,7 +166,7 @@ export default function AccountsPage() {
       details += `(Paid Cash: NRP ${(item.lastAcquisitionCashPaid ?? 0).toFixed(2)}, Paid Digital: NRP ${(item.lastAcquisitionDigitalPaid ?? 0).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
     } else if (item.lastAcquisitionPaymentMethod === 'Due') {
       details += `(Outstanding Due: NRP ${(item.dueAmount).toFixed(2)})`;
-    } else {
+    } else { // Cash or Digital, fully paid
       details += `(Fully Paid via ${item.lastAcquisitionPaymentMethod})`;
     }
     return details;
@@ -188,6 +213,7 @@ export default function AccountsPage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead className="text-right">Amount Due</TableHead>
                     <TableHead>Last Batch Payment Details</TableHead>
+                    <TableHead>Last Acq. Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -196,6 +222,7 @@ export default function AccountsPage() {
                       <TableCell className="font-medium">{item.productName}</TableCell>
                       <TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell>
                       <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
+                      <TableCell>{item.date}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
