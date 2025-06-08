@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
+  { href: '/accounts', label: 'Accounts', icon: Users, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
