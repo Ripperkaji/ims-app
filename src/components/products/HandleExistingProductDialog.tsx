@@ -19,47 +19,9 @@ import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport } fro
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PackageOpen, Edit, DollarSign, Users, Landmark, Info, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { Product, ProductType } from '@/types';
+import type { Product, ProductType, ResolutionData, AttemptedProductData, AcquisitionPaymentMethod } from '@/types';
 
-type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
-
-export interface AttemptedProductData {
-  name: string;
-  category: ProductType;
-  sellingPrice: number; // Original attempted selling price
-  costPrice: number;    // Original attempted cost price
-  totalAcquiredStock: number; // This is the quantity the user wants to add now
-}
-
-interface BaseResolution {
-  existingProductId: string;
-  quantityAdded: number;
-  paymentDetails: {
-    method: AcquisitionPaymentMethod;
-    cashPaid: number;
-    digitalPaid: number;
-    dueAmount: number;
-    totalAcquisitionCost: number;
-  };
-}
-
-export interface Condition1Data extends BaseResolution {
-  condition: 'condition1';
-}
-
-export interface Condition2Data extends BaseResolution {
-  condition: 'condition2';
-  newCostPrice: number;
-  newSellingPrice: number;
-}
-
-export interface Condition3Data extends BaseResolution {
-  condition: 'condition3';
-  newSupplierName: string;
-}
-
-export type ResolutionData = Condition1Data | Condition2Data | Condition3Data;
-
+const DialogCardTitle = DialogCardTitleImport;
 
 interface HandleExistingProductDialogProps {
   isOpen: boolean;
@@ -69,7 +31,6 @@ interface HandleExistingProductDialogProps {
   onResolve: (resolutionData: ResolutionData) => void;
 }
 
-const DialogCardTitle = DialogCardTitleImport;
 
 export default function HandleExistingProductDialog({
   isOpen,
@@ -82,14 +43,10 @@ export default function HandleExistingProductDialog({
 
   const [selectedCondition, setSelectedCondition] = useState<'condition1' | 'condition2' | 'condition3' | null>(null);
   
-  // Fields for Condition 2
   const [newCostPrice, setNewCostPrice] = useState<string>('');
   const [newSellingPrice, setNewSellingPrice] = useState<string>('');
-
-  // Field for Condition 3
   const [newSupplierName, setNewSupplierName] = useState<string>('');
 
-  // Payment related state
   const [acquisitionPaymentMethod, setAcquisitionPaymentMethod] = useState<AcquisitionPaymentMethod>('Cash');
   const [isAcquisitionHybridPayment, setIsAcquisitionHybridPayment] = useState(false);
   const [acquisitionCashPaid, setAcquisitionCashPaid] = useState('');
@@ -100,7 +57,7 @@ export default function HandleExistingProductDialog({
   const quantityToRestock = attemptedProductData.totalAcquiredStock;
 
   const currentCostPriceForCalculation = useMemo(() => {
-    if (selectedCondition === 'condition2' && parseFloat(newCostPrice) > 0) {
+    if ((selectedCondition === 'condition2' || selectedCondition === 'condition3') && parseFloat(newCostPrice) > 0) {
       return parseFloat(newCostPrice);
     }
     return existingProduct.currentCostPrice;
@@ -114,10 +71,9 @@ export default function HandleExistingProductDialog({
 
   useEffect(() => {
     if (isOpen) {
-      // Reset state when dialog opens
       setSelectedCondition(null);
-      setNewCostPrice(existingProduct.currentCostPrice.toString()); // Pre-fill for condition 2 for easier editing
-      setNewSellingPrice(existingProduct.currentSellingPrice.toString()); // Pre-fill for condition 2
+      setNewCostPrice(existingProduct.currentCostPrice.toString()); 
+      setNewSellingPrice(existingProduct.currentSellingPrice.toString()); 
       setNewSupplierName('');
       setAcquisitionPaymentMethod('Cash');
       setIsAcquisitionHybridPayment(false);
@@ -201,8 +157,11 @@ export default function HandleExistingProductDialog({
 
     let numNewCostPrice = existingProduct.currentCostPrice;
     let numNewSellingPrice = existingProduct.currentSellingPrice;
+    let costPriceForPayload: number | undefined = undefined;
+    let sellingPriceForPayload: number | undefined = undefined;
 
-    if (selectedCondition === 'condition2') {
+
+    if (selectedCondition === 'condition2' || selectedCondition === 'condition3') {
       numNewCostPrice = parseFloat(newCostPrice);
       numNewSellingPrice = parseFloat(newSellingPrice);
       if (isNaN(numNewCostPrice) || numNewCostPrice <= 0) {
@@ -214,18 +173,19 @@ export default function HandleExistingProductDialog({
       if (numNewCostPrice > numNewSellingPrice) {
         toast({ title: "Logical Error", description: "New cost price cannot be greater than new selling price.", variant: "destructive" }); return;
       }
+      costPriceForPayload = numNewCostPrice;
+      sellingPriceForPayload = numNewSellingPrice;
     }
 
     if (selectedCondition === 'condition3' && !newSupplierName.trim()) {
       toast({ title: "Supplier Name Required", description: "Please enter the new supplier's name for condition 3.", variant: "destructive" }); return;
     }
     
-    // Payment Validation
     let finalCashPaid = 0;
     let finalDigitalPaid = 0;
     let finalAmountDue = 0;
 
-    if (totalAcquisitionCost > 0) { // Only validate/process payment if there's a cost
+    if (totalAcquisitionCost > 0) { 
         if (isAcquisitionHybridPayment) {
             finalCashPaid = parseFloat(acquisitionCashPaid) || 0;
             finalDigitalPaid = parseFloat(acquisitionDigitalPaid) || 0;
@@ -274,8 +234,8 @@ export default function HandleExistingProductDialog({
         condition: 'condition2',
         existingProductId: existingProduct.id,
         quantityAdded: quantityToRestock,
-        newCostPrice: numNewCostPrice,
-        newSellingPrice: numNewSellingPrice,
+        newCostPrice: costPriceForPayload as number, // Ensured valid by checks above
+        newSellingPrice: sellingPriceForPayload as number, // Ensured valid by checks above
         paymentDetails,
       };
     } else { // condition3
@@ -284,6 +244,8 @@ export default function HandleExistingProductDialog({
         existingProductId: existingProduct.id,
         quantityAdded: quantityToRestock,
         newSupplierName: newSupplierName.trim(),
+        newCostPrice: costPriceForPayload, // Will be the entered value or undefined if not changed
+        newSellingPrice: sellingPriceForPayload, // Will be the entered value or undefined if not changed
         paymentDetails,
       };
     }
@@ -307,52 +269,59 @@ export default function HandleExistingProductDialog({
         </DialogHeader>
         
         <div className="grid gap-4 py-4 max-h-[65vh] overflow-y-auto pr-2">
-          <RadioGroup value={selectedCondition ?? ""} onValueChange={(value) => setSelectedCondition(value as any)}>
+          <RadioGroup value={selectedCondition ?? ""} onValueChange={(value) => setSelectedCondition(value as 'condition1' | 'condition2' | 'condition3' | null)}>
             <div className="space-y-3">
-              {/* Condition 1 */}
               <Label htmlFor="condition1" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition1" id="condition1" />
-                  <span className="font-semibold">Restock from same supplier (same price)</span>
+                  <span className="font-semibold">Restock (Same Supplier/Price)</span>
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {existingProduct.currentCostPrice.toFixed(2)}.</p>
               </Label>
 
-              {/* Condition 2 */}
               <Label htmlFor="condition2" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition2" id="condition2" />
-                   <span className="font-semibold">Restock from same supplier (different price)</span>
+                   <span className="font-semibold">Restock (Same Supplier, New Price)</span>
                 </div>
                  <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units and update product prices.</p>
-                {selectedCondition === 'condition2' && (
+                {(selectedCondition === 'condition2') && (
                   <div className="ml-6 mt-2 space-y-2">
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <Label htmlFor="newCostPrice" className="text-xs">New Cost Price/Unit</Label>
-                            <Input id="newCostPrice" type="number" value={newCostPrice} onChange={(e) => setNewCostPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01" className="h-8 text-xs"/>
+                            <Label htmlFor="newCostPriceC2" className="text-xs">New Cost Price/Unit</Label>
+                            <Input id="newCostPriceC2" type="number" value={newCostPrice} onChange={(e) => setNewCostPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01" className="h-8 text-xs"/>
                         </div>
                         <div>
-                            <Label htmlFor="newSellingPrice" className="text-xs">New Selling Price (MRP)</Label>
-                            <Input id="newSellingPrice" type="number" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01" className="h-8 text-xs"/>
+                            <Label htmlFor="newSellingPriceC2" className="text-xs">New Selling Price (MRP)</Label>
+                            <Input id="newSellingPriceC2" type="number" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01" className="h-8 text-xs"/>
                         </div>
                     </div>
                   </div>
                 )}
               </Label>
 
-              {/* Condition 3 */}
               <Label htmlFor="condition3" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition3" id="condition3" />
-                  <span className="font-semibold">New stock from different supplier</span>
+                  <span className="font-semibold">Restock (New Supplier, Optional New Price)</span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing product prices. Log new supplier.</p>
+                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Log new supplier. Optionally update product prices for this batch and ongoing.</p>
                 {selectedCondition === 'condition3' && (
                   <div className="ml-6 mt-2 space-y-2">
                     <div>
                         <Label htmlFor="newSupplierName" className="text-xs">New Supplier Name</Label>
                         <Input id="newSupplierName" value={newSupplierName} onChange={(e) => setNewSupplierName(e.target.value)} placeholder="Enter supplier name" className="h-8 text-xs"/>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <Label htmlFor="newCostPriceC3" className="text-xs">New Cost Price/Unit (Optional)</Label>
+                            <Input id="newCostPriceC3" type="number" value={newCostPrice} onChange={(e) => setNewCostPrice(e.target.value)} placeholder={`NRP ${existingProduct.currentCostPrice.toFixed(2)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
+                        </div>
+                        <div>
+                            <Label htmlFor="newSellingPriceC3" className="text-xs">New Selling Price (MRP) (Optional)</Label>
+                            <Input id="newSellingPriceC3" type="number" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder={`NRP ${existingProduct.currentSellingPrice.toFixed(2)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
+                        </div>
                     </div>
                   </div>
                 )}
@@ -415,8 +384,6 @@ export default function HandleExistingProductDialog({
                 </AlertDescription>
               </Alert>
            )}
-
-
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
@@ -432,5 +399,3 @@ export default function HandleExistingProductDialog({
     </Dialog>
   );
 }
-
-    

@@ -33,20 +33,20 @@ export interface Product {
   id: string;
   name: string;
   category: ProductType;
-  currentSellingPrice: number; // Current effective selling price
-  currentCostPrice: number;    // Current effective cost price (e.g., from last batch or weighted average)
+  currentSellingPrice: number; 
+  currentCostPrice: number;    
   
   acquisitionHistory: AcquisitionBatch[];
   
-  damagedQuantity: number;    // Overall damaged quantity for this product
-  testerQuantity: number; // Number of units designated as testers
+  damagedQuantity: number;    
+  testerQuantity: number; 
 }
 
 export interface SaleItem {
   productId: string;
   productName: string;
   quantity: number;
-  unitPrice: number; // This is sellingPrice at the time of sale
+  unitPrice: number; 
   totalPrice: number;
   isFlaggedForDamageExchange?: boolean;
   damageExchangeComment?: string;
@@ -89,3 +89,43 @@ export interface LogEntry {
   action: string;
   details: string;
 }
+
+// For HandleExistingProductDialog
+export interface AttemptedProductData {
+  name: string;
+  category: ProductType;
+  sellingPrice: number; 
+  costPrice: number;    
+  totalAcquiredStock: number;
+}
+
+interface BaseResolution {
+  existingProductId: string;
+  quantityAdded: number;
+  paymentDetails: {
+    method: AcquisitionPaymentMethod;
+    cashPaid: number;
+    digitalPaid: number;
+    dueAmount: number;
+    totalAcquisitionCost: number;
+  };
+}
+
+export interface Condition1Data extends BaseResolution {
+  condition: 'condition1'; // Restock (Same Supplier/Price)
+}
+
+export interface Condition2Data extends BaseResolution {
+  condition: 'condition2'; // Restock (Same Supplier, New Price)
+  newCostPrice: number;
+  newSellingPrice: number;
+}
+
+export interface Condition3Data extends BaseResolution {
+  condition: 'condition3'; // Restock (New Supplier)
+  newSupplierName: string;
+  newCostPrice?: number; // Cost price for this batch, can update product's currentCostPrice
+  newSellingPrice?: number; // Selling price for this batch, can update product's currentSellingPrice
+}
+
+export type ResolutionData = Condition1Data | Condition2Data | Condition3Data;
