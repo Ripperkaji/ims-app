@@ -6,7 +6,7 @@ import { mockProducts, mockLogEntries, mockSales, addSystemExpense } from "@/lib
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button"; // Imported buttonVariants
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -23,11 +23,11 @@ import { format, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
 
 // Helper to calculate current stock for a product
-export const calculateCurrentStock = (product: Product | undefined): number => {
+export const calculateCurrentStock = (product: Product | undefined, allSales: Sale[]): number => {
   if (!product || !product.acquisitionHistory) return 0;
   const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
   
-  const totalSold = mockSales
+  const totalSold = allSales // Use passed-in allSales
     .flatMap(sale => sale.items)
     .filter(item => item.productId === product.id)
     .reduce((sum, item) => sum + item.quantity, 0);
@@ -53,7 +53,7 @@ export default function ProductsPage() {
   useEffect(() => {
     const updatedProducts = mockProducts.map(p => ({
       ...p,
-      currentDisplayStock: calculateCurrentStock(p)
+      currentDisplayStock: calculateCurrentStock(p, mockSales) // Pass mockSales here
     })).sort((a,b) => a.name.localeCompare(b.name));
     setProductsWithCalculatedStock(updatedProducts);
   }, [refreshTrigger]);
@@ -113,7 +113,7 @@ export default function ProductsPage() {
       
       setRefreshTrigger(prev => prev + 1);
 
-      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
+      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user?.name}. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
       toast({
         title: "Product Updated",
         description: `Details for ${updatedDetails.name} have been successfully updated.`,
@@ -134,7 +134,7 @@ export default function ProductsPage() {
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
-    totalAcquiredStock: number;
+    totalAcquiredStock: number; // This is the initial batch quantity
     supplierName?: string;
     acquisitionPaymentDetails: {
       method: AcquisitionPaymentMethod;
@@ -154,7 +154,7 @@ export default function ProductsPage() {
             category: newProductData.category,
             sellingPrice: newProductData.sellingPrice,
             costPrice: newProductData.costPrice,
-            totalAcquiredStock: newProductData.totalAcquiredStock
+            totalAcquiredStock: newProductData.totalAcquiredStock 
         }
       });
       setIsHandleExistingProductDialogOpen(true);
@@ -166,7 +166,7 @@ export default function ProductsPage() {
     const firstBatch: AcquisitionBatch = {
       batchId: `batch-${newProductId}-${Date.now()}`,
       date: new Date().toISOString(),
-      condition: "Product Added",
+      condition: "Product Added", // Specific condition for new product
       supplierName: newProductData.supplierName,
       quantityAdded: newProductData.totalAcquiredStock,
       costPricePerUnit: newProductData.costPrice,
@@ -192,7 +192,7 @@ export default function ProductsPage() {
     mockProducts.push(newProduct);
     setRefreshTrigger(prev => prev + 1);
 
-    let logDetails = `Product '${newProduct.name}' added. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
+    let logDetails = `Product '${newProduct.name}' added by ${user?.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
     if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
     if (firstBatch.totalBatchCost > 0) {
       logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
@@ -216,16 +216,16 @@ export default function ProductsPage() {
     }
 
     const productToUpdate = mockProducts[productIndex];
-    let logAction = "Product Restocked";
-    let logDetails = `Product '${productToUpdate.name}' restocked. `;
+    let logAction = "Product Restocked"; // Generic, will be overridden by batch.condition
+    let logDetails = `Product '${productToUpdate.name}' restocked by ${user?.name}. `;
 
     const newBatch: AcquisitionBatch = {
       batchId: `batch-${productToUpdate.id}-${Date.now()}`,
       date: new Date().toISOString(),
-      condition: resolutionData.condition,
+      condition: resolutionData.condition, // This will be 'condition1', 'condition2', or 'condition3'
       quantityAdded: resolutionData.quantityAdded,
-      costPricePerUnit: 0, 
-      sellingPricePerUnitAtAcquisition: productToUpdate.currentSellingPrice,
+      costPricePerUnit: 0, // Will be set below
+      sellingPricePerUnitAtAcquisition: productToUpdate.currentSellingPrice, // Default, might be overridden
       paymentMethod: resolutionData.paymentDetails.method,
       totalBatchCost: resolutionData.paymentDetails.totalAcquisitionCost,
       cashPaid: resolutionData.paymentDetails.cashPaid,
@@ -236,28 +236,27 @@ export default function ProductsPage() {
     logDetails += `Qty Added: ${resolutionData.quantityAdded}. `;
 
     if (resolutionData.condition === 'condition1') {
-      logAction = "Restock (Same Supplier/Price)";
-      newBatch.condition = logAction;
+      newBatch.condition = "Restock (Same Supplier/Price)";
       newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
       logDetails += `Using existing cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition2') {
-      logAction = "Restock (Same Supplier, New Price)";
-      newBatch.condition = logAction;
+      newBatch.condition = "Restock (Same Supplier, New Price)";
       productToUpdate.currentCostPrice = resolutionData.newCostPrice;
       productToUpdate.currentSellingPrice = resolutionData.newSellingPrice;
       newBatch.costPricePerUnit = resolutionData.newCostPrice;
       newBatch.sellingPricePerUnitAtAcquisition = resolutionData.newSellingPrice;
       logDetails += `Prices updated - New Current Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New Current MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition3') {
-      logAction = "Restock (New Supplier)";
-      newBatch.condition = logAction;
+      newBatch.condition = "Restock (New Supplier)";
       newBatch.supplierName = resolutionData.newSupplierName;
-      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; // Uses existing cost for this batch
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
+      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; 
+      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch cost price: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
     }
     
+    logAction = newBatch.condition; // Set log action to the specific condition
+
     if (newBatch.totalBatchCost > 0 && newBatch.quantityAdded > 0) {
-        logDetails += `Batch Cost: NRP ${newBatch.totalBatchCost.toFixed(2)} via ${newBatch.paymentMethod}.`;
+        logDetails += `Batch Total Cost: NRP ${newBatch.totalBatchCost.toFixed(2)} via ${newBatch.paymentMethod}.`;
         if (newBatch.paymentMethod === 'Hybrid') {
             logDetails += ` (Cash: ${newBatch.cashPaid.toFixed(2)}, Digital: ${newBatch.digitalPaid.toFixed(2)}, Due: ${newBatch.dueToSupplier.toFixed(2)})`;
         } else if (newBatch.paymentMethod === 'Due') {
@@ -276,12 +275,7 @@ export default function ProductsPage() {
 
   const formatAcquisitionConditionForDisplay = (conditionKey?: string) => {
     if (!conditionKey) return 'N/A';
-    const map: Record<string, string> = {
-        'condition1': 'Restock (Same Supplier/Price)',
-        'condition2': 'Restock (Same Supplier, New Price)',
-        'condition3': 'Restock (New Supplier)'
-    };
-    return map[conditionKey] || conditionKey;
+    return conditionKey; // The condition is already user-friendly
   };
 
   if (!user) return null;
@@ -360,9 +354,28 @@ export default function ProductsPage() {
                       </span>
                       {user.role === 'admin' && (
                           <div className="justify-self-end sm:justify-self-auto hidden sm:block"> 
-                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={(e) => {e.stopPropagation(); handleOpenEditProductDialog(product.id);}} title="Edit Product Details">
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              className={cn(
+                                buttonVariants({ variant: "outline", size: "icon" }),
+                                "h-7 w-7"
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEditProductDialog(product.id);
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleOpenEditProductDialog(product.id);
+                                }
+                              }}
+                              title="Edit Product Details"
+                            >
                                 <Edit className="h-3.5 w-3.5" />
-                            </Button>
+                            </div>
                           </div>
                       )}
                     </div>
@@ -371,9 +384,25 @@ export default function ProductsPage() {
                     <div className="flex justify-between items-center mb-1.5 px-2">
                         <h4 className="text-xs font-semibold text-muted-foreground">Acquisition History ({product.acquisitionHistory.length} batches):</h4>
                         {user.role === 'admin' && (
-                            <Button variant="outline" size="sm" className="h-7 sm:hidden" onClick={() => handleOpenEditProductDialog(product.id)}>
+                            <div
+                                role="button"
+                                tabIndex={0}
+                                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 sm:hidden")}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Though not strictly necessary here as it's not in a trigger
+                                    handleOpenEditProductDialog(product.id);
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleOpenEditProductDialog(product.id);
+                                    }
+                                }}
+                                title="Edit Product Details"
+                            >
                                 <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Main
-                            </Button>
+                            </div>
                         )}
                     </div>
                     {product.acquisitionHistory.length > 0 ? (
