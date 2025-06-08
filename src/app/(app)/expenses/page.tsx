@@ -3,7 +3,7 @@
 
 import ExpensesForm from "@/components/expenses/ExpensesForm";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockExpenses } from "@/lib/data";
+import { mockExpenses, mockLogEntries } from "@/lib/data"; // Added mockLogEntries
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
-import type { Expense } from '@/types';
+import type { Expense, LogEntry } from '@/types'; // Added LogEntry
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -25,11 +25,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
+type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
+
 export default function ExpensesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // To force re-render when mockExpenses changes
+  const [refreshTrigger, setRefreshTrigger] = useState(0); 
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -38,26 +40,62 @@ export default function ExpensesPage() {
     }
   }, [user, router, toast]);
 
-  // Derive displayedExpenses from the global mockExpenses and sort it
-  // refreshTrigger is used to ensure this useMemo re-runs when we manually update mockExpenses
   const displayedExpenses = useMemo(() => {
     return [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [refreshTrigger]); // mockExpenses is not in deps as direct mutation won't trigger useMemo
+  }, [refreshTrigger]); 
 
   useEffect(() => {
-    // This effect listens for changes in the length of mockExpenses as a proxy
-    // for external updates (like system-generated expenses).
-    // This is a workaround for not having a global state manager.
     setRefreshTrigger(prev => prev + 1);
   }, [mockExpenses.length]);
 
+  const addLog = (action: string, details: string) => {
+    if (!user) return;
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: user.name,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog);
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  };
 
-  const handleExpenseAdded = (newExpense: Expense) => {
-    // The ExpensesForm will call this after validating and creating the newExpense object
-    // We add it to the global mockExpenses array
-    mockExpenses.unshift(newExpense); // Add to the beginning
-    mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Re-sort
-    setRefreshTrigger(prev => prev + 1); // Trigger re-render
+  const handleExpenseAdded = (
+    expenseCoreData: Omit<Expense, 'id'>,
+    paymentDetails: {
+      method: ExpensePaymentMethod;
+      cashPaidForLog: number;
+      digitalPaidForLog: number;
+      dueAmountForLog: number;
+    }
+  ) => {
+    if (!user) return;
+    const newExpense: Expense = {
+      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
+      ...expenseCoreData,
+      recordedBy: user.name, // Ensure recordedBy is set
+    };
+    
+    mockExpenses.unshift(newExpense);
+    mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setRefreshTrigger(prev => prev + 1);
+
+    let paymentLogString = `Paid via ${paymentDetails.method}.`;
+    if (paymentDetails.method === 'Hybrid') {
+      const parts = [];
+      if (paymentDetails.cashPaidForLog > 0) parts.push(`Cash: NRP ${paymentDetails.cashPaidForLog.toFixed(2)}`);
+      if (paymentDetails.digitalPaidForLog > 0) parts.push(`Digital: NRP ${paymentDetails.digitalPaidForLog.toFixed(2)}`);
+      if (paymentDetails.dueAmountForLog > 0) parts.push(`Due: NRP ${paymentDetails.dueAmountForLog.toFixed(2)}`);
+      paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
+    } else if (paymentDetails.method === 'Due') {
+        paymentLogString = `Marked as Due (NRP ${newExpense.amount.toFixed(2)}).`;
+    }
+
+
+    const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${newExpense.amount.toFixed(2)} recorded by ${user.name}. ${paymentLogString}`;
+    addLog("Expense Recorded", logDetails);
+
     toast({ title: "Expense Recorded!", description: `${newExpense.category} expense of NRP ${newExpense.amount.toFixed(2)} recorded.`});
   };
 
@@ -74,7 +112,7 @@ export default function ExpensesPage() {
         return;
       }
       mockExpenses.splice(expenseIndex, 1);
-      setRefreshTrigger(prev => prev + 1); // Trigger re-render
+      setRefreshTrigger(prev => prev + 1); 
       toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
     } else {
       toast({ title: "Error", description: "Expense not found for deletion.", variant: "destructive" });
@@ -98,7 +136,7 @@ export default function ExpensesPage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Recorded Expenses</CardTitle>
-              <CardDescription>List of all business expenses.</CardDescription>
+              <CardDescription>List of all business expenses. Payment details are in logs.</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
@@ -107,7 +145,7 @@ export default function ExpensesPage() {
                     <TableHead>Date</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Description</TableHead>
-                    <TableHead>Amount</TableHead>
+                    <TableHead>Total Amount</TableHead>
                     <TableHead>Recorded By</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -175,3 +213,4 @@ export default function ExpensesPage() {
     </div>
   );
 }
+
