@@ -36,16 +36,16 @@ interface EditProductDialogProps {
 export default function EditProductDialog({ product, isOpen, onClose, onConfirmEditProduct }: EditProductDialogProps) {
   const [name, setName] = useState<string>(product.name);
   const [category, setCategory] = useState<ProductType>(product.category);
-  const [sellingPrice, setSellingPrice] = useState<string>(product.sellingPrice.toString());
-  const [costPrice, setCostPrice] = useState<string>(product.costPrice.toString());
+  const [sellingPrice, setSellingPrice] = useState<string>(product.currentSellingPrice.toString());
+  const [costPrice, setCostPrice] = useState<string>(product.currentCostPrice.toString());
   const { toast } = useToast();
 
   useEffect(() => {
     if (product && isOpen) {
       setName(product.name);
       setCategory(product.category);
-      setSellingPrice(product.sellingPrice.toString());
-      setCostPrice(product.costPrice.toString());
+      setSellingPrice(product.currentSellingPrice.toString());
+      setCostPrice(product.currentCostPrice.toString());
     }
   }, [product, isOpen]);
 
