@@ -308,43 +308,30 @@ export default function ProductsPage() {
     const cashPaid = product.lastAcquisitionCashPaid ?? 0;
     const digitalPaid = product.lastAcquisitionDigitalPaid ?? 0;
 
-    let badgeText = "Paid";
-    let badgeVariant: "default" | "destructive" | "secondary" = "default";
-    let tooltipContent = `Last Batch Cost: NRP ${totalCost.toFixed(2)}. `;
+    let badgeText = "N/A";
+    let badgeVariant: "default" | "destructive" | "secondary" = "secondary";
+    let tooltipContent = "Last acquisition payment details not available.";
 
-    if (method === 'Due' && due > 0) {
-        badgeText = "Due";
-        badgeVariant = "destructive";
-        tooltipContent += `Paid via Due. Outstanding: NRP ${due.toFixed(2)}.`;
-    } else if (method === 'Hybrid') {
+    if (method) { // Only proceed if payment method exists
         if (due > 0) {
-            badgeText = "Hybrid (Due)";
+            badgeText = "Due";
             badgeVariant = "destructive";
-        } else {
-            badgeText = "Paid (Hybrid)";
+            if (method === 'Hybrid') {
+                 tooltipContent = `Paid via Hybrid (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)}). Batch Cost: NRP ${totalCost.toFixed(2)}.`;
+            } else { // Assumed 'Due' method
+                tooltipContent = `Paid via Due. Outstanding: NRP ${due.toFixed(2)}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
+            }
+        } else { // No due amount
+            badgeText = "Paid";
             badgeVariant = "default";
+            if (method === 'Hybrid') {
+                tooltipContent = `Paid via Hybrid (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}). Batch Cost: NRP ${totalCost.toFixed(2)}.`;
+            } else {
+                tooltipContent = `Paid via ${method}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
+            }
         }
-        tooltipContent += `Hybrid Pmt (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)}).`;
-    } else if (due > 0) { 
-        badgeText = "Due";
-        badgeVariant = "destructive";
-        tooltipContent += `Paid via ${method || 'Unknown'}. Outstanding: NRP ${due.toFixed(2)}.`;
-    } else { 
-        badgeText = "Paid";
-        badgeVariant = "default";
-        tooltipContent += `Paid via ${method || 'Cash'}.`;
     }
     
-    if (method === 'Cash' && due === 0) badgeVariant = 'default';
-    else if (method === 'Digital' && due === 0) badgeVariant = 'default';
-    
-    if (!method) { 
-        badgeText = "N/A";
-        badgeVariant = "secondary";
-        tooltipContent = "Last acquisition payment details not available.";
-    }
-
-
     return { badgeText, badgeVariant, tooltipContent };
   };
 
