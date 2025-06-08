@@ -217,14 +217,18 @@ export default function ProductsPage() {
     const productToUpdate = mockProducts[productIndex];
     let logAction = "Product Restocked"; 
     let logDetails = `Product '${productToUpdate.name}' restocked by ${user.name}. `;
+    
+    const costPriceFromDialog = resolutionData.newCostPrice; 
+    const sellingPriceFromDialog = resolutionData.newSellingPrice;
 
     const newBatch: AcquisitionBatch = {
       batchId: `batch-${productToUpdate.id}-${Date.now()}`,
       date: new Date().toISOString(),
       condition: resolutionData.condition, 
       quantityAdded: resolutionData.quantityAdded,
-      costPricePerUnit: 0, 
-      sellingPricePerUnitAtAcquisition: productToUpdate.currentSellingPrice, 
+      costPricePerUnit: 0, // Placeholder, will be set based on condition
+      sellingPricePerUnitAtAcquisition: 0, // Placeholder, will be set based on condition
+      supplierName: resolutionData.condition === 'condition3' ? resolutionData.newSupplierName : (productToUpdate.acquisitionHistory.length > 0 ? productToUpdate.acquisitionHistory[productToUpdate.acquisitionHistory.length -1].supplierName : undefined),
       paymentMethod: resolutionData.paymentDetails.method,
       totalBatchCost: resolutionData.paymentDetails.totalAcquisitionCost,
       cashPaid: resolutionData.paymentDetails.cashPaid,
@@ -236,36 +240,34 @@ export default function ProductsPage() {
 
     if (resolutionData.condition === 'condition1') { // Restock (Same Supplier/Price)
       newBatch.condition = "Restock (Same Supplier/Price)";
-      newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
-      newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice;
+      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; // Uses existing product current cost
+      newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice; // Uses existing product current MRP
+      // Main product prices don't change for C1
       logDetails += `Using existing cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
+      logAction = newBatch.condition;
     } else if (resolutionData.condition === 'condition2') { // Restock (Same Supplier, New Price)
       newBatch.condition = "Restock (Same Supplier, New Price)";
-      productToUpdate.currentCostPrice = resolutionData.newCostPrice;
-      productToUpdate.currentSellingPrice = resolutionData.newSellingPrice;
-      newBatch.costPricePerUnit = resolutionData.newCostPrice;
-      newBatch.sellingPricePerUnitAtAcquisition = resolutionData.newSellingPrice;
-      logDetails += `Prices updated - New Current Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New Current MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. Batch Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}. `;
-    } else if (resolutionData.condition === 'condition3') { // Restock (New Supplier)
+      // Update main product's current prices from dialog
+      productToUpdate.currentCostPrice = costPriceFromDialog!;
+      productToUpdate.currentSellingPrice = sellingPriceFromDialog!;
+      // Set batch prices from dialog
+      newBatch.costPricePerUnit = costPriceFromDialog!; 
+      newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog!;
+      logDetails += `Prices updated - New Current Cost: NRP ${costPriceFromDialog!.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog!.toFixed(2)}. Batch Cost: NRP ${costPriceFromDialog!.toFixed(2)}. `;
+      logAction = newBatch.condition;
+    } else if (resolutionData.condition === 'condition3') { // Restock (New Supplier, prices from dialog)
       newBatch.condition = "Restock (New Supplier)";
-      newBatch.supplierName = resolutionData.newSupplierName;
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. `;
-      
-      if (resolutionData.newCostPrice !== undefined && resolutionData.newSellingPrice !== undefined) {
-        productToUpdate.currentCostPrice = resolutionData.newCostPrice;
-        productToUpdate.currentSellingPrice = resolutionData.newSellingPrice;
-        newBatch.costPricePerUnit = resolutionData.newCostPrice;
-        newBatch.sellingPricePerUnitAtAcquisition = resolutionData.newSellingPrice;
-        logDetails += `Prices updated - New Current Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New Current MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. Batch Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}. `;
-      } else {
-        newBatch.costPricePerUnit = productToUpdate.currentCostPrice; 
-        newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice;
-        logDetails += `Batch cost price: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
-      }
+      // newBatch.supplierName is already set above
+      // Update main product's current prices from dialog
+      productToUpdate.currentCostPrice = costPriceFromDialog!;
+      productToUpdate.currentSellingPrice = sellingPriceFromDialog!;
+      // Set batch prices from dialog
+      newBatch.costPricePerUnit = costPriceFromDialog!;
+      newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog!;
+      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Prices updated - New Current Cost: NRP ${costPriceFromDialog!.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog!.toFixed(2)}. Batch Cost: NRP ${costPriceFromDialog!.toFixed(2)}. `;
+      logAction = newBatch.condition;
     }
     
-    logAction = newBatch.condition; 
-
     if (newBatch.totalBatchCost > 0 && newBatch.quantityAdded > 0) {
         logDetails += `Batch Total Cost: NRP ${newBatch.totalBatchCost.toFixed(2)} via ${newBatch.paymentMethod}.`;
         if (newBatch.paymentMethod === 'Hybrid') {
@@ -286,7 +288,6 @@ export default function ProductsPage() {
 
   const formatAcquisitionConditionForDisplay = (conditionKey?: string) => {
     if (!conditionKey) return 'N/A';
-    // Map internal condition keys to user-friendly strings if needed
     const conditionMap: { [key: string]: string } = {
         'condition1': 'Restock (Same Supplier/Price)',
         'condition2': 'Restock (Same Supplier, New Price)',
@@ -294,7 +295,7 @@ export default function ProductsPage() {
         'Product Added': 'Product Added',
         'Initial Stock': 'Initial Stock'
     };
-    return conditionMap[conditionKey] || conditionKey;
+    return conditionMap[conditionKey] || conditionKey.replace(/([A-Z])/g, ' $1').trim(); // Fallback for unmapped or camelCase
   };
 
   if (!user) return null;
@@ -332,7 +333,7 @@ export default function ProductsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Product List & Acquisition History</CardTitle>
+          <CardTitle>Product List &amp; Acquisition History</CardTitle>
           <CardDescription>
             Overview of products. Expand <ChevronsUpDown className="inline-block h-3 w-3 text-muted-foreground mx-0.5"/> to see acquisition history and edit options.
             {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
@@ -344,23 +345,23 @@ export default function ProductsPage() {
               {displayedProducts.map((product) => (
                 <AccordionItem value={product.id} key={product.id} className="border-b">
                   <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[auto_2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
+                       <TooltipProvider>
+                          <Tooltip>
+                              <TooltipTrigger asChild>
+                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground mr-1.5 inline-block cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs max-w-xs z-50">
+                                  <p className="font-semibold">Last Acquisition Details:</p>
+                                  <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
+                                  <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
+                                  <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
+                                  <p>Batch Cost: NRP {(product.acquisitionHistory.at(-1)?.costPricePerUnit || 0).toFixed(2)}</p>
+                                  <p>Batch MRP: NRP {(product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</p>
+                              </TooltipContent>
+                          </Tooltip>
+                      </TooltipProvider>
                       <span className="font-medium truncate col-span-full sm:col-span-1">
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <InfoIcon className="h-3 w-3 text-muted-foreground mr-1.5 inline-block cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs max-w-xs">
-                                    <p className="font-semibold">Last Acquisition Details:</p>
-                                    <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
-                                    <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
-                                    <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
-                                    <p>Batch Cost: NRP {product.acquisitionHistory.at(-1)?.costPricePerUnit.toFixed(2)}</p>
-                                    <p>Batch MRP: NRP {product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition?.toFixed(2) || product.currentSellingPrice.toFixed(2)}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
                         {product.name}
                       </span>
                       <span className="text-xs text-muted-foreground ">{product.category}</span>
@@ -374,7 +375,7 @@ export default function ProductsPage() {
                       {user.role === 'admin' && (
                           <div 
                             className="justify-self-end sm:justify-self-auto hidden sm:block"
-                            onClick={(e) => e.stopPropagation()} // Prevent accordion toggle when clicking the div itself
+                            onClick={(e) => e.stopPropagation()} 
                           > 
                             <div
                               role="button"
@@ -447,7 +448,7 @@ export default function ProductsPage() {
                                   <TableCell className="px-2 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell>
                                   <TableCell className="px-2 py-1 text-center">{batch.quantityAdded}</TableCell>
                                   <TableCell className="px-2 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell>
-                                  <TableCell className="px-2 py-1 text-right">NRP {batch.sellingPricePerUnitAtAcquisition?.toFixed(2) || product.currentSellingPrice.toFixed(2)}</TableCell>
+                                  <TableCell className="px-2 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</TableCell>
                                   <TableCell className="px-2 py-1">
                                      <TooltipProvider>
                                       <Tooltip>
@@ -463,16 +464,16 @@ export default function ProductsPage() {
                                             {(batch.dueToSupplier ?? 0) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
                                           </Badge>
                                         </TooltipTrigger>
-                                        <TooltipContent side="top" className="text-xs max-w-xs">
+                                        <TooltipContent side="top" className="text-xs max-w-xs z-50">
                                           <p>Method: {batch.paymentMethod}</p>
-                                          <p>Batch Cost: NRP {batch.totalBatchCost.toFixed(2)}</p>
+                                          <p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>
                                           {batch.paymentMethod === 'Hybrid' && (
                                             <>
                                               <p>Cash: NRP {batch.cashPaid.toFixed(2)}</p>
                                               <p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p>
                                             </>
                                           )}
-                                          {batch.dueToSupplier > 0 && <p className="font-semibold">Due: NRP {batch.dueToSupplier.toFixed(2)}</p>}
+                                          {batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
@@ -527,3 +528,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+
