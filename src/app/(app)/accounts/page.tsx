@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react'; // Removed useMemo as calculations are now direct
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -53,34 +53,62 @@ export default function AccountsPage() {
   }, [user, router, toast]);
 
   // Recalculate supplierDueItems on every render
-  const supplierDueProductAddedLogs = mockLogEntries.filter(log => log.action === "Product Added");
+  const relevantSupplierLogActions = [
+    "Product Added",
+    "Restock (Same Supplier/Price)",
+    "Restock (Same Supplier, New Price)",
+    "Restock (New Supplier)"
+  ];
+  const supplierDueLogs = mockLogEntries.filter(log => relevantSupplierLogActions.includes(log.action));
   const calculatedSupplierDueItems: SupplierDueItem[] = [];
-  supplierDueProductAddedLogs.forEach(log => {
-    const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.?\d*)/);
-    const viaDueMatch = log.details.match(/Acquired batch for NRP \d+\.?\d* via Due\./);
-    const totalAcquisitionCostMatch = log.details.match(/Acquired batch for NRP (\d+\.?\d*) via Due\./);
 
+  supplierDueLogs.forEach(log => {
     let dueAmount = 0;
-    if (dueMatchHybrid) {
-      dueAmount = parseFloat(dueMatchHybrid[1]);
-    } else if (viaDueMatch && totalAcquisitionCostMatch) {
-      dueAmount = parseFloat(totalAcquisitionCostMatch[1]);
+    // Match product name using a more general pattern that might appear in different log actions
+    const productNameMatch = log.details.match(/Product '([^']*)'|Item '([^']*)'/);
+    const productActualName = productNameMatch ? (productNameMatch[1] || productNameMatch[2] || "Unknown Product") : "Unknown Product";
+
+    const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\.|New Supplier: ([^.]+)\./);
+    const supplierActualName = supplierNameMatch ? (supplierNameMatch[1] || supplierNameMatch[2]) : undefined;
+
+    // Try to get due amount from Hybrid payment first (common for all relevant actions if hybrid was used)
+    // Regex looks for the full hybrid payment details block and extracts the Due part.
+    const hybridPaymentDetailsMatch = log.details.match(/\(Cash: NRP \d+\.?\d*,\s*Digital: NRP \d+\.?\d*,\s*Due: NRP (\d+\.?\d*)\)/);
+    if (hybridPaymentDetailsMatch && hybridPaymentDetailsMatch[1]) {
+      dueAmount = parseFloat(hybridPaymentDetailsMatch[1]);
+    } else {
+      // If not hybrid, check if it was fully paid by "Due"
+      // Check for "Product Added" action specifically for its "Acquired batch for NRP X via Due"
+      if (log.action === "Product Added") {
+        const productAddedFullDueMatch = log.details.match(/Acquired batch for NRP (\d+\.?\d*) via Due\./);
+        if (productAddedFullDueMatch && productAddedFullDueMatch[1]) {
+          dueAmount = parseFloat(productAddedFullDueMatch[1]);
+        }
+      } else if (relevantSupplierLogActions.slice(1).includes(log.action)) { // Restock actions
+        // For restock actions, check if "Paid via Due." is present
+        const restockPaidViaDueMatch = log.details.match(/Paid via Due\./);
+        if (restockPaidViaDueMatch) {
+          // If paid via Due, the due amount is the "Batch acquisition cost"
+          const restockTotalCostMatch = log.details.match(/Batch acquisition cost: NRP (\d+\.?\d*)/);
+          if (restockTotalCostMatch && restockTotalCostMatch[1]) {
+            dueAmount = parseFloat(restockTotalCostMatch[1]);
+          }
+        }
+      }
     }
 
     if (dueAmount > 0) {
-      const productNameMatch = log.details.match(/Product '([^']*)'/);
-      const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\./);
-      
       calculatedSupplierDueItems.push({
         id: log.id,
-        productName: productNameMatch ? productNameMatch[1] : "Unknown Product",
-        supplierName: supplierNameMatch ? supplierNameMatch[1] : undefined,
+        productName: productActualName,
+        supplierName: supplierActualName,
         dueAmount: dueAmount,
         date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
       });
     }
   });
   const supplierDueItems = calculatedSupplierDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 
   // Recalculate expenseDueItems on every render
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
@@ -223,9 +251,9 @@ export default function AccountsPage() {
                         {item.paymentMethod === "Hybrid" ? (
                           <span className="text-xs">
                             Hybrid (
-                            {item.cashPaid !== undefined && `Cash: ${item.cashPaid.toFixed(2)}, `}
-                            {item.digitalPaid !== undefined && `Digital: ${item.digitalPaid.toFixed(2)}, `}
-                            Due: {item.dueAmount.toFixed(2)}
+                            {item.cashPaid !== undefined && `Cash: NRP ${item.cashPaid.toFixed(2)}, `}
+                            {item.digitalPaid !== undefined && `Digital: NRP ${item.digitalPaid.toFixed(2)}, `}
+                            Due: NRP {item.dueAmount.toFixed(2)}
                             )
                           </span>
                         ) : (
