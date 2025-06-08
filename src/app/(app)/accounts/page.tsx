@@ -55,8 +55,6 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  // Calculate supplierDueItems by filtering products with due amounts
-  // and then finding the most recent relevant log entry for the acquisition date.
   const productsWithDue = mockProducts.filter(
     (product) => (product.lastAcquisitionDueToSupplier ?? 0) > 0
   );
@@ -91,7 +89,6 @@ export default function AccountsPage() {
   .sort((a, b) => a.productName.localeCompare(b.productName));
 
 
-  // Calculate expenseDueItems directly without useMemo
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
   const calculatedExpenseDueItems: ExpenseDueItem[] = [];
   expenseDueExpenseRecordedLogs.forEach(log => {
@@ -107,14 +104,11 @@ export default function AccountsPage() {
     let digitalPaid: number | undefined = undefined;
     let paymentMethod = "";
 
-    // Regex to find hybrid payment details like (Cash: NRP X, Digital: NRP Y, Due: NRP Z)
     const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i);
     const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
-    const paidViaDueMatch = log.details.includes("Paid via Due."); // For older simple "Due" logs if any
-
-
+    
     if (hybridEntryMatch && hybridEntryMatch[1]) {
-        const detailsStr = hybridEntryMatch[1]; // Content within parentheses
+        const detailsStr = hybridEntryMatch[1]; 
         const cashMatch = detailsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
         const digitalMatch = detailsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
         const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
@@ -127,10 +121,6 @@ export default function AccountsPage() {
         }
     } else if (directDueMatch && directDueMatch[1]) {
         outstandingDue = parseFloat(directDueMatch[1]);
-        paymentMethod = "Due";
-    } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { 
-        // Fallback for simpler "Paid via Due" if specific due amount isn't in the directDueMatch format
-        outstandingDue = totalAmount; // Assume full amount is due if no specific due amount is logged
         paymentMethod = "Due";
     }
     
@@ -166,7 +156,7 @@ export default function AccountsPage() {
       details += `(Paid Cash: NRP ${(item.lastAcquisitionCashPaid ?? 0).toFixed(2)}, Paid Digital: NRP ${(item.lastAcquisitionDigitalPaid ?? 0).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
     } else if (item.lastAcquisitionPaymentMethod === 'Due') {
       details += `(Outstanding Due: NRP ${(item.dueAmount).toFixed(2)})`;
-    } else { // Cash or Digital, fully paid
+    } else { 
       details += `(Fully Paid via ${item.lastAcquisitionPaymentMethod})`;
     }
     return details;
@@ -213,7 +203,7 @@ export default function AccountsPage() {
                     <TableHead>Product Name</TableHead>
                     <TableHead className="text-right">Amount Due</TableHead>
                     <TableHead>Last Batch Payment Details</TableHead>
-                    <TableHead>Last Acq. Date</TableHead>
+                    <TableHead>Acq. Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
