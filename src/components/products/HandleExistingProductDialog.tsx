@@ -103,8 +103,8 @@ export default function HandleExistingProductDialog({
     if (selectedCondition === 'condition2' && parseFloat(newCostPrice) > 0) {
       return parseFloat(newCostPrice);
     }
-    return existingProduct.costPrice;
-  }, [selectedCondition, newCostPrice, existingProduct.costPrice]);
+    return existingProduct.currentCostPrice;
+  }, [selectedCondition, newCostPrice, existingProduct.currentCostPrice]);
 
   const totalAcquisitionCost = useMemo(() => {
     if (quantityToRestock <= 0) return 0;
@@ -116,8 +116,8 @@ export default function HandleExistingProductDialog({
     if (isOpen) {
       // Reset state when dialog opens
       setSelectedCondition(null);
-      setNewCostPrice(existingProduct.costPrice.toString()); // Pre-fill for condition 2 for easier editing
-      setNewSellingPrice(existingProduct.sellingPrice.toString()); // Pre-fill for condition 2
+      setNewCostPrice(existingProduct.currentCostPrice.toString()); // Pre-fill for condition 2 for easier editing
+      setNewSellingPrice(existingProduct.currentSellingPrice.toString()); // Pre-fill for condition 2
       setNewSupplierName('');
       setAcquisitionPaymentMethod('Cash');
       setIsAcquisitionHybridPayment(false);
@@ -199,8 +199,8 @@ export default function HandleExistingProductDialog({
         return;
     }
 
-    let numNewCostPrice = existingProduct.costPrice;
-    let numNewSellingPrice = existingProduct.sellingPrice;
+    let numNewCostPrice = existingProduct.currentCostPrice;
+    let numNewSellingPrice = existingProduct.currentSellingPrice;
 
     if (selectedCondition === 'condition2') {
       numNewCostPrice = parseFloat(newCostPrice);
@@ -302,7 +302,7 @@ export default function HandleExistingProductDialog({
           <DialogDescription>
             A product named "{existingProduct.name}" (Category: {existingProduct.category}) already exists.
             You attempted to add {quantityToRestock} unit(s). How would you like to proceed?
-            Current Cost: NRP {existingProduct.costPrice.toFixed(2)}, Current MRP: NRP {existingProduct.sellingPrice.toFixed(2)}.
+            Current Cost: NRP {existingProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP {existingProduct.currentSellingPrice.toFixed(2)}.
           </DialogDescription>
         </DialogHeader>
         
@@ -315,7 +315,7 @@ export default function HandleExistingProductDialog({
                   <RadioGroupItem value="condition1" id="condition1" />
                   <span className="font-semibold">Restock from same supplier (same price)</span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {existingProduct.costPrice.toFixed(2)}.</p>
+                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {existingProduct.currentCostPrice.toFixed(2)}.</p>
               </Label>
 
               {/* Condition 2 */}
