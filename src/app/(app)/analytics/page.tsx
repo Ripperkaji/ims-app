@@ -8,6 +8,7 @@ import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
+import type { Sale } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,13 +43,23 @@ export default function AnalyticsPage() {
     }
   }, [user, router, toast]);
 
-  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), []);
-  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), []);
+  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [mockSales]);
+  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [mockExpenses]);
   const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
 
   const currentStockValuation = useMemo(() => {
-    return mockProducts.reduce((sum, product) => sum + (product.stock * product.costPrice), 0);
-  }, []);
+    return mockProducts.reduce((sum, product) => {
+      const totalAcquired = product.acquisitionHistory.reduce((acc, batch) => acc + batch.quantityAdded, 0);
+      const totalSold = mockSales
+        .flatMap(sale => sale.items)
+        .filter(item => item.productId === product.id)
+        .reduce((acc, item) => acc + item.quantity, 0);
+      const currentStock = totalAcquired - totalSold - (product.damagedQuantity || 0) - (product.testerQuantity || 0);
+      
+      const valuationForProduct = currentStock * product.currentCostPrice;
+      return sum + (isNaN(valuationForProduct) ? 0 : valuationForProduct);
+    }, 0);
+  }, [mockProducts, mockSales]);
 
   const payableCategories = useMemo(() => ['Rent', 'Utilities', 'Logistics', 'Marketing', 'Software', 'Maintenance'], []);
 
@@ -56,7 +67,7 @@ export default function AnalyticsPage() {
     return mockExpenses
       .filter(expense => payableCategories.includes(expense.category))
       .reduce((sum, expense) => sum + expense.amount, 0);
-  }, [payableCategories]);
+  }, [mockExpenses, payableCategories]);
 
   const categorySalesData = useMemo(() => {
     const salesByCategory: { [category: string]: number } = {};
@@ -71,7 +82,7 @@ export default function AnalyticsPage() {
     return Object.entries(salesByCategory)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, []);
+  }, [mockSales, mockProducts]);
 
   const categoryChartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -111,7 +122,7 @@ export default function AnalyticsPage() {
       monthsData.push({ name: monthName, totalSales: monthlyTotal });
     }
     return monthsData;
-  }, []);
+  }, [mockSales]);
 
   const monthlySalesChartConfig = {
     totalSales: { // This config remains for tooltip or potential legend label. Individual bar colors are set by <Cell>.
@@ -158,7 +169,7 @@ export default function AnalyticsPage() {
       });
     }
     return tableData;
-  }, []);
+  }, [mockSales]);
 
 
   if (!user || user.role !== 'admin') {
@@ -319,4 +330,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-
