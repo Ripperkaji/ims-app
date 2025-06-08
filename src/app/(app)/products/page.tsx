@@ -19,6 +19,8 @@ import EditProductDialog from "@/components/products/EditProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 
+type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
+
 export default function ProductsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -113,6 +115,14 @@ export default function ProductsPage() {
     sellingPrice: number;
     costPrice: number;
     totalAcquiredStock: number;
+    supplierName?: string;
+    acquisitionPaymentDetails: {
+      method: AcquisitionPaymentMethod;
+      cashPaid: number;
+      digitalPaid: number;
+      dueAmount: number;
+      totalAcquisitionCost: number;
+    };
   }) => {
     const newProduct: Product = {
       id: `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -121,7 +131,7 @@ export default function ProductsPage() {
       sellingPrice: newProductData.sellingPrice,
       costPrice: newProductData.costPrice,
       totalAcquiredStock: newProductData.totalAcquiredStock,
-      stock: newProductData.totalAcquiredStock,
+      stock: newProductData.totalAcquiredStock, // Initial stock is the total acquired stock
       damagedQuantity: 0,
       testerQuantity: 0, 
     };
@@ -129,7 +139,19 @@ export default function ProductsPage() {
     mockProducts.push(newProduct);
     setCurrentProducts(prevProducts => [...prevProducts, newProduct].sort((a,b) => a.name.localeCompare(b.name)));
 
-    addLog("Product Added", `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added. Category: ${newProduct.category}, Cost: NRP ${newProduct.costPrice.toFixed(2)}, Selling Price: NRP ${newProduct.sellingPrice.toFixed(2)}, Initial Stock: ${newProduct.totalAcquiredStock}.`);
+    let logDetails = `Product '${newProduct.name}' (ID: ${newProduct.id.substring(0,8)}...) added. Category: ${newProduct.category}, Cost: NRP ${newProduct.costPrice.toFixed(2)}, Selling: NRP ${newProduct.sellingPrice.toFixed(2)}, Initial Stock: ${newProduct.totalAcquiredStock}.`;
+    if (newProductData.supplierName) {
+      logDetails += ` Supplier: ${newProductData.supplierName}.`;
+    }
+    if (newProductData.acquisitionPaymentDetails.totalAcquisitionCost > 0) {
+      const { method, cashPaid, digitalPaid, dueAmount, totalAcquisitionCost } = newProductData.acquisitionPaymentDetails;
+      logDetails += ` Acquired batch for NRP ${totalAcquisitionCost.toFixed(2)} via ${method}.`;
+      if (method === 'Hybrid') {
+        logDetails += ` (Cash: ${cashPaid.toFixed(2)}, Digital: ${digitalPaid.toFixed(2)}, Due: ${dueAmount.toFixed(2)})`;
+      }
+    }
+    
+    addLog("Product Added", logDetails);
     toast({
       title: "Product Added",
       description: `${newProduct.name} has been successfully added to the inventory.`,
