@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { mockProducts, mockLogEntries, mockSales } from "@/lib/data";
+import { mockProducts, mockLogEntries, mockSales, addSystemExpense } from "@/lib/data";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle } from "lucide-react";
+import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, Expense } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
@@ -56,7 +56,7 @@ export default function ProductsPage() {
       currentDisplayStock: calculateCurrentStock(p)
     })).sort((a,b) => a.name.localeCompare(b.name));
     setProductsWithCalculatedStock(updatedProducts);
-  }, [refreshTrigger]); // Removed mockProducts, mockSales as direct deps if they are stable refs to mutable arrays
+  }, [refreshTrigger]);
 
 
   const addLog = (action: string, details: string) => {
@@ -332,14 +332,31 @@ export default function ProductsPage() {
                 <AccordionItem value={product.id} key={product.id} className="border-b">
                   <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
-                      <span className="font-medium truncate col-span-full sm:col-span-1">{product.name}</span>
+                      <span className="font-medium truncate col-span-full sm:col-span-1">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <InfoIcon className="h-3 w-3 text-muted-foreground mr-1.5 inline-block cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs max-w-xs">
+                                    <p className="font-semibold">Last Acquisition Details:</p>
+                                    <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
+                                    <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
+                                    <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
+                                    <p>Batch Cost: NRP {product.acquisitionHistory.at(-1)?.costPricePerUnit.toFixed(2)}</p>
+                                    <p>Batch MRP: NRP {product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition?.toFixed(2) || product.currentSellingPrice.toFixed(2)}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        {product.name}
+                      </span>
                       <span className="text-xs text-muted-foreground ">{product.category}</span>
                       <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
                       <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
                       <span className="text-xs font-semibold">
                         Stock: {product.currentDisplayStock}
-                        {product.currentDisplayStock <= 10 && product.currentDisplayStock > 0 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                        {product.currentDisplayStock === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                        {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                        {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
                       </span>
                       {user.role === 'admin' && (
                           <div className="justify-self-end sm:justify-self-auto hidden sm:block"> 
@@ -394,7 +411,7 @@ export default function ProductsPage() {
                                             )}
                                           >
                                             {batch.dueToSupplier > 0 ? "Due" : "Paid"}
-                                            {batch.dueToSupplier > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
+                                            {(batch.dueToSupplier ?? 0) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
                                           </Badge>
                                         </TooltipTrigger>
                                         <TooltipContent side="top" className="text-xs max-w-xs">
@@ -461,3 +478,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+
