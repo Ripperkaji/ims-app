@@ -27,7 +27,11 @@ interface ExpenseDueItem {
   id: string;
   description: string;
   category: string;
-  dueAmount: number;
+  totalAmount: number;
+  cashPaid?: number;
+  digitalPaid?: number;
+  dueAmount: number; // Outstanding due amount
+  paymentMethod: string; // "Hybrid" or "Due"
   date: string;
 }
 
@@ -53,10 +57,9 @@ export default function AccountsPage() {
     const productAddedLogs = mockLogEntries.filter(log => log.action === "Product Added");
 
     productAddedLogs.forEach(log => {
-      const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.\d+)/);
-      const viaDueMatch = log.details.match(/Acquired batch for NRP \d+\.\d+ via Due\./);
-      const totalAcquisitionCostMatch = log.details.match(/Acquired batch for NRP (\d+\.\d+) via Due\./);
-
+      const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.?\d*)/); // Adjusted regex for decimals
+      const viaDueMatch = log.details.match(/Acquired batch for NRP \d+\.?\d* via Due\./);
+      const totalAcquisitionCostMatch = log.details.match(/Acquired batch for NRP (\d+\.?\d*) via Due\./);
 
       let dueAmount = 0;
       if (dueMatchHybrid) {
@@ -86,25 +89,48 @@ export default function AccountsPage() {
     const expenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
 
     expenseRecordedLogs.forEach(log => {
-      const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.\d+)/);
-      const paidViaDueMatch = log.details.match(/Paid via Due \(NRP (\d+\.\d+)\)\./);
+      const mainDetailMatch = log.details.match(/Expense for '([^']*)' \(Category: ([^)]+)\), Amount: NRP (\d+\.?\d*)/);
+      if (!mainDetailMatch) return;
 
-      let dueAmount = 0;
-      if (dueMatchHybrid) {
-        dueAmount = parseFloat(dueMatchHybrid[1]);
-      } else if (paidViaDueMatch) {
-        dueAmount = parseFloat(paidViaDueMatch[1]);
+      const description = mainDetailMatch[1];
+      const category = mainDetailMatch[2];
+      const totalAmount = parseFloat(mainDetailMatch[3]);
+      
+      let outstandingDue = 0;
+      let cashPaid: number | undefined = undefined;
+      let digitalPaid: number | undefined = undefined;
+      let paymentMethod = "";
+
+      const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./);
+      const markedAsDueMatch = log.details.match(/Marked as Due \(NRP (\d+\.?\d*)\)\./);
+
+      if (hybridPaymentMatch) {
+        const partsStr = hybridPaymentMatch[1];
+        const cashMatch = partsStr.match(/Cash: NRP (\d+\.?\d*)/);
+        const digitalMatch = partsStr.match(/Digital: NRP (\d+\.?\d*)/);
+        const dueMatch = partsStr.match(/Due: NRP (\d+\.?\d*)/);
+
+        if (dueMatch) {
+          outstandingDue = parseFloat(dueMatch[1]);
+          paymentMethod = "Hybrid";
+          if (cashMatch) cashPaid = parseFloat(cashMatch[1]);
+          if (digitalMatch) digitalPaid = parseFloat(digitalMatch[1]);
+        }
+      } else if (markedAsDueMatch) {
+        outstandingDue = parseFloat(markedAsDueMatch[1]);
+        paymentMethod = "Due";
       }
       
-      if (dueAmount > 0) {
-        const descriptionMatch = log.details.match(/Expense for '([^']*)'/);
-        const categoryMatch = log.details.match(/\(Category: ([^)]+)\)/);
-        
+      if (outstandingDue > 0) {
         dues.push({
           id: log.id,
-          description: descriptionMatch ? descriptionMatch[1] : "Unknown Expense",
-          category: categoryMatch ? categoryMatch[1] : "Unknown Category",
-          dueAmount: dueAmount,
+          description,
+          category,
+          totalAmount,
+          cashPaid,
+          digitalPaid,
+          dueAmount: outstandingDue,
+          paymentMethod,
           date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
         });
       }
@@ -135,9 +161,9 @@ export default function AccountsPage() {
               <Landmark className="h-5 w-5 text-primary" /> Account Payable Details
             </CardTitle>
             <CardDescription>
-              View outstanding amounts due to suppliers or for expenses.
+              View outstanding amounts.
               {selectedPayableType === 'supplier' && ` Total Supplier Due: NRP ${totalSupplierDue.toFixed(2)}.`}
-              {selectedPayableType === 'expense' && ` Total Expense Due: NRP ${totalExpenseDue.toFixed(2)}.`}
+              {selectedPayableType === 'expense' && ` Total Outstanding Expense Due: NRP ${totalExpenseDue.toFixed(2)}.`}
             </CardDescription>
           </div>
           <Select value={selectedPayableType} onValueChange={(value) => setSelectedPayableType(value as PayableType)}>
@@ -185,7 +211,9 @@ export default function AccountsPage() {
                   <TableRow>
                     <TableHead>Description</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount Due</TableHead>
+                    <TableHead className="text-right">Total Expense</TableHead>
+                    <TableHead>Payment Breakdown</TableHead>
+                    <TableHead className="text-right">Outstanding Due</TableHead>
                     <TableHead>Recorded Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,6 +222,20 @@ export default function AccountsPage() {
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.description}</TableCell>
                       <TableCell>{item.category}</TableCell>
+                      <TableCell className="text-right">NRP {item.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        {item.paymentMethod === "Hybrid" ? (
+                          <span className="text-xs">
+                            Hybrid (
+                            {item.cashPaid !== undefined && `Cash: ${item.cashPaid.toFixed(2)}, `}
+                            {item.digitalPaid !== undefined && `Digital: ${item.digitalPaid.toFixed(2)}, `}
+                            Due: {item.dueAmount.toFixed(2)}
+                            )
+                          </span>
+                        ) : (
+                          "Fully Due"
+                        )}
+                      </TableCell>
                       <TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell>
                       <TableCell>{item.date}</TableCell>
                     </TableRow>
