@@ -325,20 +325,20 @@ export default function ProductsPage() {
             badgeVariant = "default";
         }
         tooltipContent += `Hybrid Pmt (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)}).`;
-    } else if (due > 0) { // Should ideally be covered by method === 'Due' or 'Hybrid'
+    } else if (due > 0) { 
         badgeText = "Due";
         badgeVariant = "destructive";
         tooltipContent += `Paid via ${method || 'Unknown'}. Outstanding: NRP ${due.toFixed(2)}.`;
-    } else { // Fully paid by Cash or Digital
+    } else { 
         badgeText = "Paid";
         badgeVariant = "default";
         tooltipContent += `Paid via ${method || 'Cash'}.`;
     }
     
-    if (method === 'Cash' && due === 0) badgeVariant = 'default'; // e.g. green-like
+    if (method === 'Cash' && due === 0) badgeVariant = 'default';
     else if (method === 'Digital' && due === 0) badgeVariant = 'default';
     
-    if (!method) { // If no payment method is logged for some reason
+    if (!method) { 
         badgeText = "N/A";
         badgeVariant = "secondary";
         tooltipContent = "Last acquisition payment details not available.";
@@ -435,7 +435,7 @@ export default function ProductsPage() {
                                 "text-xs cursor-default"
                             )}>
                               {badgeText}
-                               {product.lastAcquisitionDueToSupplier && product.lastAcquisitionDueToSupplier > 0 && (
+                               {(product.lastAcquisitionDueToSupplier ?? 0) > 0 && (
                                 <AlertTriangle className="ml-1 h-3 w-3" />
                               )}
                             </Badge>
