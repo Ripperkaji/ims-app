@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter, Landmark, AlertTriangle } from "lucide-react";
+import { Edit, PlusCircle, PackagePlus, AlertOctagon, Filter, Landmark, AlertTriangle, InfoIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod } from '@/types';
@@ -33,7 +33,6 @@ export default function ProductsPage() {
   const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ProductType | ''>('');
 
-  // State for handling product name conflicts
   const [productConflictData, setProductConflictData] = useState<{ existingProduct: Product; attemptedData: AttemptedProductData } | null>(null);
   const [isHandleExistingProductDialogOpen, setIsHandleExistingProductDialogOpen] = useState(false);
 
@@ -173,6 +172,12 @@ export default function ProductsPage() {
       lastAcquisitionCashPaid: newProductData.acquisitionPaymentDetails.cashPaid,
       lastAcquisitionDigitalPaid: newProductData.acquisitionPaymentDetails.digitalPaid,
       lastAcquisitionDueToSupplier: newProductData.acquisitionPaymentDetails.dueAmount,
+      // New fields for last acquisition context
+      lastAcquisitionCondition: 'Product Added',
+      lastAcquisitionSupplierName: newProductData.supplierName,
+      lastAcquisitionBatchCostPrice: newProductData.costPrice,
+      lastAcquisitionBatchMRP: newProductData.sellingPrice,
+      lastAcquisitionBatchQuantity: newProductData.totalAcquiredStock,
     };
     
     mockProducts.push(newProduct);
@@ -221,18 +226,31 @@ export default function ProductsPage() {
     }
 
     const { paymentDetails } = resolutionData;
-    const costForThisBatch = paymentDetails.totalAcquisitionCost / (resolutionData.quantityAdded || 1); 
+    const costForThisBatch = resolutionData.quantityAdded > 0 ? (paymentDetails.totalAcquisitionCost / resolutionData.quantityAdded) : 0;
+
+    productToUpdate.lastAcquisitionBatchQuantity = resolutionData.quantityAdded;
 
     if (resolutionData.condition === 'condition1') {
       logAction = "Restock (Same Supplier/Price)";
+      productToUpdate.lastAcquisitionCondition = logAction;
+      productToUpdate.lastAcquisitionBatchCostPrice = productToUpdate.costPrice; // Uses existing cost
+      productToUpdate.lastAcquisitionBatchMRP = productToUpdate.sellingPrice;
+      // Supplier name remains from previous or is undefined
       logDetails += `Using existing cost price: NRP ${productToUpdate.costPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition2') {
       logAction = "Restock (Same Supplier, New Price)";
       productToUpdate.costPrice = resolutionData.newCostPrice;
       productToUpdate.sellingPrice = resolutionData.newSellingPrice;
+      productToUpdate.lastAcquisitionCondition = logAction;
+      productToUpdate.lastAcquisitionBatchCostPrice = resolutionData.newCostPrice;
+      productToUpdate.lastAcquisitionBatchMRP = resolutionData.newSellingPrice;
       logDetails += `Prices updated - New Cost: NRP ${resolutionData.newCostPrice.toFixed(2)}, New MRP: NRP ${resolutionData.newSellingPrice.toFixed(2)}. `;
     } else if (resolutionData.condition === 'condition3') {
       logAction = "Restock (New Supplier)";
+      productToUpdate.lastAcquisitionCondition = logAction;
+      productToUpdate.lastAcquisitionSupplierName = resolutionData.newSupplierName;
+      productToUpdate.lastAcquisitionBatchCostPrice = productToUpdate.costPrice; // Uses existing cost for this batch
+      productToUpdate.lastAcquisitionBatchMRP = productToUpdate.sellingPrice;
       logDetails += `New Supplier: ${resolutionData.newSupplierName}. Using existing product cost price for this batch: NRP ${productToUpdate.costPrice.toFixed(2)}. `;
     }
 
@@ -281,12 +299,17 @@ export default function ProductsPage() {
     mockProducts[productIndexGlobal].stock = newStockLevel;
     mockProducts[productIndexGlobal].totalAcquiredStock = newTotalAcquiredStock;
     
-    // For quick add, assume it was a cash purchase and fully paid for simplicity or mark as unknown
-    mockProducts[productIndexGlobal].lastAcquisitionPaymentMethod = 'Cash'; // Or undefined
-    mockProducts[productIndexGlobal].lastAcquisitionTotalCost = product.costPrice * quantityToAdd; // Estimate
+    mockProducts[productIndexGlobal].lastAcquisitionPaymentMethod = 'Cash';
+    mockProducts[productIndexGlobal].lastAcquisitionTotalCost = product.costPrice * quantityToAdd; 
     mockProducts[productIndexGlobal].lastAcquisitionCashPaid = product.costPrice * quantityToAdd;
     mockProducts[productIndexGlobal].lastAcquisitionDigitalPaid = 0;
     mockProducts[productIndexGlobal].lastAcquisitionDueToSupplier = 0;
+
+    mockProducts[productIndexGlobal].lastAcquisitionCondition = 'Quick Stock Add';
+    mockProducts[productIndexGlobal].lastAcquisitionBatchQuantity = quantityToAdd;
+    mockProducts[productIndexGlobal].lastAcquisitionBatchCostPrice = product.costPrice;
+    mockProducts[productIndexGlobal].lastAcquisitionBatchMRP = product.sellingPrice;
+    // lastAcquisitionSupplierName remains unchanged from previous
 
 
     setCurrentProducts(prevProducts =>
@@ -302,37 +325,43 @@ export default function ProductsPage() {
   };
 
   const getLastAcquisitionStatus = (product: Product): { badgeText: string; badgeVariant: "default" | "destructive" | "secondary"; tooltipContent: string } => {
-    const method = product.lastAcquisitionPaymentMethod;
     const due = product.lastAcquisitionDueToSupplier ?? 0;
+    let badgeText = "Paid";
+    let badgeVariant: "default" | "destructive" | "secondary" = "default";
+    let tooltipContent = `Last Batch (Qty: ${product.lastAcquisitionBatchQuantity || 'N/A'}) acquired via ${product.lastAcquisitionPaymentMethod || 'N/A'}.`;
+
+    if (due > 0) {
+        badgeText = "Due";
+        badgeVariant = "destructive";
+    }
+    
+    const method = product.lastAcquisitionPaymentMethod;
     const totalCost = product.lastAcquisitionTotalCost ?? 0;
     const cashPaid = product.lastAcquisitionCashPaid ?? 0;
     const digitalPaid = product.lastAcquisitionDigitalPaid ?? 0;
 
-    let badgeText = "N/A";
-    let badgeVariant: "default" | "destructive" | "secondary" = "secondary";
-    let tooltipContent = "Last acquisition payment details not available.";
-
-    if (method) { // Only proceed if payment method exists
-        if (due > 0) {
-            badgeText = "Due";
-            badgeVariant = "destructive";
-            if (method === 'Hybrid') {
-                 tooltipContent = `Paid via Hybrid (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)}). Batch Cost: NRP ${totalCost.toFixed(2)}.`;
-            } else { // Assumed 'Due' method
-                tooltipContent = `Paid via Due. Outstanding: NRP ${due.toFixed(2)}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
-            }
-        } else { // No due amount
-            badgeText = "Paid";
-            badgeVariant = "default";
-            if (method === 'Hybrid') {
-                tooltipContent = `Paid via Hybrid (Cash: NRP ${cashPaid.toFixed(2)}, Digital: NRP ${digitalPaid.toFixed(2)}). Batch Cost: NRP ${totalCost.toFixed(2)}.`;
-            } else {
-                tooltipContent = `Paid via ${method}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
-            }
-        }
+    let paymentDetails = `Method: ${method || 'N/A'}. Batch Cost: NRP ${totalCost.toFixed(2)}.`;
+    if (method === 'Hybrid') {
+      paymentDetails += ` (Paid Cash: NRP ${cashPaid.toFixed(2)}, Paid Digital: NRP ${digitalPaid.toFixed(2)}, Due: NRP ${due.toFixed(2)})`;
+    } else if (method === 'Due') {
+      paymentDetails += ` (Outstanding Due: NRP ${due.toFixed(2)})`;
+    } else if (method === 'Cash' || method === 'Digital') {
+      paymentDetails += ` (Fully Paid via ${method})`;
+    } else {
+      paymentDetails = "Last acquisition payment details not fully available.";
     }
+    tooltipContent = paymentDetails;
     
     return { badgeText, badgeVariant, tooltipContent };
+  };
+
+
+  const formatAcquisitionCondition = (condition?: string) => {
+    if (!condition) return 'N/A';
+    if (condition === 'condition1') return 'Restock (Same Supplier/Price)';
+    if (condition === 'condition2') return 'Restock (Same Supplier, New Price)';
+    if (condition === 'condition3') return 'Restock (New Supplier)';
+    return condition; // For "Product Added", "Initial Stock", "Quick Stock Add"
   };
 
 
@@ -394,7 +423,32 @@ export default function ProductsPage() {
                 const { badgeText, badgeVariant, tooltipContent } = getLastAcquisitionStatus(product);
                 return (
                   <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-1">
+                        {product.name}
+                        {(product.lastAcquisitionBatchQuantity !== undefined && product.lastAcquisitionBatchQuantity !== null) && (
+                           <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <InfoIcon className="h-3.5 w-3.5 text-muted-foreground cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent className="w-auto max-w-xs text-xs" side="top">
+                                <p className="font-semibold mb-1">Last Acquisition Details:</p>
+                                <ul className="list-disc list-inside space-y-0.5">
+                                  <li>Condition: {formatAcquisitionCondition(product.lastAcquisitionCondition)}</li>
+                                  {product.lastAcquisitionSupplierName && <li>Supplier: {product.lastAcquisitionSupplierName}</li>}
+                                  <li>Batch Qty: {product.lastAcquisitionBatchQuantity}</li>
+                                  <li>Batch Cost: NRP {product.lastAcquisitionBatchCostPrice?.toFixed(2) || 'N/A'}</li>
+                                  {(product.lastAcquisitionCondition === 'Restock (Same Supplier, New Price)' || product.lastAcquisitionCondition === 'Product Added' || product.lastAcquisitionCondition === 'Initial Stock') &&
+                                    <li>Batch MRP: NRP {product.lastAcquisitionBatchMRP?.toFixed(2) || 'N/A'}</li>
+                                  }
+                                </ul>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{product.category}</TableCell>
                     <TableCell>NRP {product.costPrice.toFixed(2)}</TableCell>
                     <TableCell>NRP {product.sellingPrice.toFixed(2)}</TableCell>

@@ -31,6 +31,13 @@ export interface Product {
   lastAcquisitionCashPaid?: number;
   lastAcquisitionDigitalPaid?: number;
   lastAcquisitionDueToSupplier?: number;
+
+  // New fields for last acquisition context
+  lastAcquisitionCondition?: string; // e.g., "Product Added", "Restock (Same Supplier/Price)", "condition1", "condition2", "condition3"
+  lastAcquisitionSupplierName?: string;
+  lastAcquisitionBatchCostPrice?: number;
+  lastAcquisitionBatchMRP?: number;
+  lastAcquisitionBatchQuantity?: number;
 }
 
 export interface SaleItem {
@@ -81,3 +88,4 @@ export interface LogEntry {
   details: string;
 }
 
+    

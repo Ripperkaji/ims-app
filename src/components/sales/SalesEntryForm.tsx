@@ -463,7 +463,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                           .sort((a,b) => a.name.localeCompare(b.name))
                           .map(p => (
                             <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId} className="text-xs">
-                              {p.name} ({p.category}) - Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)}
+                              {p.name} (Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)})
                             </SelectItem>
                           ))
                         }

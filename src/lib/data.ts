@@ -17,6 +17,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 9.50 * 70,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Bulk Vapes Ltd.',
+    lastAcquisitionBatchCostPrice: 9.50,
+    lastAcquisitionBatchMRP: 15.99,
+    lastAcquisitionBatchQuantity: 70,
   },
   {
     id: 'prod2',
@@ -33,6 +38,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 30.00 * 35,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Modders Inc.',
+    lastAcquisitionBatchCostPrice: 30.00,
+    lastAcquisitionBatchMRP: 49.99,
+    lastAcquisitionBatchQuantity: 35,
   },
   {
     id: 'prod3',
@@ -49,6 +59,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 5.00 * 120,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 5.00,
+    lastAcquisitionBatchMRP: 9.99,
+    lastAcquisitionBatchQuantity: 120,
   },
   {
     id: 'prod4',
@@ -65,6 +79,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 3.75 * 50,
     lastAcquisitionDigitalPaid: 3.75 * 30,
     lastAcquisitionDueToSupplier: 3.75 * 20,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Dispo King',
+    lastAcquisitionBatchCostPrice: 3.75,
+    lastAcquisitionBatchMRP: 7.50,
+    lastAcquisitionBatchQuantity: 100,
   },
   {
     id: 'prod5',
@@ -81,6 +100,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 18.00 * 40,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Vape Supplies Co.',
+    lastAcquisitionBatchCostPrice: 18.00,
+    lastAcquisitionBatchMRP: 29.99,
+    lastAcquisitionBatchQuantity: 40,
   },
   {
     id: 'disp1',
@@ -97,6 +121,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 4.00 * 150,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 4.00,
+    lastAcquisitionBatchMRP: 8.00,
+    lastAcquisitionBatchQuantity: 150,
   },
   {
     id: 'disp2',
@@ -113,6 +141,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 3.80 * 120,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 3.80,
+    lastAcquisitionBatchMRP: 7.75,
+    lastAcquisitionBatchQuantity: 120,
   },
   {
     id: 'nicsalt1',
@@ -129,6 +161,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 10.00 * 80,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 10.00,
+    lastAcquisitionBatchMRP: 16.50,
+    lastAcquisitionBatchQuantity: 80,
   },
   {
     id: 'nicsalt2',
@@ -145,6 +181,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 9.75 * 90,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 9.75,
+    lastAcquisitionBatchMRP: 16.25,
+    lastAcquisitionBatchQuantity: 90,
   },
   {
     id: 'freebase1',
@@ -161,6 +201,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 8.00 * 60,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 8.00,
+    lastAcquisitionBatchMRP: 14.00,
+    lastAcquisitionBatchQuantity: 60,
   },
   {
     id: 'freebase2',
@@ -177,6 +221,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 8.50 * 75,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 8.50,
+    lastAcquisitionBatchMRP: 14.50,
+    lastAcquisitionBatchQuantity: 75,
   },
   {
     id: 'freebase3',
@@ -193,6 +241,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 8.25 * 65,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 8.25,
+    lastAcquisitionBatchMRP: 14.25,
+    lastAcquisitionBatchQuantity: 65,
   },
   {
     id: 'coil1',
@@ -209,6 +261,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 6.50 * 100,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 6.50,
+    lastAcquisitionBatchMRP: 12.00,
+    lastAcquisitionBatchQuantity: 100,
   },
   {
     id: 'coil2',
@@ -225,6 +281,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 6.00 * 150,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 6.00,
+    lastAcquisitionBatchMRP: 11.00,
+    lastAcquisitionBatchQuantity: 150,
   },
   {
     id: 'podmod1',
@@ -241,6 +301,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 22.00 * 50,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Caliburn Official',
+    lastAcquisitionBatchCostPrice: 22.00,
+    lastAcquisitionBatchMRP: 35.00,
+    lastAcquisitionBatchQuantity: 50,
   },
   {
     id: 'podmod2',
@@ -257,6 +322,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 40.00 * 30,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'GeekVape Direct',
+    lastAcquisitionBatchCostPrice: 40.00,
+    lastAcquisitionBatchMRP: 65.00,
+    lastAcquisitionBatchQuantity: 30,
   },
   {
     id: 'cotton1',
@@ -273,6 +343,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 2.50 * 200,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 2.50,
+    lastAcquisitionBatchMRP: 5.00,
+    lastAcquisitionBatchQuantity: 200,
   },
   {
     id: 'cotton2',
@@ -289,6 +363,11 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 3.00 * 100,
     lastAcquisitionDigitalPaid: 3.00 * 50,
     lastAcquisitionDueToSupplier: 3.00 * 30,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionSupplierName: 'Wick & Wire Co.',
+    lastAcquisitionBatchCostPrice: 3.00,
+    lastAcquisitionBatchMRP: 6.50,
+    lastAcquisitionBatchQuantity: 180,
   },
   {
     id: 'cotton3',
@@ -305,6 +384,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 3.50 * 160,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 3.50,
+    lastAcquisitionBatchMRP: 7.00,
+    lastAcquisitionBatchQuantity: 160,
   },
   {
     id: 'build1',
@@ -321,6 +404,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 0,
     lastAcquisitionDigitalPaid: 15.00 * 30,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 15.00,
+    lastAcquisitionBatchMRP: 25.00,
+    lastAcquisitionBatchQuantity: 30,
   },
   {
     id: 'build2',
@@ -337,6 +424,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 4.50 * 80,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 4.50,
+    lastAcquisitionBatchMRP: 9.00,
+    lastAcquisitionBatchQuantity: 80,
   },
   {
     id: 'build3',
@@ -353,6 +444,10 @@ export const mockProducts: Product[] = [
     lastAcquisitionCashPaid: 6.00 * 50,
     lastAcquisitionDigitalPaid: 0,
     lastAcquisitionDueToSupplier: 0,
+    lastAcquisitionCondition: 'Initial Stock',
+    lastAcquisitionBatchCostPrice: 6.00,
+    lastAcquisitionBatchMRP: 12.50,
+    lastAcquisitionBatchQuantity: 50,
   }
 ];
 
@@ -366,6 +461,12 @@ mockProducts.forEach(p => {
     p.lastAcquisitionCashPaid = p.lastAcquisitionTotalCost;
     p.lastAcquisitionDigitalPaid = 0;
     p.lastAcquisitionDueToSupplier = 0;
+  }
+  if (p.lastAcquisitionCondition === undefined) {
+    p.lastAcquisitionCondition = 'Initial Stock';
+    p.lastAcquisitionBatchCostPrice = p.costPrice;
+    p.lastAcquisitionBatchMRP = p.sellingPrice;
+    p.lastAcquisitionBatchQuantity = p.totalAcquiredStock;
   }
 });
 
