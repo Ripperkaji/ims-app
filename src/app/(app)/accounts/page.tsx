@@ -58,6 +58,8 @@ export default function AccountsPage() {
     "Restock (Same Supplier, New Price)",
     "Restock (New Supplier)"
   ];
+
+  // Calculate supplierDueItems directly without useMemo for on-every-render freshness
   const supplierDueLogs = mockLogEntries.filter(log => relevantSupplierLogActions.includes(log.action));
   const calculatedSupplierDueItems: SupplierDueItem[] = [];
 
@@ -66,17 +68,19 @@ export default function AccountsPage() {
     const productNameMatch = log.details.match(/Product '([^']*)'|Item '([^']*)'/);
     const productActualName = productNameMatch ? (productNameMatch[1] || productNameMatch[2] || "Unknown Product") : "Unknown Product";
 
-    const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\.|New Supplier: ([^.]+)\./);
+    // Use a non-greedy match for supplier name to avoid consuming too much if names have special chars.
+    const supplierNameMatch = log.details.match(/Supplier: (.*?)\.|New Supplier: (.*?)\./);
     const supplierActualName = supplierNameMatch ? (supplierNameMatch[1] || supplierNameMatch[2]) : undefined;
 
     const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i);
-    if (hybridEntryMatch) {
-        const detailsStr = hybridEntryMatch[1]; 
-        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i); // Changed regex here
+    if (hybridEntryMatch && hybridEntryMatch[1]) {
+        const detailsStr = hybridEntryMatch[1]; // Content within parentheses
+        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
         if (duePartMatch && duePartMatch[1]) {
             dueAmount = parseFloat(duePartMatch[1]);
         }
     } else {
+        // This block is for non-hybrid payments.
         if (log.action === "Product Added" && log.details.includes("via Due.")) {
             const directDueInParenMatch = log.details.match(/\(Due:\s*NRP\s*([\d.]+)\)/i);
             if (directDueInParenMatch && directDueInParenMatch[1]) {
@@ -87,8 +91,8 @@ export default function AccountsPage() {
                     dueAmount = parseFloat(productAddedFullDueMatch[1]);
                 }
             }
-        } else if (relevantSupplierLogActions.slice(1).includes(log.action) && log.details.includes("Paid via Due.")) {
-             const directDueInParenMatch = log.details.match(/\(Due:\s*NRP\s*([\d.]+)\)/i);
+        } else if (relevantSupplierLogActions.slice(1).includes(log.action) && log.details.includes("Paid via Due.")) { // Restock actions
+            const directDueInParenMatch = log.details.match(/\(Due:\s*NRP\s*([\d.]+)\)/i);
             if (directDueInParenMatch && directDueInParenMatch[1]) {
                 dueAmount = parseFloat(directDueInParenMatch[1]);
             } else {
@@ -113,6 +117,7 @@ export default function AccountsPage() {
   const supplierDueItems = calculatedSupplierDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
+  // Calculate expenseDueItems directly without useMemo
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
   const calculatedExpenseDueItems: ExpenseDueItem[] = [];
   expenseDueExpenseRecordedLogs.forEach(log => {
@@ -132,19 +137,19 @@ export default function AccountsPage() {
     const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i); 
     const paidViaDueMatch = log.details.includes("Paid via Due."); 
 
-    if (hybridPaymentMatch) {
+    if (hybridPaymentMatch && hybridPaymentMatch[1]) {
       const partsStr = hybridPaymentMatch[1];
       const cashMatch = partsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
       const digitalMatch = partsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
       const dueMatch = partsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
 
-      if (dueMatch) {
+      if (dueMatch && dueMatch[1]) {
         outstandingDue = parseFloat(dueMatch[1]);
         paymentMethod = "Hybrid";
-        if (cashMatch) cashPaid = parseFloat(cashMatch[1]);
-        if (digitalMatch) digitalPaid = parseFloat(digitalMatch[1]);
+        if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
+        if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
       }
-    } else if (markedAsDueMatch) {
+    } else if (markedAsDueMatch && markedAsDueMatch[1]) {
       outstandingDue = parseFloat(markedAsDueMatch[1]);
       paymentMethod = "Due";
     } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { 
