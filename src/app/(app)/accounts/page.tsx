@@ -52,91 +52,87 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  const supplierDueItems = useMemo((): SupplierDueItem[] => {
-    const dues: SupplierDueItem[] = [];
-    const productAddedLogs = mockLogEntries.filter(log => log.action === "Product Added");
+  // Recalculate supplierDueItems on every render
+  const supplierDueProductAddedLogs = mockLogEntries.filter(log => log.action === "Product Added");
+  const calculatedSupplierDueItems: SupplierDueItem[] = [];
+  supplierDueProductAddedLogs.forEach(log => {
+    const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.?\d*)/);
+    const viaDueMatch = log.details.match(/Acquired batch for NRP \d+\.?\d* via Due\./);
+    const totalAcquisitionCostMatch = log.details.match(/Acquired batch for NRP (\d+\.?\d*) via Due\./);
 
-    productAddedLogs.forEach(log => {
-      const dueMatchHybrid = log.details.match(/Due: NRP (\d+\.?\d*)/); // Adjusted regex for decimals
-      const viaDueMatch = log.details.match(/Acquired batch for NRP \d+\.?\d* via Due\./);
-      const totalAcquisitionCostMatch = log.details.match(/Acquired batch for NRP (\d+\.?\d*) via Due\./);
+    let dueAmount = 0;
+    if (dueMatchHybrid) {
+      dueAmount = parseFloat(dueMatchHybrid[1]);
+    } else if (viaDueMatch && totalAcquisitionCostMatch) {
+      dueAmount = parseFloat(totalAcquisitionCostMatch[1]);
+    }
 
-      let dueAmount = 0;
-      if (dueMatchHybrid) {
-        dueAmount = parseFloat(dueMatchHybrid[1]);
-      } else if (viaDueMatch && totalAcquisitionCostMatch) {
-        dueAmount = parseFloat(totalAcquisitionCostMatch[1]);
-      }
-
-      if (dueAmount > 0) {
-        const productNameMatch = log.details.match(/Product '([^']*)'/);
-        const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\./);
-        
-        dues.push({
-          id: log.id,
-          productName: productNameMatch ? productNameMatch[1] : "Unknown Product",
-          supplierName: supplierNameMatch ? supplierNameMatch[1] : undefined,
-          dueAmount: dueAmount,
-          date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
-        });
-      }
-    });
-    return dues.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, []);
-
-  const expenseDueItems = useMemo((): ExpenseDueItem[] => {
-    const dues: ExpenseDueItem[] = [];
-    const expenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
-
-    expenseRecordedLogs.forEach(log => {
-      const mainDetailMatch = log.details.match(/Expense for '([^']*)' \(Category: ([^)]+)\), Amount: NRP (\d+\.?\d*)/);
-      if (!mainDetailMatch) return;
-
-      const description = mainDetailMatch[1];
-      const category = mainDetailMatch[2];
-      const totalAmount = parseFloat(mainDetailMatch[3]);
+    if (dueAmount > 0) {
+      const productNameMatch = log.details.match(/Product '([^']*)'/);
+      const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\./);
       
-      let outstandingDue = 0;
-      let cashPaid: number | undefined = undefined;
-      let digitalPaid: number | undefined = undefined;
-      let paymentMethod = "";
+      calculatedSupplierDueItems.push({
+        id: log.id,
+        productName: productNameMatch ? productNameMatch[1] : "Unknown Product",
+        supplierName: supplierNameMatch ? supplierNameMatch[1] : undefined,
+        dueAmount: dueAmount,
+        date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
+      });
+    }
+  });
+  const supplierDueItems = calculatedSupplierDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./);
-      const markedAsDueMatch = log.details.match(/Marked as Due \(NRP (\d+\.?\d*)\)\./);
+  // Recalculate expenseDueItems on every render
+  const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
+  const calculatedExpenseDueItems: ExpenseDueItem[] = [];
+  expenseDueExpenseRecordedLogs.forEach(log => {
+    const mainDetailMatch = log.details.match(/Expense for '([^']*)' \(Category: ([^)]+)\), Amount: NRP (\d+\.?\d*)/);
+    if (!mainDetailMatch) return;
 
-      if (hybridPaymentMatch) {
-        const partsStr = hybridPaymentMatch[1];
-        const cashMatch = partsStr.match(/Cash: NRP (\d+\.?\d*)/);
-        const digitalMatch = partsStr.match(/Digital: NRP (\d+\.?\d*)/);
-        const dueMatch = partsStr.match(/Due: NRP (\d+\.?\d*)/);
+    const description = mainDetailMatch[1];
+    const category = mainDetailMatch[2];
+    const totalAmount = parseFloat(mainDetailMatch[3]);
+    
+    let outstandingDue = 0;
+    let cashPaid: number | undefined = undefined;
+    let digitalPaid: number | undefined = undefined;
+    let paymentMethod = "";
 
-        if (dueMatch) {
-          outstandingDue = parseFloat(dueMatch[1]);
-          paymentMethod = "Hybrid";
-          if (cashMatch) cashPaid = parseFloat(cashMatch[1]);
-          if (digitalMatch) digitalPaid = parseFloat(digitalMatch[1]);
-        }
-      } else if (markedAsDueMatch) {
-        outstandingDue = parseFloat(markedAsDueMatch[1]);
-        paymentMethod = "Due";
+    const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./);
+    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP (\d+\.?\d*)\)\./);
+
+    if (hybridPaymentMatch) {
+      const partsStr = hybridPaymentMatch[1];
+      const cashMatch = partsStr.match(/Cash: NRP (\d+\.?\d*)/);
+      const digitalMatch = partsStr.match(/Digital: NRP (\d+\.?\d*)/);
+      const dueMatch = partsStr.match(/Due: NRP (\d+\.?\d*)/);
+
+      if (dueMatch) {
+        outstandingDue = parseFloat(dueMatch[1]);
+        paymentMethod = "Hybrid";
+        if (cashMatch) cashPaid = parseFloat(cashMatch[1]);
+        if (digitalMatch) digitalPaid = parseFloat(digitalMatch[1]);
       }
-      
-      if (outstandingDue > 0) {
-        dues.push({
-          id: log.id,
-          description,
-          category,
-          totalAmount,
-          cashPaid,
-          digitalPaid,
-          dueAmount: outstandingDue,
-          paymentMethod,
-          date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
-        });
-      }
-    });
-    return dues.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, []);
+    } else if (markedAsDueMatch) {
+      outstandingDue = parseFloat(markedAsDueMatch[1]);
+      paymentMethod = "Due";
+    }
+    
+    if (outstandingDue > 0) {
+      calculatedExpenseDueItems.push({
+        id: log.id,
+        description,
+        category,
+        totalAmount,
+        cashPaid,
+        digitalPaid,
+        dueAmount: outstandingDue,
+        paymentMethod,
+        date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
+      });
+    }
+  });
+  const expenseDueItems = calculatedExpenseDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
   if (!user || user.role !== 'admin') {
@@ -257,4 +253,3 @@ export default function AccountsPage() {
     </div>
   );
 }
-
