@@ -52,7 +52,6 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  // Recalculate supplierDueItems on every render
   const relevantSupplierLogActions = [
     "Product Added",
     "Restock (Same Supplier/Price)",
@@ -70,18 +69,16 @@ export default function AccountsPage() {
     const supplierNameMatch = log.details.match(/Supplier: ([^.]+)\.|New Supplier: ([^.]+)\./);
     const supplierActualName = supplierNameMatch ? (supplierNameMatch[1] || supplierNameMatch[2]) : undefined;
 
-    const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i); // Matches "... via Hybrid. (details...)"
+    const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i);
     if (hybridEntryMatch) {
-        const detailsStr = hybridEntryMatch[1]; // e.g., "Cash: NRP C, Digital: NRP D, Due: NRP E"
-        const duePartMatch = detailsStr.match(/Due: NRP ([\d.]+)/i);
+        const detailsStr = hybridEntryMatch[1]; 
+        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i); // Changed regex here
         if (duePartMatch && duePartMatch[1]) {
             dueAmount = parseFloat(duePartMatch[1]);
         }
     } else {
-        // Not a hybrid payment, or hybrid but not matching the specific pattern above.
-        // Check for full 'Due' payments
         if (log.action === "Product Added" && log.details.includes("via Due.")) {
-            const directDueInParenMatch = log.details.match(/\(Due: NRP ([\d.]+)\)/i);
+            const directDueInParenMatch = log.details.match(/\(Due:\s*NRP\s*([\d.]+)\)/i);
             if (directDueInParenMatch && directDueInParenMatch[1]) {
                 dueAmount = parseFloat(directDueInParenMatch[1]);
             } else {
@@ -91,7 +88,7 @@ export default function AccountsPage() {
                 }
             }
         } else if (relevantSupplierLogActions.slice(1).includes(log.action) && log.details.includes("Paid via Due.")) {
-            const directDueInParenMatch = log.details.match(/\(Due: NRP ([\d.]+)\)/i);
+             const directDueInParenMatch = log.details.match(/\(Due:\s*NRP\s*([\d.]+)\)/i);
             if (directDueInParenMatch && directDueInParenMatch[1]) {
                 dueAmount = parseFloat(directDueInParenMatch[1]);
             } else {
@@ -116,7 +113,6 @@ export default function AccountsPage() {
   const supplierDueItems = calculatedSupplierDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
-  // Recalculate expenseDueItems on every render
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
   const calculatedExpenseDueItems: ExpenseDueItem[] = [];
   expenseDueExpenseRecordedLogs.forEach(log => {
@@ -133,14 +129,14 @@ export default function AccountsPage() {
     let paymentMethod = "";
 
     const hybridPaymentMatch = log.details.match(/Paid via Hybrid \(([^)]+)\)\./i);
-    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i); // For full due
-    const paidViaDueMatch = log.details.includes("Paid via Due."); // Alternative for full due logging
+    const markedAsDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i); 
+    const paidViaDueMatch = log.details.includes("Paid via Due."); 
 
     if (hybridPaymentMatch) {
       const partsStr = hybridPaymentMatch[1];
-      const cashMatch = partsStr.match(/Cash: NRP ([\d.]+)/i);
-      const digitalMatch = partsStr.match(/Digital: NRP ([\d.]+)/i);
-      const dueMatch = partsStr.match(/Due: NRP ([\d.]+)/i);
+      const cashMatch = partsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
+      const digitalMatch = partsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
+      const dueMatch = partsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
 
       if (dueMatch) {
         outstandingDue = parseFloat(dueMatch[1]);
@@ -151,8 +147,7 @@ export default function AccountsPage() {
     } else if (markedAsDueMatch) {
       outstandingDue = parseFloat(markedAsDueMatch[1]);
       paymentMethod = "Due";
-    } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { // Handle older "Paid via Due." for expenses
-        // If "Paid via Due." is present, the due amount is the total amount of the expense.
+    } else if (paidViaDueMatch && log.details.includes("Amount: NRP")) { 
         outstandingDue = totalAmount;
         paymentMethod = "Due";
     }
@@ -296,4 +291,3 @@ export default function AccountsPage() {
     </div>
   );
 }
-
