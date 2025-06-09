@@ -19,11 +19,15 @@ import {
   Zap,
   FlaskConical,
   AlertOctagon,
-  BarChart3
+  BarChart3,
+  MessageSquare // Added for Chat
 } from 'lucide-react';
+import { useState } from 'react'; // Added for chat dialog state
+import LiveChatDialog from '@/components/chat/LiveChatDialog'; // Added for Chat
 
 interface NavItem {
-  href: string;
+  href?: string; // Make href optional for non-navigation items like chat
+  action?: () => void; // Add action for buttons like chat
   label: string;
   icon: React.ElementType;
   roles: ('admin' | 'staff')[];
@@ -46,38 +50,63 @@ const navItems: NavItem[] = [
 export default function AppSidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   if (!user) return null;
 
   const filteredNavItems = navItems.filter(item => item.roles.includes(user.role));
+  const chatNavItem: NavItem = {
+    label: 'Chat',
+    icon: MessageSquare,
+    roles: ['admin', 'staff'],
+    action: () => setIsChatOpen(true),
+  };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground sm:flex">
-      <div className="flex h-16 items-center border-b px-6 bg-sidebar-accent text-sidebar-accent-foreground">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline text-lg">
-          <Zap className="h-7 w-7 text-primary" />
-          <span>VapeTrack</span>
-        </Link>
-      </div>
-      <ScrollArea className="flex-1">
-        <nav className="grid items-start gap-1 px-4 py-4 text-sm font-medium">
-          {filteredNavItems.map((item) => (
-            <Link key={item.href} href={item.href} legacyBehavior passHref>
-              <a
+    <>
+      <aside className="fixed inset-y-0 left-0 z-10 hidden w-64 flex-col border-r bg-sidebar text-sidebar-foreground sm:flex">
+        <div className="flex h-16 items-center border-b px-6 bg-sidebar-accent text-sidebar-accent-foreground">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline text-lg">
+            <Zap className="h-7 w-7 text-primary" />
+            <span>VapeTrack</span>
+          </Link>
+        </div>
+        <ScrollArea className="flex-1">
+          <nav className="grid items-start gap-1 px-4 py-4 text-sm font-medium">
+            {filteredNavItems.map((item) => (
+              item.href ? (
+                <Link key={item.label} href={item.href} legacyBehavior passHref>
+                  <a
+                    className={cn(
+                      'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                      pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href.length > '/dashboard'.length)
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
+                        : 'text-sidebar-foreground'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </a>
+                </Link>
+              ) : null // Placeholder for non-link items if any, though chat is handled separately
+            ))}
+            {/* Chat Button */}
+            {chatNavItem.roles.includes(user.role) && (
+              <Button
+                variant="ghost"
+                onClick={chatNavItem.action}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                  pathname === item.href || (pathname.startsWith(item.href) && item.href !== '/dashboard' && item.href.length > '/dashboard'.length) // More specific active check
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
-                    : 'text-sidebar-foreground'
+                  'flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all justify-start w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 )}
               >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </a>
-            </Link>
-          ))}
-        </nav>
-      </ScrollArea>
-    </aside>
+                <chatNavItem.icon className="h-5 w-5" />
+                {chatNavItem.label}
+              </Button>
+            )}
+          </nav>
+        </ScrollArea>
+      </aside>
+      {user && <LiveChatDialog isOpen={isChatOpen} onOpenChange={setIsChatOpen} />}
+    </>
   );
 }

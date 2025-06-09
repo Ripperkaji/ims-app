@@ -1,4 +1,6 @@
 
+import type { Timestamp } from 'firebase/firestore';
+
 export type UserRole = 'admin' | 'staff';
 
 export const ALL_PRODUCT_TYPES = [
@@ -17,11 +19,11 @@ export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 export interface AcquisitionBatch {
   batchId: string;
   date: string;
-  condition: string; // e.g., "Initial Stock", "Product Added", "Restock (Same Supplier/Price)", "Restock (Same Supplier, New Price)", "Restock (New Supplier)"
+  condition: string; 
   supplierName?: string;
   quantityAdded: number;
   costPricePerUnit: number;
-  sellingPricePerUnitAtAcquisition?: number; // MRP at the time of this batch's acquisition if it was set/changed
+  sellingPricePerUnitAtAcquisition?: number; 
   paymentMethod: AcquisitionPaymentMethod;
   totalBatchCost: number;
   cashPaid: number;
@@ -90,7 +92,6 @@ export interface LogEntry {
   details: string;
 }
 
-// For HandleExistingProductDialog
 export interface AttemptedProductData {
   name: string;
   category: ProductType;
@@ -112,20 +113,29 @@ interface BaseResolution {
 }
 
 export interface Condition1Data extends BaseResolution {
-  condition: 'condition1'; // Restock (Same Supplier/Price)
+  condition: 'condition1'; 
 }
 
 export interface Condition2Data extends BaseResolution {
-  condition: 'condition2'; // Restock (Same Supplier, New Price)
+  condition: 'condition2'; 
   newCostPrice: number;
   newSellingPrice: number;
 }
 
 export interface Condition3Data extends BaseResolution {
-  condition: 'condition3'; // Restock (New Supplier)
+  condition: 'condition3'; 
   newSupplierName: string;
-  newCostPrice?: number; // Cost price for this batch, can update product's currentCostPrice
-  newSellingPrice?: number; // Selling price for this batch, can update product's currentSellingPrice
+  newCostPrice?: number; 
+  newSellingPrice?: number;
 }
 
 export type ResolutionData = Condition1Data | Condition2Data | Condition3Data;
+
+// Chat Feature Types
+export interface ChatMessage {
+  id: string;
+  text: string;
+  senderName: string;
+  senderRole: UserRole;
+  timestamp: Timestamp | Date; // Firestore Timestamp on read, Date on write preparation
+}
