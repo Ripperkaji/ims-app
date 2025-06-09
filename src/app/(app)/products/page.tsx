@@ -10,7 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, Expense, ResolutionData, AttemptedProductData } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, Expense, ResolutionData, AttemptedProductData, Sale } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
@@ -226,8 +226,8 @@ export default function ProductsPage() {
       date: new Date().toISOString(),
       condition: resolutionData.condition, 
       quantityAdded: resolutionData.quantityAdded,
-      costPricePerUnit: 0, // Placeholder, will be set based on condition
-      sellingPricePerUnitAtAcquisition: 0, // Placeholder, will be set based on condition
+      costPricePerUnit: 0, 
+      sellingPricePerUnitAtAcquisition: 0, 
       supplierName: resolutionData.condition === 'condition3' ? resolutionData.newSupplierName : (productToUpdate.acquisitionHistory.length > 0 ? productToUpdate.acquisitionHistory[productToUpdate.acquisitionHistory.length -1].supplierName : undefined),
       paymentMethod: resolutionData.paymentDetails.method,
       totalBatchCost: resolutionData.paymentDetails.totalAcquisitionCost,
@@ -238,33 +238,38 @@ export default function ProductsPage() {
 
     logDetails += `Qty Added: ${resolutionData.quantityAdded}. `;
 
-    if (resolutionData.condition === 'condition1') { // Restock (Same Supplier/Price)
+    if (resolutionData.condition === 'condition1') { 
       newBatch.condition = "Restock (Same Supplier/Price)";
-      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; // Uses existing product current cost
-      newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice; // Uses existing product current MRP
-      // Main product prices don't change for C1
+      newBatch.costPricePerUnit = productToUpdate.currentCostPrice; 
+      newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice; 
       logDetails += `Using existing cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
       logAction = newBatch.condition;
-    } else if (resolutionData.condition === 'condition2') { // Restock (Same Supplier, New Price)
+    } else if (resolutionData.condition === 'condition2') { 
       newBatch.condition = "Restock (Same Supplier, New Price)";
-      // Update main product's current prices from dialog
       productToUpdate.currentCostPrice = costPriceFromDialog!;
       productToUpdate.currentSellingPrice = sellingPriceFromDialog!;
-      // Set batch prices from dialog
       newBatch.costPricePerUnit = costPriceFromDialog!; 
       newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog!;
       logDetails += `Prices updated - New Current Cost: NRP ${costPriceFromDialog!.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog!.toFixed(2)}. Batch Cost: NRP ${costPriceFromDialog!.toFixed(2)}. `;
       logAction = newBatch.condition;
-    } else if (resolutionData.condition === 'condition3') { // Restock (New Supplier, prices from dialog)
+    } else if (resolutionData.condition === 'condition3') { 
       newBatch.condition = "Restock (New Supplier)";
-      // newBatch.supplierName is already set above
-      // Update main product's current prices from dialog
-      productToUpdate.currentCostPrice = costPriceFromDialog!;
-      productToUpdate.currentSellingPrice = sellingPriceFromDialog!;
-      // Set batch prices from dialog
-      newBatch.costPricePerUnit = costPriceFromDialog!;
-      newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog!;
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Prices updated - New Current Cost: NRP ${costPriceFromDialog!.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog!.toFixed(2)}. Batch Cost: NRP ${costPriceFromDialog!.toFixed(2)}. `;
+      let mainPricesUpdated = false;
+      if (costPriceFromDialog !== undefined && sellingPriceFromDialog !== undefined) {
+          productToUpdate.currentCostPrice = costPriceFromDialog;
+          productToUpdate.currentSellingPrice = sellingPriceFromDialog;
+          newBatch.costPricePerUnit = costPriceFromDialog;
+          newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog;
+          mainPricesUpdated = true;
+          logDetails += `Prices updated - New Current Cost: NRP ${costPriceFromDialog.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog.toFixed(2)}. `;
+      } else {
+          newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
+          newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice;
+      }
+      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch Cost: NRP ${newBatch.costPricePerUnit.toFixed(2)}. `;
+      if (!mainPricesUpdated) {
+          logDetails += `Main product prices remain unchanged. `;
+      }
       logAction = newBatch.condition;
     }
     
@@ -295,7 +300,7 @@ export default function ProductsPage() {
         'Product Added': 'Product Added',
         'Initial Stock': 'Initial Stock'
     };
-    return conditionMap[conditionKey] || conditionKey.replace(/([A-Z])/g, ' $1').trim(); // Fallback for unmapped or camelCase
+    return conditionMap[conditionKey] || conditionKey.replace(/([A-Z])/g, ' $1').trim();
   };
 
   if (!user) return null;
@@ -332,170 +337,216 @@ export default function ProductsPage() {
       </div>
 
       <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Product List &amp; Acquisition History</CardTitle>
-          <CardDescription>
-            Overview of products. Expand <ChevronsUpDown className="inline-block h-3 w-3 text-muted-foreground mx-0.5"/> to see acquisition history and edit options.
-            {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 sm:p-2">
-          {displayedProducts.length > 0 ? (
-            <Accordion type="multiple" className="w-full">
-              {displayedProducts.map((product) => (
-                <AccordionItem value={product.id} key={product.id} className="border-b">
-                  <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[auto_2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
-                       <TooltipProvider>
-                          <Tooltip>
-                              <TooltipTrigger asChild>
-                                  <InfoIcon className="h-3.5 w-3.5 text-muted-foreground mr-1.5 inline-block cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent side="top" className="text-xs max-w-xs z-50">
-                                  <p className="font-semibold">Last Acquisition Details:</p>
-                                  <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
-                                  <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
-                                  <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
-                                  <p>Batch Cost: NRP {(product.acquisitionHistory.at(-1)?.costPricePerUnit || 0).toFixed(2)}</p>
-                                  <p>Batch MRP: NRP {(product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</p>
-                              </TooltipContent>
-                          </Tooltip>
-                      </TooltipProvider>
-                      <span className="font-medium truncate col-span-full sm:col-span-1">
-                        {product.name}
-                      </span>
-                      <span className="text-xs text-muted-foreground ">{product.category}</span>
-                      <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
-                      <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
-                      <span className="text-xs font-semibold">
-                        Stock: {product.currentDisplayStock}
-                        {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                        {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
-                      </span>
-                      {user.role === 'admin' && (
-                          <div 
-                            className="justify-self-end sm:justify-self-auto hidden sm:block"
-                            onClick={(e) => e.stopPropagation()} 
-                          > 
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              className={cn(
-                                buttonVariants({ variant: "outline", size: "icon" }),
-                                "h-7 w-7"
-                              )}
-                              onClick={(e) => {
-                                e.stopPropagation(); 
-                                handleOpenEditProductDialog(product.id);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  handleOpenEditProductDialog(product.id);
-                                }
-                              }}
-                              title="Edit Product Details"
-                            >
-                                <Edit className="h-3.5 w-3.5" />
-                            </div>
-                          </div>
-                      )}
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="px-1.5 pt-2 pb-3 bg-muted/20 rounded-b-md">
-                    <div className="flex justify-between items-center mb-1.5 px-2">
-                        <h4 className="text-xs font-semibold text-muted-foreground">Acquisition History ({product.acquisitionHistory.length} batches):</h4>
+        {user.role === 'admin' ? (
+            <>
+            <CardHeader>
+                <CardTitle>Product List &amp; Acquisition History</CardTitle>
+                <CardDescription>
+                    Overview of products. Expand <ChevronsUpDown className="inline-block h-3 w-3 text-muted-foreground mx-0.5"/> to see acquisition history and edit options.
+                    {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-2">
+            {displayedProducts.length > 0 ? (
+                <Accordion type="multiple" className="w-full">
+                {displayedProducts.map((product) => (
+                    <AccordionItem value={product.id} key={product.id} className="border-b">
+                    <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-[auto_2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <InfoIcon className="h-3.5 w-3.5 text-muted-foreground mr-1.5 inline-block cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="text-xs max-w-xs z-50">
+                                    <p className="font-semibold">Last Acquisition Details:</p>
+                                    <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
+                                    <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
+                                    <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
+                                    <p>Batch Cost: NRP {(product.acquisitionHistory.at(-1)?.costPricePerUnit || 0).toFixed(2)}</p>
+                                    <p>Batch MRP: NRP {(product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <span className="font-medium truncate col-span-full sm:col-span-1">
+                            {product.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground ">{product.category}</span>
+                        <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
+                        <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
+                        <span className="text-xs font-semibold">
+                            Stock: {product.currentDisplayStock}
+                            {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                            {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                        </span>
                         {user.role === 'admin' && (
-                            <div
+                            <div 
+                                className="justify-self-end sm:justify-self-auto hidden sm:block"
+                                onClick={(e) => e.stopPropagation()} 
+                            > 
+                                <div
                                 role="button"
                                 tabIndex={0}
-                                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 sm:hidden")}
+                                className={cn(
+                                    buttonVariants({ variant: "outline", size: "icon" }),
+                                    "h-7 w-7"
+                                )}
                                 onClick={(e) => {
+                                    e.stopPropagation(); 
                                     handleOpenEditProductDialog(product.id);
                                 }}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' || e.key === ' ') {
                                     e.preventDefault();
+                                    e.stopPropagation();
                                     handleOpenEditProductDialog(product.id);
                                     }
                                 }}
                                 title="Edit Product Details"
-                            >
-                                <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Main
+                                >
+                                    <Edit className="h-3.5 w-3.5" />
+                                </div>
                             </div>
                         )}
-                    </div>
-                    {product.acquisitionHistory.length > 0 ? (
-                       <div className="overflow-x-auto">
-                           <Table className="text-xs min-w-[600px]">
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead className="h-7 px-2 py-1">Date</TableHead>
-                                <TableHead className="h-7 px-2 py-1">Condition</TableHead>
-                                <TableHead className="h-7 px-2 py-1">Supplier</TableHead>
-                                <TableHead className="h-7 px-2 py-1 text-center">Qty</TableHead>
-                                <TableHead className="h-7 px-2 py-1 text-right">Cost/U</TableHead>
-                                <TableHead className="h-7 px-2 py-1 text-right">Batch MRP</TableHead>
-                                <TableHead className="h-7 px-2 py-1">Payment</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {product.acquisitionHistory.slice().sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
-                                <TableRow key={batch.batchId}>
-                                  <TableCell className="px-2 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell>
-                                  <TableCell className="px-2 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell>
-                                  <TableCell className="px-2 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell>
-                                  <TableCell className="px-2 py-1 text-center">{batch.quantityAdded}</TableCell>
-                                  <TableCell className="px-2 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell>
-                                  <TableCell className="px-2 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</TableCell>
-                                  <TableCell className="px-2 py-1">
-                                     <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge 
-                                            variant={batch.dueToSupplier > 0 ? "destructive" : "default"}
-                                            className={cn(
-                                                batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600",
-                                                "text-xs cursor-default px-1.5 py-0.5"
-                                            )}
-                                          >
-                                            {batch.dueToSupplier > 0 ? "Due" : "Paid"}
-                                            {(batch.dueToSupplier ?? 0) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="top" className="text-xs max-w-xs z-50">
-                                          <p>Method: {batch.paymentMethod}</p>
-                                          <p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>
-                                          {batch.paymentMethod === 'Hybrid' && (
-                                            <>
-                                              <p>Cash: NRP {batch.cashPaid.toFixed(2)}</p>
-                                              <p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p>
-                                            </>
-                                          )}
-                                          {batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  </TableCell>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-1.5 pt-2 pb-3 bg-muted/20 rounded-b-md">
+                        <div className="flex justify-between items-center mb-1.5 px-2">
+                            <h4 className="text-xs font-semibold text-muted-foreground">Acquisition History ({product.acquisitionHistory.length} batches):</h4>
+                            {user.role === 'admin' && (
+                                <div
+                                    role="button"
+                                    tabIndex={0}
+                                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 sm:hidden")}
+                                    onClick={(e) => {
+                                        handleOpenEditProductDialog(product.id);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                        e.preventDefault();
+                                        handleOpenEditProductDialog(product.id);
+                                        }
+                                    }}
+                                    title="Edit Product Details"
+                                >
+                                    <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Main
+                                </div>
+                            )}
+                        </div>
+                        {product.acquisitionHistory.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <Table className="text-xs min-w-[600px]">
+                                <TableHeader>
+                                <TableRow>
+                                    <TableHead className="h-7 px-2 py-1">Date</TableHead>
+                                    <TableHead className="h-7 px-2 py-1">Condition</TableHead>
+                                    <TableHead className="h-7 px-2 py-1">Supplier</TableHead>
+                                    <TableHead className="h-7 px-2 py-1 text-center">Qty</TableHead>
+                                    <TableHead className="h-7 px-2 py-1 text-right">Cost/U</TableHead>
+                                    <TableHead className="h-7 px-2 py-1 text-right">Batch MRP</TableHead>
+                                    <TableHead className="h-7 px-2 py-1">Payment</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                           </Table>
-                       </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground px-2 py-4 text-center">No acquisition history recorded for this product.</p>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          ) : (
-             <div className="text-center py-8 text-muted-foreground">
-              {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
-            </div>
-          )}
-        </CardContent>
+                                </TableHeader>
+                                <TableBody>
+                                {product.acquisitionHistory.slice().sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
+                                    <TableRow key={batch.batchId}>
+                                    <TableCell className="px-2 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell>
+                                    <TableCell className="px-2 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell>
+                                    <TableCell className="px-2 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell>
+                                    <TableCell className="px-2 py-1 text-center">{batch.quantityAdded}</TableCell>
+                                    <TableCell className="px-2 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell>
+                                    <TableCell className="px-2 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</TableCell>
+                                    <TableCell className="px-2 py-1">
+                                        <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                            <Badge 
+                                                variant={batch.dueToSupplier > 0 ? "destructive" : "default"}
+                                                className={cn(
+                                                    batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600",
+                                                    "text-xs cursor-default px-1.5 py-0.5"
+                                                )}
+                                            >
+                                                {batch.dueToSupplier > 0 ? "Due" : "Paid"}
+                                                {(batch.dueToSupplier ?? 0) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
+                                            </Badge>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="text-xs max-w-xs z-50">
+                                            <p>Method: {batch.paymentMethod}</p>
+                                            <p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>
+                                            {batch.paymentMethod === 'Hybrid' && (
+                                                <>
+                                                <p>Cash: NRP {batch.cashPaid.toFixed(2)}</p>
+                                                <p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p>
+                                                </>
+                                            )}
+                                            {batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        </TooltipProvider>
+                                    </TableCell>
+                                    </TableRow>
+                                ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        ) : (
+                        <p className="text-xs text-muted-foreground px-2 py-4 text-center">No acquisition history recorded for this product.</p>
+                        )}
+                    </AccordionContent>
+                    </AccordionItem>
+                ))}
+                </Accordion>
+            ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
+                </div>
+            )}
+            </CardContent>
+            </>
+        ) : ( 
+            <>
+            <CardHeader>
+                <CardTitle>Product List</CardTitle>
+                <CardDescription>
+                    Overview of available products.
+                    {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 sm:p-2">
+                {displayedProducts.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>MRP</TableHead>
+                        <TableHead className="text-center">Stock</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {displayedProducts.map((product) => (
+                        <TableRow key={product.id}>
+                        <TableCell className="font-medium">{product.name}</TableCell>
+                        <TableCell>{product.category}</TableCell>
+                        <TableCell>NRP {product.currentSellingPrice.toFixed(2)}</TableCell>
+                        <TableCell className="text-center">
+                            {product.currentDisplayStock}
+                            {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                            {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+                ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                    {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
+                </div>
+                )}
+            </CardContent>
+            </>
+        )}
       </Card>
       
       {isAddProductDialogOpen && (
