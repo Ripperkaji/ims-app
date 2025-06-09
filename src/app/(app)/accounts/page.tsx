@@ -20,13 +20,12 @@ interface SupplierDueItem {
   productName: string;
   batchId: string;
   acquisitionDate: string;
-  dueAmount: number; // This is batch.dueToSupplier
+  dueAmount: number;
   supplierName?: string;
-  // Fields for getSupplierPaymentDetails:
-  paymentMethod: AcquisitionPaymentMethod; // From the batch
-  totalBatchCost: number;         // From the batch
-  cashPaidForBatch: number;       // From the batch
-  digitalPaidForBatch: number;    // From the batch
+  paymentMethod: AcquisitionPaymentMethod;
+  totalBatchCost: number;
+  cashPaidForBatch: number;
+  digitalPaidForBatch: number;
 }
 
 interface ExpenseDueItem {
@@ -46,9 +45,6 @@ export default function AccountsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
-  // This state can be used to trigger re-renders if needed, though direct calculation might be sufficient
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -61,7 +57,7 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  // Calculate supplierDueItems directly on each render to ensure freshness with mockProducts
+  // Calculate supplierDueItems directly on each render to ensure freshness
   const supplierDueItems: SupplierDueItem[] = [];
   mockProducts.forEach(product => {
     product.acquisitionHistory.forEach(batch => {
@@ -99,7 +95,7 @@ export default function AccountsPage() {
     let digitalPaid: number | undefined = undefined;
     let paymentMethod = "";
 
-    const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i); // Adjusted regex slightly
+    const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i);
     const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
     
     if (hybridEntryMatch && hybridEntryMatch[1]) {
@@ -110,13 +106,13 @@ export default function AccountsPage() {
 
         if (duePartMatch && duePartMatch[1]) {
             outstandingDue = parseFloat(duePartMatch[1]);
-            paymentMethod = "Hybrid"; // Set method to Hybrid
+            paymentMethod = "Hybrid";
             if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
             if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
         }
     } else if (directDueMatch && directDueMatch[1]) {
         outstandingDue = parseFloat(directDueMatch[1]);
-        paymentMethod = "Due"; // Set method to Due
+        paymentMethod = "Due";
     }
     
     if (outstandingDue > 0) {
@@ -128,7 +124,7 @@ export default function AccountsPage() {
         cashPaid,
         digitalPaid,
         dueAmount: outstandingDue,
-        paymentMethod, // Ensure this is passed
+        paymentMethod,
         date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
       });
     }
@@ -151,7 +147,7 @@ export default function AccountsPage() {
       details += `(Paid Cash: NRP ${(item.cashPaidForBatch).toFixed(2)}, Paid Digital: NRP ${(item.digitalPaidForBatch).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
     } else if (item.paymentMethod === 'Due') {
       details += `(Outstanding Due: NRP ${(item.dueAmount).toFixed(2)})`;
-    } else { // Cash or Digital for the batch
+    } else {
       details += `(Batch Fully Paid via ${item.paymentMethod})`;
     }
     return details;
@@ -204,13 +200,13 @@ export default function AccountsPage() {
                 </TableHeader>
                 <TableBody>
                   {supplierDueItems.map((item) => (
-                    <TableRow key={item.batchId}> {/* Use batchId as key */}
-                      <TableCell className="font-medium">{item.productName}</TableCell>
-                      <TableCell>{item.supplierName || "N/A"}</TableCell>
-                      <TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell>
-                      <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
-                      <TableCell>{item.acquisitionDate}</TableCell>
-                    </TableRow>
+                    <TableRow key={item.batchId}
+                      ><TableCell className="font-medium">{item.productName}</TableCell
+                      ><TableCell>{item.supplierName || "N/A"}</TableCell
+                      ><TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell
+                      ><TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell
+                      ><TableCell>{item.acquisitionDate}</TableCell
+                    ></TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -234,11 +230,11 @@ export default function AccountsPage() {
                 </TableHeader>
                 <TableBody>
                   {expenseDueItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.description}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell className="text-right">NRP {item.totalAmount.toFixed(2)}</TableCell>
-                      <TableCell>
+                    <TableRow key={item.id}
+                      ><TableCell className="font-medium">{item.description}</TableCell
+                      ><TableCell>{item.category}</TableCell
+                      ><TableCell className="text-right">NRP {item.totalAmount.toFixed(2)}</TableCell
+                      ><TableCell>
                         {item.paymentMethod === "Hybrid" ? (
                           <span className="text-xs">
                             Hybrid (
@@ -250,10 +246,10 @@ export default function AccountsPage() {
                         ) : (
                           "Fully Due"
                         )}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell>
-                      <TableCell>{item.date}</TableCell>
-                    </TableRow>
+                      </TableCell
+                      ><TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell
+                      ><TableCell>{item.date}</TableCell
+                    ></TableRow>
                   ))}
                 </TableBody>
               </Table>
