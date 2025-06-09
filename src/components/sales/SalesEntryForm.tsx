@@ -23,7 +23,7 @@ interface SalesEntryFormProps {
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
 interface LocalSaleItemInForm {
-  tempId: string; 
+  tempId: string;
   selectedCategory: ProductType | '';
   productId: string;
   productName: string;
@@ -32,6 +32,20 @@ interface LocalSaleItemInForm {
   totalPrice: number;
 }
 
+// Helper function to calculate current stock for a product within this form
+const calculateCurrentStockForSaleForm = (product: Product | undefined, allSales: Sale[]): number => {
+  if (!product || !product.acquisitionHistory) return 0;
+  const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
+
+  const totalSold = allSales
+    .flatMap(sale => sale.items)
+    .filter(item => item.productId === product.id)
+    .reduce((sum, item) => sum + item.quantity, 0);
+
+  return totalAcquired - totalSold - (product.damagedQuantity || 0) - (product.testerQuantity || 0);
+};
+
+
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -39,7 +53,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [selectedItems, setSelectedItems] = useState<LocalSaleItemInForm[]>([]);
-  
+
   const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethodSelection>('Cash');
   const [isHybridPayment, setIsHybridPayment] = useState(false);
   const [hybridCashPaid, setHybridCashPaid] = useState('');
@@ -63,7 +77,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       }, 0);
     } catch (e) {
       console.error("SalesEntryForm: Error calculating totalAmount:", e);
-      return 0; 
+      return 0;
     }
   }, [selectedItems]);
 
@@ -76,7 +90,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       setHybridDigitalPaid('');
       setHybridAmountLeftDue('');
     }
-    setValidationError(null); 
+    setValidationError(null);
   }, [formPaymentMethod]);
 
   useEffect(() => {
@@ -100,7 +114,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     if (filledFields === 2) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
         const remainingForDue = totalAmount - cash - digital;
-        if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) { 
+        if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) {
             setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
         }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
@@ -115,7 +129,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         }
       }
     }
-    
+
     const currentCashForValidation = parseFloat(hybridCashPaid) || 0;
     const currentDigitalForValidation = parseFloat(hybridDigitalPaid) || 0;
     const currentDueForValidation = parseFloat(hybridAmountLeftDue) || 0;
@@ -176,9 +190,10 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     if (product) {
       item.productId = product.id;
       item.productName = product.name;
-      item.unitPrice = product.sellingPrice;
-      item.quantity = 1; 
-      if (product.stock < 1) {
+      item.unitPrice = product.currentSellingPrice;
+      item.quantity = 1;
+      const currentStock = calculateCurrentStockForSaleForm(product, mockSales);
+      if (currentStock < 1) {
         toast({ title: "Out of Stock", description: `${product.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
         item.quantity = 0;
       }
@@ -196,7 +211,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     if (isNaN(quantity) || quantity < 0) {
       item.quantity = 0;
     } else {
-      const stockToCheck = allGlobalProducts.find(p => p.id === item.productId)?.stock || 0;
+      const productDetails = allGlobalProducts.find(p => p.id === item.productId);
+      const stockToCheck = calculateCurrentStockForSaleForm(productDetails, mockSales);
       if (quantity > stockToCheck) {
         toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck} items in stock.`, variant: "destructive" });
         item.quantity = stockToCheck;
@@ -251,7 +267,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" });
         return;
       }
-      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { 
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) {
         toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`, variant: "destructive" });
         setValidationError(`Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
         return;
@@ -270,7 +286,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
           break;
       }
     }
-    
+
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
 
     const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({
@@ -302,10 +318,13 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     newSale.items.forEach(item => {
       const productIndex = updatedGlobalProducts.findIndex(p => p.id === item.productId);
       if (productIndex !== -1) {
-        if (updatedGlobalProducts[productIndex].stock >= item.quantity) {
-          updatedGlobalProducts[productIndex].stock -= item.quantity;
+        const currentStock = calculateCurrentStockForSaleForm(updatedGlobalProducts[productIndex], mockSales);
+        if (currentStock >= item.quantity) {
+          // This part is tricky with mock data.
+          // For a real DB, you'd decrement. For mock, we assume the calculation was pre-validated.
+          // The actual 'mockProducts' array is updated based on the fact that this sale will be added to mockSales.
         } else {
-          toast({ title: "Stock Error", description: `Not enough stock for ${item.productName} during final processing.`, variant: "destructive" });
+          toast({ title: "Stock Error", description: `Not enough stock for ${item.productName} during final processing. Available: ${currentStock}. Needed: ${item.quantity}`, variant: "destructive" });
           successfulStockUpdate = false;
         }
       } else {
@@ -315,14 +334,22 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     });
 
     if (!successfulStockUpdate) {
-      return; 
+      return;
     }
-    
-    allGlobalProducts.length = 0; 
-    allGlobalProducts.push(...updatedGlobalProducts);
-    
-    mockSales.unshift(newSale);
-    mockSales.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    mockSales.unshift(newSale); // Add sale to mockSales *before* potentially re-calculating stock for other components
+
+    // Re-calculate stock for allGlobalProducts AFTER the sale is recorded
+    // This is more for other components that might re-render and use allGlobalProducts directly for stock display
+    // Note: This direct mutation of allGlobalProducts is a mock data pattern.
+    allGlobalProducts.forEach(p => {
+      const saleProductIndex = updatedGlobalProducts.findIndex(up => up.id === p.id);
+      if(saleProductIndex !== -1) {
+        const itemSold = newSale.items.find(si => si.productId === p.id);
+        // The actual stock reduction is implicit because calculateCurrentStockForSaleForm
+        // will now include this newSale when it's called again.
+      }
+    });
 
 
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
@@ -348,7 +375,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setCustomerName('');
     setCustomerContact('');
     setSelectedItems([]);
-    setFormPaymentMethod('Cash'); 
+    setFormPaymentMethod('Cash');
     setHybridCashPaid('');
     setHybridDigitalPaid('');
     setHybridAmountLeftDue('');
@@ -388,7 +415,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                 <p className="text-xs text-destructive pt-1">Please select a sale origin to continue.</p>
             )}
           </div>
-          
+
           <fieldset disabled={!saleOrigin} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
@@ -422,7 +449,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
               <Label className="text-base">Selected Items</Label>
               {selectedItems.map((item, index) => (
                 <div key={item.tempId} className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,2fr)_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
-                  
+
                   <div className="space-y-1">
                     <Label htmlFor={`category-${index}`} className="text-xs">Category</Label>
                     <Select
@@ -453,30 +480,37 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       <SelectContent>
                         {item.selectedCategory && allGlobalProducts
                           .filter(p => p.category === item.selectedCategory)
-                          .filter(p => {
-                            const isCurrentItem = item.productId && p.id === item.productId;
+                          .map(p => {
+                            const currentStock = calculateCurrentStockForSaleForm(p, mockSales);
+                            const isCurrentItemSelected = item.productId && p.id === item.productId;
                             const isAlreadySelectedInOtherRows = selectedItems.some(
                               (otherItem, otherIndex) => otherIndex !== index && otherItem.productId === p.id
                             );
-                            return (p.stock > 0 || isCurrentItem) && !isAlreadySelectedInOtherRows;
+                            const isDisabled = (currentStock === 0 && !isCurrentItemSelected) || (!isCurrentItemSelected && isAlreadySelectedInOtherRows);
+
+                            return (
+                              <SelectItem key={p.id} value={p.id} disabled={isDisabled} className="text-xs">
+                                {p.name} (Stock: {currentStock}, Price: NRP {p.currentSellingPrice.toFixed(2)})
+                              </SelectItem>
+                            );
                           })
-                          .sort((a,b) => a.name.localeCompare(b.name))
-                          .map(p => (
-                            <SelectItem key={p.id} value={p.id} disabled={p.stock === 0 && p.id !== item.productId} className="text-xs">
-                              {p.name} (Stock: {p.stock}, Price: NRP {p.sellingPrice.toFixed(2)})
-                            </SelectItem>
-                          ))
+                          .sort((a,b) => {
+                            // Ensure product name is available for sorting if item is fully formed
+                            const nameA = allGlobalProducts.find(p => p.id === a.props.value)?.name || '';
+                            const nameB = allGlobalProducts.find(p => p.id === b.props.value)?.name || '';
+                            return nameA.localeCompare(nameB);
+                          })
                         }
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="w-20 space-y-1">
                     <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label>
                     <Input
                       id={`quantity-${index}`}
                       type="number"
-                      min="0" 
+                      min="0"
                       value={item.quantity}
                       onChange={(e) => handleItemQuantityChange(index, e.target.value)}
                       className="text-center h-9 text-xs"
@@ -594,4 +628,3 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     </Card>
   );
 }
-    
