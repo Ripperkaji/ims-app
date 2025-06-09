@@ -10,20 +10,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { mockLogEntries, mockProducts } from "@/lib/data";
-import type { LogEntry, Product, AcquisitionPaymentMethod } from "@/types";
+import type { LogEntry, Product, AcquisitionPaymentMethod, AcquisitionBatch } from "@/types";
 import { format } from 'date-fns';
 
 type PayableType = 'supplier' | 'expense' | '';
 
 interface SupplierDueItem {
-  id: string; // product.id
+  productId: string;
   productName: string;
-  dueAmount: number;
-  lastAcquisitionPaymentMethod?: AcquisitionPaymentMethod;
-  lastAcquisitionTotalCost?: number;
-  lastAcquisitionCashPaid?: number;
-  lastAcquisitionDigitalPaid?: number;
-  date: string; // Date of the last acquisition log entry
+  batchId: string;
+  acquisitionDate: string;
+  dueAmount: number; // This is batch.dueToSupplier
+  supplierName?: string;
+  // Fields for getSupplierPaymentDetails:
+  paymentMethod: AcquisitionPaymentMethod; // From the batch
+  totalBatchCost: number;         // From the batch
+  cashPaidForBatch: number;       // From the batch
+  digitalPaidForBatch: number;    // From the batch
 }
 
 interface ExpenseDueItem {
@@ -43,6 +46,9 @@ export default function AccountsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
+  // This state can be used to trigger re-renders if needed, though direct calculation might be sufficient
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -55,38 +61,27 @@ export default function AccountsPage() {
     }
   }, [user, router, toast]);
 
-  const productsWithDue = mockProducts.filter(
-    (product) => (product.lastAcquisitionDueToSupplier ?? 0) > 0
-  );
-
-  const supplierDueItems: SupplierDueItem[] = productsWithDue.map((product) => {
-    const relevantAcquisitionLogs = mockLogEntries
-      .filter(
-        (log) =>
-          (log.action === "Product Added" ||
-            log.action === "Restock (Same Supplier/Price)" ||
-            log.action === "Restock (Same Supplier, New Price)" ||
-            log.action === "Restock (New Supplier)") &&
-          log.details.includes(product.name) 
-      )
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    const lastAcquisitionDate = relevantAcquisitionLogs.length > 0
-      ? format(new Date(relevantAcquisitionLogs[0].timestamp), 'MMM dd, yyyy HH:mm')
-      : 'N/A';
-
-    return {
-      id: product.id,
-      productName: product.name,
-      dueAmount: product.lastAcquisitionDueToSupplier ?? 0,
-      lastAcquisitionPaymentMethod: product.lastAcquisitionPaymentMethod,
-      lastAcquisitionTotalCost: product.lastAcquisitionTotalCost,
-      lastAcquisitionCashPaid: product.lastAcquisitionCashPaid,
-      lastAcquisitionDigitalPaid: product.lastAcquisitionDigitalPaid,
-      date: lastAcquisitionDate,
-    };
-  })
-  .sort((a, b) => a.productName.localeCompare(b.productName));
+  // Calculate supplierDueItems directly on each render to ensure freshness with mockProducts
+  const supplierDueItems: SupplierDueItem[] = [];
+  mockProducts.forEach(product => {
+    product.acquisitionHistory.forEach(batch => {
+      if (batch.dueToSupplier > 0) {
+        supplierDueItems.push({
+          productId: product.id,
+          productName: product.name,
+          batchId: batch.batchId,
+          acquisitionDate: format(new Date(batch.date), 'MMM dd, yyyy HH:mm'),
+          dueAmount: batch.dueToSupplier,
+          supplierName: batch.supplierName,
+          paymentMethod: batch.paymentMethod,
+          totalBatchCost: batch.totalBatchCost,
+          cashPaidForBatch: batch.cashPaid,
+          digitalPaidForBatch: batch.digitalPaid,
+        });
+      }
+    });
+  });
+  supplierDueItems.sort((a, b) => new Date(b.acquisitionDate).getTime() - new Date(a.acquisitionDate).getTime());
 
 
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
@@ -104,7 +99,7 @@ export default function AccountsPage() {
     let digitalPaid: number | undefined = undefined;
     let paymentMethod = "";
 
-    const hybridEntryMatch = log.details.match(/via Hybrid\.\s*\(([^)]+)\)/i);
+    const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i); // Adjusted regex slightly
     const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
     
     if (hybridEntryMatch && hybridEntryMatch[1]) {
@@ -115,13 +110,13 @@ export default function AccountsPage() {
 
         if (duePartMatch && duePartMatch[1]) {
             outstandingDue = parseFloat(duePartMatch[1]);
-            paymentMethod = "Hybrid";
+            paymentMethod = "Hybrid"; // Set method to Hybrid
             if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
             if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
         }
     } else if (directDueMatch && directDueMatch[1]) {
         outstandingDue = parseFloat(directDueMatch[1]);
-        paymentMethod = "Due";
+        paymentMethod = "Due"; // Set method to Due
     }
     
     if (outstandingDue > 0) {
@@ -133,7 +128,7 @@ export default function AccountsPage() {
         cashPaid,
         digitalPaid,
         dueAmount: outstandingDue,
-        paymentMethod,
+        paymentMethod, // Ensure this is passed
         date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
       });
     }
@@ -149,15 +144,15 @@ export default function AccountsPage() {
   const totalExpenseDue = expenseDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
 
   const getSupplierPaymentDetails = (item: SupplierDueItem): string => {
-    if (!item.lastAcquisitionPaymentMethod) return 'N/A';
+    if (!item.paymentMethod) return 'N/A';
     
-    let details = `Method: ${item.lastAcquisitionPaymentMethod}. Total Batch Cost: NRP ${(item.lastAcquisitionTotalCost ?? 0).toFixed(2)}. `;
-    if (item.lastAcquisitionPaymentMethod === 'Hybrid') {
-      details += `(Paid Cash: NRP ${(item.lastAcquisitionCashPaid ?? 0).toFixed(2)}, Paid Digital: NRP ${(item.lastAcquisitionDigitalPaid ?? 0).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
-    } else if (item.lastAcquisitionPaymentMethod === 'Due') {
+    let details = `Method: ${item.paymentMethod}. Batch Cost: NRP ${(item.totalBatchCost).toFixed(2)}. `;
+    if (item.paymentMethod === 'Hybrid') {
+      details += `(Paid Cash: NRP ${(item.cashPaidForBatch).toFixed(2)}, Paid Digital: NRP ${(item.digitalPaidForBatch).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
+    } else if (item.paymentMethod === 'Due') {
       details += `(Outstanding Due: NRP ${(item.dueAmount).toFixed(2)})`;
-    } else { 
-      details += `(Fully Paid via ${item.lastAcquisitionPaymentMethod})`;
+    } else { // Cash or Digital for the batch
+      details += `(Batch Fully Paid via ${item.paymentMethod})`;
     }
     return details;
   };
@@ -201,18 +196,20 @@ export default function AccountsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product Name</TableHead>
-                    <TableHead className="text-right">Amount Due</TableHead>
-                    <TableHead>Last Batch Payment Details</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead className="text-right">Due Amount</TableHead>
+                    <TableHead>Batch Pmt. Details</TableHead>
                     <TableHead>Acq. Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {supplierDueItems.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.batchId}> {/* Use batchId as key */}
                       <TableCell className="font-medium">{item.productName}</TableCell>
+                      <TableCell>{item.supplierName || "N/A"}</TableCell>
                       <TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell>
                       <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
-                      <TableCell>{item.date}</TableCell>
+                      <TableCell>{item.acquisitionDate}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
