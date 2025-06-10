@@ -36,7 +36,7 @@ for (const key of requiredConfigKeys) {
 if (missingKeys && typeof window !== 'undefined') { // Only show alert in browser, not during build
   // alert("Firebase configuration is incomplete. Please check environment variables. Chat and other Firebase services may not work.");
   // Using console.error for now as alert can be too intrusive during dev.
-  console.error("Firebase configuration is incomplete. Please check environment variables. Chat and other Firebase services may not work.");
+  // console.error("Firebase configuration is incomplete. Please check environment variables. Chat and other Firebase services may not work.");
 }
 
 
