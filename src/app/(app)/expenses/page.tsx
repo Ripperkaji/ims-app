@@ -23,6 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
