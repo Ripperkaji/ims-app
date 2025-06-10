@@ -63,11 +63,9 @@ export default function AnalyticsPage() {
 
   const payableCategories = useMemo(() => ['Rent', 'Utilities', 'Logistics', 'Marketing', 'Software', 'Maintenance'], []);
 
-  const totalAccountPayableAmount = useMemo(() => {
-    return mockExpenses
+  const totalAccountPayableAmount = mockExpenses
       .filter(expense => payableCategories.includes(expense.category))
       .reduce((sum, expense) => sum + expense.amount, 0);
-  }, [mockExpenses, payableCategories]);
 
   // Calculate categorySalesData directly on each render to ensure freshness
   const categorySalesData = (() => {
