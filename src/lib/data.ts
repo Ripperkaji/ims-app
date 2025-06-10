@@ -294,15 +294,25 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 }
 
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-export const mockExpenses: Expense[] = [ /* ... existing expenses ... */ ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+// Initialize mockExpenses with some data including categories from payableCategories
+export const mockExpenses: Expense[] = [
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'admin_user' },
+  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'admin_user' },
+  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'admin_user' },
+  // Any other system-generated expenses will be added by addSystemExpense
+].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+
+export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
 
 export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
   const newExpense: Expense = { id: `exp-sys-${Date.now()}`, ...expenseData };
   mockExpenses.push(newExpense);
   mockExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const logEntry: LogEntry = { id: `log-exp-${newExpense.id}`, timestamp: formatISO(new Date()), user: newExpense.recordedBy || 'System', action: 'System Expense Recorded', details: `Expense Category: ${newExpense.category}, Amount: NRP ${newExpense.amount.toFixed(2)}. Desc: ${newExpense.description}`};
+  const logEntry: LogEntry = { id: `log-exp-${newExpense.id}`, timestamp: formatISO(new Date()), user: expenseData.recordedBy || 'System', action: 'System Expense Recorded', details: `Expense Category: ${expenseData.category}, Amount: NRP ${expenseData.amount.toFixed(2)}. Desc: ${expenseData.description}`};
   mockLogEntries.unshift(logEntry);
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   return newExpense;
 }
+
