@@ -17,6 +17,7 @@ import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/F
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { calculateCurrentStock } from "../products/page";
 
 
 export default function DashboardPage() {
@@ -28,8 +29,20 @@ export default function DashboardPage() {
   const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
   const totalProducts = useMemo(() => mockProducts.length, [mockProducts]);
 
-  const criticalStockCount = useMemo(() => mockProducts.filter(p => p.stock === 1).length, [triggerRefresh, mockProducts]);
-  const outOfStockCount = useMemo(() => mockProducts.filter(p => p.stock === 0).length, [triggerRefresh, mockProducts]);
+  const criticalStockCount = useMemo(() => {
+    return mockProducts.filter(p => {
+      const currentStock = calculateCurrentStock(p, mockSales);
+      return currentStock === 1;
+    }).length;
+  }, [triggerRefresh, mockProducts, mockSales]);
+
+  const outOfStockCount = useMemo(() => {
+    return mockProducts.filter(p => {
+      const currentStock = calculateCurrentStock(p, mockSales);
+      return currentStock === 0;
+    }).length;
+  }, [triggerRefresh, mockProducts, mockSales]);
+
   const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]);
 
 
@@ -104,26 +117,29 @@ export default function DashboardPage() {
             const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
             if (productIndex !== -1) {
               const product = mockProducts[productIndex];
-              const originalStock = product.stock;
+              const originalStock = calculateCurrentStock(product, mockSales); // Calculate before changing
               const originalDamage = product.damagedQuantity;
 
               product.damagedQuantity += itemDetail.quantitySold;
-              product.stock -= itemDetail.quantitySold;
-              if (product.stock < 0) product.stock = 0;
+              // Stock is not directly manipulated here; it's calculated.
+              // The sale has already removed stock. Damaging means those sold items are now "damaged" instead of "sold and good".
+              // The impact on *sellable* stock is that it *doesn't* go back up as if it were a return.
+              // The effective stock is reduced because these units are damaged.
+              // The `calculateCurrentStock` will now reflect this increased damage.
 
-              const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Stock: ${originalStock}, New Stock: ${product.stock}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
+              const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Sellable Stock (before damage): ${originalStock + itemDetail.quantitySold}, New Sellable Stock (after damage): ${calculateCurrentStock(product, mockSales)}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
 
               const damageExpense: Omit<Expense, 'id'> = {
                 date: new Date().toISOString(),
                 description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
                 category: "Product Damage",
-                amount: itemDetail.quantitySold * product.costPrice,
+                amount: itemDetail.quantitySold * product.currentCostPrice,
                 recordedBy: user.name,
               };
               addSystemExpense(damageExpense);
 
-              allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.costPrice).toFixed(2)}. `;
+              allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.currentCostPrice).toFixed(2)}. `;
             } else {
                addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
             }
