@@ -324,15 +324,14 @@ export const addManagedUser = (name: string, role: UserRole, defaultPassword: st
   if (!name.trim() || !defaultPassword.trim()) return null;
   if (role === 'admin') {
     console.warn("Attempted to add an admin user via addManagedUser. This is not allowed. User not added.");
-    // Optionally, you could throw an error or return a more specific error object.
     return null; 
   }
 
   const newUser: ManagedUser = {
     id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     name: name.trim(),
-    role: 'staff', // Force role to staff
-    defaultPassword, // Store the password (in a real app, hash this)
+    role: 'staff', 
+    defaultPassword, 
     createdAt: formatISO(new Date()),
   };
   mockManagedUsers.push(newUser);
@@ -349,4 +348,25 @@ export const addManagedUser = (name: string, role: UserRole, defaultPassword: st
   mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return newUser;
+};
+
+export const editManagedUser = (userId: string, newName: string, editedBy: string): ManagedUser | null => {
+  const userIndex = mockManagedUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1 || !newName.trim()) {
+    return null;
+  }
+  const originalUser = { ...mockManagedUsers[userIndex] };
+  mockManagedUsers[userIndex].name = newName.trim();
+  
+  const logEntry: LogEntry = {
+    id: `log-user-edit-${userId}`,
+    timestamp: formatISO(new Date()),
+    user: editedBy,
+    action: 'User Edited',
+    details: `Staff User ID ${userId.substring(0,8)}... name changed from '${originalUser.name}' to '${newName.trim()}' by ${editedBy}.`,
+  };
+  mockLogEntries.unshift(logEntry);
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  
+  return mockManagedUsers[userIndex];
 };

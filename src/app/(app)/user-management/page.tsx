@@ -5,21 +5,31 @@ import { useEffect, useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { UserCog, UserPlus } from "lucide-react";
+import { UserCog, UserPlus, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { mockManagedUsers, addManagedUser } from "@/lib/data";
+import { mockManagedUsers, addManagedUser, editManagedUser } from "@/lib/data"; // Added editManagedUser
 import type { ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
-import AddUserDialog from '@/components/accounts/AddUserDialog'; // Re-using for staff addition
+import AddUserDialog from '@/components/accounts/AddUserDialog';
+import EditUserDialog from '@/components/accounts/EditUserDialog'; // Import EditUserDialog
 
 export default function UserManagementPage() {
   const { user } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
-  const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>(mockManagedUsers);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false); // State for edit dialog
+  const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null); // State for user being edited
+  const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>([]);
+
+  useEffect(() => {
+    // Initial load and sort
+    setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  }, []);
+
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -34,10 +44,9 @@ export default function UserManagementPage() {
 
   const handleUserAdded = (name: string, role: UserRole, defaultPassword: string) => {
     if (!user) return;
-    // Role is forced to 'staff' by AddUserDialog and addManagedUser function
     const newUser = addManagedUser(name, 'staff', defaultPassword, user.name);
     if (newUser) {
-      setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())); // Refresh list from source & sort
+      setManagedUsersList(prevUsers => [...prevUsers, newUser].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       toast({
         title: "Staff User Added",
         description: `Staff user '${newUser.name}' has been added.`,
@@ -45,18 +54,46 @@ export default function UserManagementPage() {
     } else {
       toast({
         title: "Error",
-        description: "Failed to add staff user. Admins cannot add other admins.",
+        description: "Failed to add staff user. Ensure name and password are provided.",
         variant: "destructive",
       });
     }
     setIsAddUserDialogOpen(false);
   };
 
+  const handleOpenEditDialog = (staffUser: ManagedUser) => {
+    setUserToEdit(staffUser);
+    setIsEditUserDialogOpen(true);
+  };
+
+  const handleUserEdited = (userId: string, newName: string) => {
+    if (!user) return;
+    const updatedUser = editManagedUser(userId, newName, user.name);
+    if (updatedUser) {
+      setManagedUsersList(prevUsers => 
+        prevUsers.map(u => u.id === userId ? updatedUser : u)
+                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      );
+      toast({
+        title: "Staff User Updated",
+        description: `Staff user '${updatedUser.name}' has been updated.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update staff user. Ensure the new name is valid.",
+        variant: "destructive",
+      });
+    }
+    setIsEditUserDialogOpen(false);
+    setUserToEdit(null);
+  };
+
+
   if (!user || user.role !== 'admin') {
     return null;
   }
 
-  // Filter out any potential admin users from the display list, as they are fixed.
   const displayableUsers = managedUsersList.filter(u => u.role === 'staff');
 
   return (
@@ -74,7 +111,7 @@ export default function UserManagementPage() {
               <UserCog className="h-5 w-5 text-primary" /> Manage Staff Users
             </CardTitle>
             <CardDescription>
-              View and add staff users. Admins are fixed and cannot be managed here.
+              View, add, or edit staff users. Admins are fixed and cannot be managed here.
             </CardDescription>
           </div>
           <Button onClick={() => setIsAddUserDialogOpen(true)}>
@@ -89,15 +126,20 @@ export default function UserManagementPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Created At</TableHead>
-                  {/* Add actions column later if needed (e.g., edit staff, reset password) */}
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayableUsers.map((managedUser) => (
-                  <TableRow key={managedUser.id}>
-                    <TableCell className="font-medium">{managedUser.name}</TableCell>
-                    <TableCell className="capitalize">{managedUser.role}</TableCell>
-                    <TableCell>{format(new Date(managedUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
+                {displayableUsers.map((managedStaffUser) => (
+                  <TableRow key={managedStaffUser.id}>
+                    <TableCell className="font-medium">{managedStaffUser.name}</TableCell>
+                    <TableCell className="capitalize">{managedStaffUser.role}</TableCell>
+                    <TableCell>{format(new Date(managedStaffUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(managedStaffUser)}>
+                        <Edit className="mr-2 h-3.5 w-3.5" /> Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -113,6 +155,15 @@ export default function UserManagementPage() {
           isOpen={isAddUserDialogOpen}
           onClose={() => setIsAddUserDialogOpen(false)}
           onUserAdded={handleUserAdded}
+        />
+      )}
+
+      {isEditUserDialogOpen && userToEdit && (
+        <EditUserDialog
+          isOpen={isEditUserDialogOpen}
+          onClose={() => { setIsEditUserDialogOpen(false); setUserToEdit(null); }}
+          userToEdit={userToEdit}
+          onUserEdited={handleUserEdited}
         />
       )}
     </div>
