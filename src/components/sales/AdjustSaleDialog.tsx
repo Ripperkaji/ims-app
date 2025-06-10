@@ -17,13 +17,18 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { Sale, SaleItem, Product } from '@/types';
-import { calculateCurrentStock } from '@/app/(app)/products/page'; // Import calculateCurrentStock
+import type { Sale, SaleItem, Product, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
+import { calculateCurrentStock } from '@/app/(app)/products/page';
 
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+
+interface EditableSaleItem extends SaleItem {
+  selectedCategory: ProductType | '';
+}
 
 interface AdjustSaleDialogProps {
   sale: Sale;
@@ -34,7 +39,7 @@ interface AdjustSaleDialogProps {
     updatedSaleData: Partial<Sale> & {
         customerName: string;
         customerContact?: string;
-        items: SaleItem[];
+        items: SaleItem[]; // This should be SaleItem[], not EditableSaleItem[]
         totalAmount: number;
         formPaymentMethod: PaymentMethodSelection;
         cashPaid: number;
@@ -45,7 +50,7 @@ interface AdjustSaleDialogProps {
   ) => void;
   allGlobalProducts: Product[];
   isInitiallyFlagged: boolean;
-  mockSales: Sale[]; // Added mockSales prop
+  mockSales: Sale[];
 }
 
 const DialogCardTitle = DialogCardTitleImport;
@@ -56,7 +61,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
   const [editedCustomerContact, setEditedCustomerContact] = useState(sale.customerContact || '');
-  const [editedItems, setEditedItems] = useState<SaleItem[]>(() => JSON.parse(JSON.stringify(sale.items)));
+  const [editedItems, setEditedItems] = useState<EditableSaleItem[]>([]);
 
   const [editedFormPaymentMethod, setEditedFormPaymentMethod] = useState<PaymentMethodSelection>(sale.formPaymentMethod);
   const [isHybridPayment, setIsHybridPayment] = useState(sale.formPaymentMethod === 'Hybrid');
@@ -76,7 +81,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     if (isOpen) {
       setEditedCustomerName(sale.customerName);
       setEditedCustomerContact(sale.customerContact || '');
-      setEditedItems(JSON.parse(JSON.stringify(sale.items)));
+      setEditedItems(
+        sale.items.map(originalItem => {
+          const productDetails = allGlobalProducts.find(p => p.id === originalItem.productId);
+          return {
+            ...JSON.parse(JSON.stringify(originalItem)), // Deep copy of SaleItem
+            selectedCategory: productDetails?.category || '',
+          };
+        })
+      );
       setEditedFormPaymentMethod(sale.formPaymentMethod);
       setIsHybridPayment(sale.formPaymentMethod === 'Hybrid');
       setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
@@ -85,7 +98,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       setAdjustmentComment('');
       setValidationError(null);
     }
-  }, [sale, isOpen]);
+  }, [sale, isOpen, allGlobalProducts]);
 
  useEffect(() => {
     if (editedFormPaymentMethod === 'Hybrid') {
@@ -148,40 +161,36 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const handleAddItem = () => {
-    const productsToConsider = allGlobalProducts; 
-    
-    const firstAvailableProduct = productsToConsider.find(p => {
-        const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
-        const originalItem = sale.items.find(oi => oi.productId === p.id);
-        
-        const calculatedCurrentStock = calculateCurrentStock(globalProduct, mockSales) || 0;
-        const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
-        const effectiveStock = calculatedCurrentStock + quantityInOriginalSale;
-
-        return effectiveStock > 0 && !editedItems.find(si => si.productId === p.id);
-    });
-    
-    if (firstAvailableProduct) {
-      setEditedItems([
-        ...editedItems,
-        {
-          productId: firstAvailableProduct.id,
-          productName: firstAvailableProduct.name,
-          quantity: 1,
-          unitPrice: firstAvailableProduct.currentSellingPrice,
-          totalPrice: firstAvailableProduct.currentSellingPrice,
-        },
-      ]);
-    } else {
-        toast({
-            title: "No More Products",
-            description: "All available products for adjustment are either out of stock or already added.",
-            variant: "destructive"
-        });
-    }
+    setEditedItems([
+      ...editedItems,
+      {
+        productId: '',
+        productName: '',
+        quantity: 0,
+        unitPrice: 0,
+        totalPrice: 0,
+        selectedCategory: '', // Initialize category
+        isFlaggedForDamageExchange: false, // Default for new item
+        damageExchangeComment: '',      // Default for new item
+      },
+    ]);
   };
 
-  const handleItemChange = (index: number, field: keyof SaleItem, value: string | number) => {
+  const handleItemCategoryChange = (index: number, category: ProductType | '') => {
+    const newItems = [...editedItems];
+    newItems[index] = {
+      ...newItems[index],
+      selectedCategory: category,
+      productId: '', 
+      productName: '',
+      quantity: 0,
+      unitPrice: 0,
+      totalPrice: 0,
+    };
+    setEditedItems(newItems);
+  };
+
+  const handleItemChange = (index: number, field: keyof EditableSaleItem, value: string | number) => {
     const newItems = [...editedItems];
     const item = newItems[index];
 
@@ -207,7 +216,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     } else if (field === 'quantity') {
       const parsedQuantity = parseInt(value as string, 10);
       if (isNaN(parsedQuantity) || parsedQuantity < 0) {
-        item.quantity = 0; // Default to 0 if input is invalid
+        item.quantity = 0; 
       } else {
         const productDetails = allGlobalProducts.find(p => p.id === item.productId);
         const stockToCheck = calculateCurrentStock(productDetails, mockSales) || 0;
@@ -245,8 +254,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       toast({ title: "No Items", description: "Please add at least one product.", variant: "destructive" });
       return;
     }
-    if (editedItems.some(item => item.quantity <= 0 || isNaN(item.quantity))) {
-      toast({ title: "Invalid Quantity", description: "One or more items have zero or invalid quantity.", variant: "destructive" });
+    if (editedItems.some(item => item.productId === '' || item.quantity <= 0 || isNaN(item.quantity))) {
+      toast({ title: "Invalid Item", description: "One or more items are incomplete (missing product or category) or have zero/invalid quantity.", variant: "destructive" });
       return;
     }
     if (dialogTotalAmount <= 0 && editedItems.length > 0){
@@ -284,10 +293,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         return;
     }
 
+    const itemsToSave: SaleItem[] = editedItems.map(ei => {
+      const { selectedCategory, ...saleItem } = ei; // Destructure to remove selectedCategory
+      return saleItem;
+    });
+
     const updatedSalePortion = {
         customerName: editedCustomerName,
         customerContact: editedCustomerContact.trim() || undefined,
-        items: editedItems,
+        items: itemsToSave,
         totalAmount: dialogTotalAmount,
         formPaymentMethod: editedFormPaymentMethod,
         cashPaid: finalCashPaid,
@@ -302,7 +316,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
   const handleDialogClose = () => {
     setEditedCustomerName(sale.customerName);
     setEditedCustomerContact(sale.customerContact || '');
-    setEditedItems(JSON.parse(JSON.stringify(sale.items)));
+    setEditedItems(
+      sale.items.map(originalItem => {
+        const productDetails = allGlobalProducts.find(p => p.id === originalItem.productId);
+        return {
+          ...JSON.parse(JSON.stringify(originalItem)),
+          selectedCategory: productDetails?.category || '',
+        };
+      })
+    );
     setEditedFormPaymentMethod(sale.formPaymentMethod);
     setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
     setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
@@ -314,8 +336,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
   if (!isOpen) return null;
 
-  const availableProductsForDropdown = (currentItemId?: string, currentItemIndex?: number) => {
-    const baseProducts = allGlobalProducts;
+  const availableProductsForDropdown = (
+    currentItemId?: string, 
+    currentItemIndex?: number,
+    categoryFilter?: ProductType | ''
+  ) => {
+    let baseProducts = allGlobalProducts;
+    if (categoryFilter) {
+        baseProducts = baseProducts.filter(p => p.category === categoryFilter);
+    }
       
     return baseProducts.filter(p => {
         const productDetails = allGlobalProducts.find(gp => gp.id === p.id);
@@ -368,18 +397,35 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
             <Label className="text-base font-medium">Items</Label>
             {editedItems.map((item, index) => (
-            <div key={index} className="flex items-end gap-3 p-3 border rounded-lg bg-card">
-                <div className="flex-1 space-y-1">
+            <div key={index} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
+                <div className="space-y-1">
+                  <Label htmlFor={`category-${index}-adj`} className="text-xs">Category</Label>
+                  <Select
+                    value={item.selectedCategory}
+                    onValueChange={(value) => handleItemCategoryChange(index, value as ProductType | '')}
+                  >
+                    <SelectTrigger id={`category-${index}-adj`} className="h-9 text-xs">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ALL_PRODUCT_TYPES.map(type => (
+                        <SelectItem key={type} value={type} className="text-xs">{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
                 <Label htmlFor={`product-${index}-edit`}>Product</Label>
                 <Select
                     value={item.productId}
                     onValueChange={(value) => handleItemChange(index, 'productId', value)}
+                    disabled={!item.selectedCategory}
                 >
-                    <SelectTrigger id={`product-${index}-edit`}>
+                    <SelectTrigger id={`product-${index}-edit`} className="h-9 text-xs">
                     <SelectValue placeholder="Select product" />
                     </SelectTrigger>
                     <SelectContent>
-                    {availableProductsForDropdown(item.productId, index).map((p) => {
+                    {availableProductsForDropdown(item.productId, index, item.selectedCategory).map((p) => {
                         const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
                         const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
                         const currentGlobalStockValue = calculateCurrentStock(productDetails, mockSales) || 0;
@@ -388,35 +434,37 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                         return (
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
+                                      className="text-xs"
                           >
-                          {p.name} ({p.category}) - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.currentSellingPrice.toFixed(2)}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.currentSellingPrice.toFixed(2)}
                           </SelectItem>
                         );
                     })}
                     </SelectContent>
                 </Select>
                 </div>
-                <div className="w-24 space-y-1">
-                <Label htmlFor={`quantity-${index}-edit`}>Quantity</Label>
+                <div className="w-20 space-y-1">
+                <Label htmlFor={`quantity-${index}-edit`} className="text-xs">Quantity</Label>
                 <Input
                     id={`quantity-${index}-edit`}
                     type="number"
                     min="0"
                     value={item.quantity}
                     onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className="text-center"
+                    className="text-center h-9 text-xs"
+                    disabled={!item.productId}
                 />
                 </div>
-                <div className="text-right w-28 space-y-1">
-                    <Label>Subtotal</Label>
-                    <p className="font-semibold text-lg h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
+                <div className="text-right w-24 space-y-1">
+                    <Label className="text-xs">Subtotal</Label>
+                    <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
                 </div>
-                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0">
-                <Trash2 className="h-4 w-4" />
+                <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0 h-8 w-8">
+                <Trash2 className="h-3.5 w-3.5" />
                 </Button>
             </div>
             ))}
-            <Button type="button" variant="outline" onClick={handleAddItem} className="w-full">
+            <Button type="button" variant="outline" onClick={handleAddItem} className="w-full h-9">
             <PlusCircle className="mr-2 h-4 w-4" /> Add Item
             </Button>
 
@@ -450,18 +498,18 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </CardHeader>
                 <CardContent className="space-y-3 p-2">
                     <div>
-                    <Label htmlFor="hybridCashPaid-edit">Cash Paid (NRP)</Label>
-                    <Input id="hybridCashPaid-edit" type="number" value={hybridCashPaid} onChange={(e) => setHybridCashPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
+                    <Label htmlFor="hybridCashPaid-edit" className="text-xs">Cash Paid (NRP)</Label>
+                    <Input id="hybridCashPaid-edit" type="number" value={hybridCashPaid} onChange={(e) => setHybridCashPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1 h-9" />
                     </div>
                     <div>
-                    <Label htmlFor="hybridDigitalPaid-edit">Digital Payment (NRP)</Label>
-                    <Input id="hybridDigitalPaid-edit" type="number" value={hybridDigitalPaid} onChange={(e) => setHybridDigitalPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
+                    <Label htmlFor="hybridDigitalPaid-edit" className="text-xs">Digital Payment (NRP)</Label>
+                    <Input id="hybridDigitalPaid-edit" type="number" value={hybridDigitalPaid} onChange={(e) => setHybridDigitalPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1 h-9" />
                     </div>
                     <div>
-                    <Label htmlFor="hybridAmountLeftDue-edit">Amount Left Due (NRP)</Label>
-                    <Input id="hybridAmountLeftDue-edit" type="number" value={hybridAmountLeftDue} onChange={(e) => setHybridAmountLeftDue(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
+                    <Label htmlFor="hybridAmountLeftDue-edit" className="text-xs">Amount Left Due (NRP)</Label>
+                    <Input id="hybridAmountLeftDue-edit" type="number" value={hybridAmountLeftDue} onChange={(e) => setHybridAmountLeftDue(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1 h-9" />
                     </div>
-                    {validationError && (<Alert variant="destructive" className="mt-2"><Info className="h-4 w-4" /><AlertTitle>Payment Error</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>)}
+                    {validationError && (<Alert variant="destructive" className="mt-2 p-2.5"><Info className="h-4 w-4" /><AlertTitle className="text-sm font-semibold">Payment Error</AlertTitle><AlertDescription className="text-xs">{validationError}</AlertDescription></Alert>)}
                 </CardContent>
                 </Card>
             )}
@@ -484,6 +532,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 onChange={(e) => setAdjustmentComment(e.target.value)}
                 placeholder={isInitiallyFlagged ? "Explain the resolution or action taken..." : "Reason for adjustment (e.g., customer request, error correction)..."}
                 rows={3}
+                className="mt-1"
                 />
             </div>
         </div>
@@ -493,7 +542,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
           <Button
             type="button"
             onClick={handleConfirmChanges}
-            disabled={ (isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError) || editedItems.some(item => item.quantity <=0 && item.totalPrice > 0) || (editedItems.length > 0 && dialogTotalAmount <= 0) }
+            disabled={ (isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError) || editedItems.some(item => item.productId === '' || (item.quantity <=0 && item.totalPrice > 0)) || (editedItems.length > 0 && dialogTotalAmount <= 0) }
             className={((isInitiallyFlagged && !adjustmentComment.trim()) || (isHybridPayment && !!validationError)) ? "bg-primary/50" : "bg-primary hover:bg-primary/90"}
           >
             <Landmark className="mr-2 h-5 w-5" /> Confirm Changes & Save
@@ -503,3 +552,5 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
+
+    
