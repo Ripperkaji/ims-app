@@ -19,11 +19,11 @@ export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 export interface AcquisitionBatch {
   batchId: string;
   date: string;
-  condition: string; 
+  condition: string;
   supplierName?: string;
   quantityAdded: number;
   costPricePerUnit: number;
-  sellingPricePerUnitAtAcquisition?: number; 
+  sellingPricePerUnitAtAcquisition?: number;
   paymentMethod: AcquisitionPaymentMethod;
   totalBatchCost: number;
   cashPaid: number;
@@ -35,20 +35,20 @@ export interface Product {
   id: string;
   name: string;
   category: ProductType;
-  currentSellingPrice: number; 
-  currentCostPrice: number;    
-  
+  currentSellingPrice: number;
+  currentCostPrice: number;
+
   acquisitionHistory: AcquisitionBatch[];
-  
-  damagedQuantity: number;    
-  testerQuantity: number; 
+
+  damagedQuantity: number;
+  testerQuantity: number;
 }
 
 export interface SaleItem {
   productId: string;
   productName: string;
   quantity: number;
-  unitPrice: number; 
+  unitPrice: number;
   totalPrice: number;
   isFlaggedForDamageExchange?: boolean;
   damageExchangeComment?: string;
@@ -60,11 +60,11 @@ export interface Sale {
   customerContact?: string;
   items: SaleItem[];
   totalAmount: number;
-  
+
   cashPaid: number;
   digitalPaid: number;
   amountDue: number;
-  
+
   formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
   date: string;
@@ -95,8 +95,8 @@ export interface LogEntry {
 export interface AttemptedProductData {
   name: string;
   category: ProductType;
-  sellingPrice: number; 
-  costPrice: number;    
+  sellingPrice: number;
+  costPrice: number;
   totalAcquiredStock: number;
 }
 
@@ -113,19 +113,19 @@ interface BaseResolution {
 }
 
 export interface Condition1Data extends BaseResolution {
-  condition: 'condition1'; 
+  condition: 'condition1';
 }
 
 export interface Condition2Data extends BaseResolution {
-  condition: 'condition2'; 
+  condition: 'condition2';
   newCostPrice: number;
   newSellingPrice: number;
 }
 
 export interface Condition3Data extends BaseResolution {
-  condition: 'condition3'; 
+  condition: 'condition3';
   newSupplierName: string;
-  newCostPrice?: number; 
+  newCostPrice?: number;
   newSellingPrice?: number;
 }
 
@@ -138,4 +138,12 @@ export interface ChatMessage {
   senderName: string;
   senderRole: UserRole;
   timestamp: Timestamp | Date; // Firestore Timestamp on read, Date on write preparation
+}
+
+// User Management Type
+export interface ManagedUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  createdAt: string;
 }

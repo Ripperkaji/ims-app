@@ -1,5 +1,5 @@
 
-import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType } from '@/types';
+import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType, ManagedUser, UserRole } from '@/types';
 import { formatISO } from 'date-fns';
 
 // Helper to create initial acquisition batch
@@ -295,12 +295,10 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-// Initialize mockExpenses with some data including categories from payableCategories
 export const mockExpenses: Expense[] = [
   { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'admin_user' },
   { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'admin_user' },
   { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'admin_user' },
-  // Any other system-generated expenses will be added by addSystemExpense
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
@@ -316,3 +314,33 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
   return newExpense;
 }
 
+// Mock User Management Data
+export const mockManagedUsers: ManagedUser[] = [
+  { id: 'user-admin-01', name: 'admin_user', role: 'admin', createdAt: formatISO(new Date(Date.now() - 100 * 24 * 60 * 60 * 1000)) },
+  { id: 'user-staff-01', name: 'staff_user', role: 'staff', createdAt: formatISO(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) },
+  { id: 'user-staff-02', name: 'alice', role: 'staff', createdAt: formatISO(new Date(Date.now() - 85 * 24 * 60 * 60 * 1000)) },
+];
+
+export const addManagedUser = (name: string, role: UserRole, addedBy: string): ManagedUser | null => {
+  if (!name.trim() || !role) return null;
+  const newUser: ManagedUser = {
+    id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    name: name.trim(),
+    role,
+    createdAt: formatISO(new Date()),
+  };
+  mockManagedUsers.push(newUser);
+  mockManagedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  const logEntry: LogEntry = {
+    id: `log-user-add-${newUser.id}`,
+    timestamp: newUser.createdAt,
+    user: addedBy,
+    action: 'User Added',
+    details: `User '${newUser.name}' (Role: ${newUser.role}) added by ${addedBy}.`,
+  };
+  mockLogEntries.unshift(logEntry);
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return newUser;
+};

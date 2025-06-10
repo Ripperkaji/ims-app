@@ -29,7 +29,7 @@ export default function LogsPage() {
 
   const [allLogs] = useState<LogEntry[]>(mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
   const [filteredLogEntries, setFilteredLogEntries] = useState<LogEntry[]>(allLogs);
-  
+
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [selectedAction, setSelectedAction] = useState<string>(ALL_ACTIONS_VALUE);
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
@@ -79,7 +79,7 @@ export default function LogsPage() {
         });
       }
     }
-    
+
     if (selectedAction && selectedAction !== ALL_ACTIONS_VALUE) {
       tempFilteredLogs = tempFilteredLogs.filter(log => log.action === selectedAction);
     }
@@ -104,12 +104,60 @@ export default function LogsPage() {
     setIsFilterPopoverOpen(false);
     toast({ title: "Filters Cleared", description: "Showing all log entries." });
   };
-  
+
+  const escapeCsvCell = (cellData: string): string => {
+    if (cellData === null || cellData === undefined) {
+      return '';
+    }
+    const stringData = String(cellData);
+    // If the data contains a comma, newline, or double quote, wrap it in double quotes
+    // and escape any existing double quotes by doubling them (e.g., " becomes "")
+    if (stringData.includes(',') || stringData.includes('\n') || stringData.includes('"')) {
+      return `"${stringData.replace(/"/g, '""')}"`;
+    }
+    return stringData;
+  };
+
   const handleExportLogs = (type: 'all' | 'filtered') => {
     const dataToExport = type === 'filtered' && isFilterActive ? filteredLogEntries : allLogs;
-    toast({ 
-      title: "Feature Coming Soon", 
-      description: `Exporting ${type === 'filtered' && isFilterActive ? 'filtered' : 'all'} ${dataToExport.length} logs to spreadsheet is not yet implemented.` 
+
+    if (dataToExport.length === 0) {
+      toast({
+        title: "No Logs to Export",
+        description: type === 'filtered' && isFilterActive ? "No logs match the current filters." : "There are no logs to export.",
+        variant: "default",
+      });
+      return;
+    }
+
+    const headers = ['ID', 'Timestamp', 'User', 'Action', 'Details'];
+    const csvRows = [
+      headers.join(','), // Header row
+      ...dataToExport.map(log => [
+        escapeCsvCell(log.id),
+        escapeCsvCell(format(parseISO(log.timestamp), 'yyyy-MM-dd HH:mm:ss')),
+        escapeCsvCell(log.user),
+        escapeCsvCell(log.action),
+        escapeCsvCell(log.details),
+      ].join(','))
+    ];
+
+    const csvString = csvRows.join('\n');
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+    link.setAttribute('download', `vapetrack_logs_${type}_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: "Logs Exported",
+      description: `${dataToExport.length} log entries have been exported to CSV.`,
     });
   };
 
@@ -228,17 +276,17 @@ export default function LogsPage() {
               <DropdownMenuItem onClick={() => handleExportLogs('all')}>
                 Export All Logs
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => handleExportLogs('filtered')}
-                disabled={!isFilterActive}
+                disabled={!isFilterActive && filteredLogEntries.length === allLogs.length}
               >
-                Export Filtered Logs
+                Export Filtered Logs ({isFilterActive ? filteredLogEntries.length : allLogs.length})
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
-      
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>System & User Activity</CardTitle>
@@ -256,8 +304,8 @@ export default function LogsPage() {
             </TableHeader>
             <TableBody>
               {filteredLogEntries.map((log) => (
-                <TableRow 
-                  key={log.id} 
+                <TableRow
+                  key={log.id}
                   onClick={() => handleOpenLogDetails(log)}
                   className="cursor-pointer hover:bg-muted/50"
                 >

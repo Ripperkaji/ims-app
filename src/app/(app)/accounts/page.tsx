@@ -1,17 +1,19 @@
 
 "use client";
 
-import { useEffect, useState } from 'react'; 
+import { useEffect, useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Users, Landmark } from "lucide-react"; 
+import { Users, Landmark, UserPlus, UserCog } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockLogEntries, mockProducts } from "@/lib/data";
-import type { LogEntry, Product, AcquisitionPaymentMethod, AcquisitionBatch } from "@/types";
+import { Button } from '@/components/ui/button';
+import { mockLogEntries, mockProducts, mockManagedUsers, addManagedUser } from "@/lib/data";
+import type { LogEntry, Product, AcquisitionPaymentMethod, AcquisitionBatch, ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
+import AddUserDialog from '@/components/accounts/AddUserDialog'; // New Import
 
 type PayableType = 'supplier' | 'expense' | '';
 
@@ -35,8 +37,8 @@ interface ExpenseDueItem {
   totalAmount: number;
   cashPaid?: number;
   digitalPaid?: number;
-  dueAmount: number; 
-  paymentMethod: string; 
+  dueAmount: number;
+  paymentMethod: string;
   date: string;
 }
 
@@ -45,19 +47,20 @@ export default function AccountsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>(mockManagedUsers); // State for users
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
-      toast({ 
-        title: "Access Denied", 
-        description: "You do not have permission to view this page.", 
-        variant: "destructive" 
+      toast({
+        title: "Access Denied",
+        description: "You do not have permission to view this page.",
+        variant: "destructive"
       });
       router.push('/dashboard');
     }
   }, [user, router, toast]);
 
-  // Calculate supplierDueItems directly on each render to ensure freshness
   const supplierDueItems: SupplierDueItem[] = [];
   mockProducts.forEach(product => {
     product.acquisitionHistory.forEach(batch => {
@@ -89,7 +92,7 @@ export default function AccountsPage() {
     const description = mainDetailMatch[1];
     const category = mainDetailMatch[2];
     const totalAmount = parseFloat(mainDetailMatch[3]);
-    
+
     let outstandingDue = 0;
     let cashPaid: number | undefined = undefined;
     let digitalPaid: number | undefined = undefined;
@@ -97,9 +100,9 @@ export default function AccountsPage() {
 
     const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i);
     const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
-    
+
     if (hybridEntryMatch && hybridEntryMatch[1]) {
-        const detailsStr = hybridEntryMatch[1]; 
+        const detailsStr = hybridEntryMatch[1];
         const cashMatch = detailsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
         const digitalMatch = detailsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
         const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
@@ -114,7 +117,7 @@ export default function AccountsPage() {
         outstandingDue = parseFloat(directDueMatch[1]);
         paymentMethod = "Due";
     }
-    
+
     if (outstandingDue > 0) {
       calculatedExpenseDueItems.push({
         id: log.id,
@@ -141,7 +144,7 @@ export default function AccountsPage() {
 
   const getSupplierPaymentDetails = (item: SupplierDueItem): string => {
     if (!item.paymentMethod) return 'N/A';
-    
+
     let details = `Method: ${item.paymentMethod}. Batch Cost: NRP ${(item.totalBatchCost).toFixed(2)}. `;
     if (item.paymentMethod === 'Hybrid') {
       details += `(Paid Cash: NRP ${(item.cashPaidForBatch).toFixed(2)}, Paid Digital: NRP ${(item.digitalPaidForBatch).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
@@ -153,15 +156,34 @@ export default function AccountsPage() {
     return details;
   };
 
+  const handleUserAdded = (name: string, role: UserRole) => {
+    if (!user) return;
+    const newUser = addManagedUser(name, role, user.name);
+    if (newUser) {
+      setManagedUsersList([...mockManagedUsers]); // Refresh list from source
+      toast({
+        title: "User Added",
+        description: `User '${newUser.name}' with role '${newUser.role}' has been added.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to add user. Please check inputs.",
+        variant: "destructive",
+      });
+    }
+    setIsAddUserDialogOpen(false);
+  };
+
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8"> {/* Increased spacing for new card */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
           <Users className="h-7 w-7 text-primary" /> Accounts Management
         </h1>
       </div>
-      
+
       <Card className="shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -263,11 +285,55 @@ export default function AccountsPage() {
         </CardContent>
       </Card>
 
-       <div className="p-4 border rounded-lg shadow-sm bg-card mt-6">
-        <p className="text-muted-foreground">
-          Further user account management functionalities (e.g., adding, editing users) can be implemented here.
-        </p>
-      </div>
+      {/* User Management Section */}
+      <Card className="shadow-lg">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <UserCog className="h-5 w-5 text-primary" /> User Management
+            </CardTitle>
+            <CardDescription>
+              View and add system users. Note: This is a mock interface for now.
+            </CardDescription>
+          </div>
+          <Button onClick={() => setIsAddUserDialogOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" /> Add New User
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {managedUsersList.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Created At</TableHead>
+                  {/* Add actions column later if needed */}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {managedUsersList.map((managedUser) => (
+                  <TableRow key={managedUser.id}>
+                    <TableCell className="font-medium">{managedUser.name}</TableCell>
+                    <TableCell className="capitalize">{managedUser.role}</TableCell>
+                    <TableCell>{format(new Date(managedUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <p className="text-center py-4 text-muted-foreground">No managed users found.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {isAddUserDialogOpen && user && (
+        <AddUserDialog
+          isOpen={isAddUserDialogOpen}
+          onClose={() => setIsAddUserDialogOpen(false)}
+          onUserAdded={handleUserAdded}
+        />
+      )}
     </div>
   );
 }
