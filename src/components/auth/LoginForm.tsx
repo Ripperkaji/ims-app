@@ -33,7 +33,7 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    let finalUsername = '';
+    let finalUsername: string;
     let expectedPassword = '';
 
     if (role === 'admin') {
