@@ -165,8 +165,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
           productId: firstAvailableProduct.id,
           productName: firstAvailableProduct.name,
           quantity: 1,
-          unitPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
-          totalPrice: firstAvailableProduct.sellingPrice, // Use sellingPrice
+          unitPrice: firstAvailableProduct.currentSellingPrice,
+          totalPrice: firstAvailableProduct.currentSellingPrice,
         },
       ]);
     } else {
@@ -187,7 +187,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
-        item.unitPrice = newProduct.sellingPrice; // Use sellingPrice
+        item.unitPrice = newProduct.currentSellingPrice;
         
         const originalItem = sale.items.find(i => i.productId === newProduct.id);
         const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
@@ -383,7 +383,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} ({p.category}) - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.sellingPrice.toFixed(2)}
+                          {p.name} ({p.category}) - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.currentSellingPrice.toFixed(2)}
                           </SelectItem>
                         );
                     })}
