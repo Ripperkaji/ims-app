@@ -189,7 +189,7 @@ const initialMockLogEntries: LogEntry[] = [
    {
     id: 'log0',
     timestamp: formatISO(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 10*60*1000)),
-    user: 'admin_user',
+    user: 'NPS', // Changed from admin_user
     action: 'Sale Created',
     details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 45.98. Payment: Hybrid (Cash: 20.00, Digital: 15.98, Due: 10.00). Status: Due. Origin: store.'
   },
@@ -222,13 +222,12 @@ function getRandomInt(min: number, max: number): number {
 }
 
 const mockCustomerNames = ["Alex Smith", "Jamie Brown", "Chris Lee", "Pat Taylor", "Jordan Davis"];
-const mockStaffUsers = ["staff_user", "alice", "admin_user"];
+const mockStaffUsers = ["staff_user", "alice", "NPS", "SKG"]; // Admins can also create sales
 const generatedSales: Sale[] = [];
 const generatedLogEntries: LogEntry[] = [];
-const NUM_SALES_TO_GENERATE = 5; // Reduced for brevity
+const NUM_SALES_TO_GENERATE = 5; 
 const DAYS_RANGE = 30;
 
-// Helper to calculate current stock for dynamic product pool
 const calculateCurrentStockForPool = (product: Product, currentSales: Sale[]): number => {
     const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
     const totalSold = currentSales
@@ -276,7 +275,6 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
   if (saleItems.length === 0) continue;
   const totalAmount = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
   let cashPaid = 0, digitalPaid = 0, amountDue = 0, formPaymentMethod: Sale['formPaymentMethod'] = 'Cash', status: Sale['status'] = 'Paid';
-  // Simplified payment logic
   const paymentTypeRoll = Math.random();
   if (paymentTypeRoll < 0.5) { formPaymentMethod = 'Cash'; cashPaid = totalAmount; }
   else if (paymentTypeRoll < 0.8) { formPaymentMethod = 'Credit Card'; digitalPaid = totalAmount; }
@@ -296,9 +294,9 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export const mockExpenses: Expense[] = [
-  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'admin_user' },
-  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'admin_user' },
-  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'admin_user' },
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'NPS' }, // Changed from admin_user
+  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'NPS' }, // Changed from admin_user
+  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'SKG' }, // Changed from admin_user
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
@@ -315,18 +313,26 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
 }
 
 // Mock User Management Data
+// The two fixed admins "NPS" and "SKG" are not part of this list as they cannot be managed.
+// This list is for staff users added by admins.
 export const mockManagedUsers: ManagedUser[] = [
-  { id: 'user-admin-01', name: 'admin_user', role: 'admin', createdAt: formatISO(new Date(Date.now() - 100 * 24 * 60 * 60 * 1000)) },
-  { id: 'user-staff-01', name: 'staff_user', role: 'staff', createdAt: formatISO(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) },
-  { id: 'user-staff-02', name: 'alice', role: 'staff', createdAt: formatISO(new Date(Date.now() - 85 * 24 * 60 * 60 * 1000)) },
+  { id: 'user-staff-01', name: 'staff_user', role: 'staff', defaultPassword: 'password123', createdAt: formatISO(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) },
+  { id: 'user-staff-02', name: 'alice', role: 'staff', defaultPassword: 'password456', createdAt: formatISO(new Date(Date.now() - 85 * 24 * 60 * 60 * 1000)) },
 ];
 
-export const addManagedUser = (name: string, role: UserRole, addedBy: string): ManagedUser | null => {
-  if (!name.trim() || !role) return null;
+export const addManagedUser = (name: string, role: UserRole, defaultPassword: string, addedBy: string): ManagedUser | null => {
+  if (!name.trim() || !defaultPassword.trim()) return null;
+  if (role === 'admin') {
+    console.warn("Attempted to add an admin user via addManagedUser. This is not allowed. User not added.");
+    // Optionally, you could throw an error or return a more specific error object.
+    return null; 
+  }
+
   const newUser: ManagedUser = {
     id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     name: name.trim(),
-    role,
+    role: 'staff', // Force role to staff
+    defaultPassword, // Store the password (in a real app, hash this)
     createdAt: formatISO(new Date()),
   };
   mockManagedUsers.push(newUser);
@@ -337,7 +343,7 @@ export const addManagedUser = (name: string, role: UserRole, addedBy: string): M
     timestamp: newUser.createdAt,
     user: addedBy,
     action: 'User Added',
-    details: `User '${newUser.name}' (Role: ${newUser.role}) added by ${addedBy}.`,
+    details: `Staff User '${newUser.name}' (Role: ${newUser.role}) added by ${addedBy}.`,
   };
   mockLogEntries.unshift(logEntry);
   mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());

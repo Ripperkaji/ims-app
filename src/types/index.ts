@@ -145,5 +145,6 @@ export interface ManagedUser {
   id: string;
   name: string;
   role: UserRole;
+  defaultPassword?: string; // Added for staff's initial password
   createdAt: string;
 }
