@@ -316,7 +316,8 @@ export default function DueSalesPage() {
           onClose={() => setSaleToAdjust(null)}
           onSaleAdjusted={handleSaleAdjusted}
           allGlobalProducts={mockProducts}
-          isInitiallyFlagged={saleToAdjust.isFlagged || false} 
+          isInitiallyFlagged={saleToAdjust.isFlagged || false}
+          mockSales={mockSales}
         />
       )}
     </div>
@@ -325,5 +326,6 @@ export default function DueSalesPage() {
     
 
     
+
 
 

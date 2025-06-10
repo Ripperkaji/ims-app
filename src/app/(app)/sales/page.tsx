@@ -702,11 +702,13 @@ export default function SalesPage() {
           onSaleAdjusted={handleSaleAdjustedOnSalesPage}
           allGlobalProducts={mockProducts}
           isInitiallyFlagged={saleToAdjust.isFlagged || false}
+          mockSales={allSalesData}
         />
       )}
     </div>
   );
 }
     
+
 
 

@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, CardDescription as DialogCardDescriptionImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
+import { calculateCurrentStock } from '@/app/(app)/products/page'; // Import calculateCurrentStock
 
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -44,12 +45,13 @@ interface AdjustSaleDialogProps {
   ) => void;
   allGlobalProducts: Product[];
   isInitiallyFlagged: boolean;
+  mockSales: Sale[]; // Added mockSales prop
 }
 
 const DialogCardTitle = DialogCardTitleImport;
 const DialogCardDescription = DialogCardDescriptionImport;
 
-export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted, allGlobalProducts, isInitiallyFlagged }: AdjustSaleDialogProps) {
+export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted, allGlobalProducts, isInitiallyFlagged, mockSales }: AdjustSaleDialogProps) {
   const { toast } = useToast();
 
   const [editedCustomerName, setEditedCustomerName] = useState(sale.customerName);
@@ -151,9 +153,10 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const firstAvailableProduct = productsToConsider.find(p => {
         const globalProduct = allGlobalProducts.find(gp => gp.id === p.id);
         const originalItem = sale.items.find(oi => oi.productId === p.id);
-        const currentStock = globalProduct?.stock || 0;
+        
+        const calculatedCurrentStock = calculateCurrentStock(globalProduct, mockSales) || 0;
         const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
-        const effectiveStock = currentStock + quantityInOriginalSale;
+        const effectiveStock = calculatedCurrentStock + quantityInOriginalSale;
 
         return effectiveStock > 0 && !editedItems.find(si => si.productId === p.id);
     });
@@ -190,7 +193,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         item.unitPrice = newProduct.currentSellingPrice;
         
         const originalItem = sale.items.find(i => i.productId === newProduct.id);
-        const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
+        const currentGlobalStock = calculateCurrentStock(allGlobalProducts.find(p => p.id === newProduct.id), mockSales) || 0;
         const quantityInOriginalSale = originalItem ? originalItem.quantity : 0;
         const maxAllowed = currentGlobalStock + quantityInOriginalSale;
 
@@ -204,7 +207,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     } else if (field === 'quantity') {
       const quantity = Number(value);
       const productDetails = allGlobalProducts.find(p => p.id === item.productId);
-      const stockToCheck = productDetails?.stock || 0;
+      const stockToCheck = calculateCurrentStock(productDetails, mockSales) || 0;
       const originalItem = sale.items.find(i => i.productId === item.productId);
       const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
 
@@ -311,16 +314,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const baseProducts = allGlobalProducts;
       
     return baseProducts.filter(p => {
-        const productInGlobalStock = allGlobalProducts.find(gp => gp.id === p.id);
-        const originalItemInSale = sale.items.find(oi => oi.productId === p.id);
+        const productDetails = allGlobalProducts.find(gp => gp.id === p.id);
+        const originalSaleItem = sale.items.find(oi => oi.productId === p.id);
         
-        const currentGlobalStockValue = productInGlobalStock?.stock || 0;
-        const quantityInOriginalSaleForThisProduct = (originalItemInSale && originalItemInSale.productId === p.id) ? originalItemInSale.quantity : 0;
+        const currentGlobalStockValue = calculateCurrentStock(productDetails, mockSales) || 0;
+        const quantityInOriginalSaleForThisProduct = (originalSaleItem && originalSaleItem.productId === p.id) ? originalSaleItem.quantity : 0;
         const effectiveStock = currentGlobalStockValue + quantityInOriginalSaleForThisProduct;
 
         const isCurrentItemForThisRow = p.id === currentItemId;
         
-        // Check if this product ID is selected in any *other* row
         const alreadySelectedInOtherEditedRows = editedItems.some(
             (otherItem, otherIndex) => otherIndex !== currentItemIndex && otherItem.productId === p.id
         );
@@ -376,7 +378,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     {availableProductsForDropdown(item.productId, index).map((p) => {
                         const productDetails = allGlobalProducts.find(agp => agp.id === p.id);
                         const originalSaleItem = sale.items.find(osi => osi.productId === p.id);
-                        const currentGlobalStockValue = productDetails?.stock || 0;
+                        const currentGlobalStockValue = calculateCurrentStock(productDetails, mockSales) || 0;
                         const quantityInOriginalSale = (originalSaleItem && originalSaleItem.productId === p.id) ? originalSaleItem.quantity : 0;
                         const effectiveStockDisplay = currentGlobalStockValue + quantityInOriginalSale;
                         return (
