@@ -4,7 +4,7 @@
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
 import { useAuthStore } from "@/stores/authStore";
 import { mockSales, mockLogEntries, mockProducts } from "@/lib/data"; 
-import type { Sale, LogEntry, SaleItem } from "@/types"; 
+import type { Sale, LogEntry, SaleItem } from '@/types'; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog";
 import { cn } from "@/lib/utils";
 import { calculateCurrentStock } from "../products/page";
 
-type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
 
 const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
@@ -101,7 +101,7 @@ export default function SalesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
   };
 
   const handleOpenAdjustDialog = (saleId: string) => {
@@ -700,4 +700,3 @@ export default function SalesPage() {
     </div>
   );
 }
-    

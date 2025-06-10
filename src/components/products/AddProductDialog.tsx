@@ -186,7 +186,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
         case 'Due': finalAmountDue = totalAcquisitionCost; break;
       }
     }
-    if (acquisitionPaymentValidationError && isAcquisitionHybridPayment) {
+     if (acquisitionPaymentValidationError && isAcquisitionHybridPayment && totalAcquisitionCost > 0) {
         toast({ title: "Payment Error", description: acquisitionPaymentValidationError, variant: "destructive" });
         return;
     }
@@ -293,7 +293,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
               <SelectTrigger id="acquisitionPaymentMethod"><SelectValue placeholder="Select payment method" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Digital">Digital (Card/Bank)</SelectItem>
+                <SelectItem value="Digital">Digital Payment</SelectItem>
                 <SelectItem value="Due">Due to Supplier</SelectItem>
                 <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
               </SelectContent>

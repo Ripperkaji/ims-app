@@ -339,7 +339,7 @@ export default function HandleExistingProductDialog({
                     <SelectTrigger id="resAcqPaymentMethod" className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select method" /></SelectTrigger>
                     <SelectContent>
                         <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="Digital">Digital (Card/Bank)</SelectItem>
+                        <SelectItem value="Digital">Digital Payment</SelectItem>
                         <SelectItem value="Due">Due to Supplier</SelectItem>
                         <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
                     </SelectContent>

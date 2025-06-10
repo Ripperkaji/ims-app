@@ -137,9 +137,9 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
       if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalDueAmount < 0) {
         toast({ title: "Invalid Payment", description: "Expense payment amounts cannot be negative.", variant: "destructive" }); return;
       }
-      if (Math.abs(finalCashPaid + finalDigitalPaid + finalDueAmount - numericAmount) > 0.001 && numericAmount > 0) {
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - numericAmount) > 0.001 && numericAmount > 0) {
         setPaymentValidationError(`Hybrid payments must sum to Total Expense Amount (NRP ${numericAmount.toFixed(2)}).`);
-        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalDueAmount).toFixed(2)}) must sum to Total Expense Amount (NRP ${numericAmount.toFixed(2)}).`, variant: "destructive" });
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Expense Amount (NRP ${numericAmount.toFixed(2)}).`, variant: "destructive" });
         return;
       }
     } else {
@@ -245,7 +245,7 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Digital">Digital (Card/Bank)</SelectItem>
+                <SelectItem value="Digital">Digital Payment</SelectItem>
                 <SelectItem value="Due">Due (To be paid later)</SelectItem>
                 <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
               </SelectContent>

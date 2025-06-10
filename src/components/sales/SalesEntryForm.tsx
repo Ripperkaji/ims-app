@@ -20,7 +20,7 @@ interface SalesEntryFormProps {
   onSaleAdded?: (newSale: Sale) => void;
 }
 
-type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 interface LocalSaleItemInForm {
   tempId: string;
@@ -277,8 +277,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         case 'Cash':
           finalCashPaid = totalAmount;
           break;
-        case 'Credit Card':
-        case 'Debit Card':
+        case 'Digital':
           finalDigitalPaid = totalAmount;
           break;
         case 'Due':
@@ -548,8 +547,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Credit Card">Credit Card</SelectItem>
-                    <SelectItem value="Debit Card">Debit Card</SelectItem>
+                    <SelectItem value="Digital">Digital Payment</SelectItem>
                     <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
                     <SelectItem value="Due">Full Amount Due</SelectItem>
                   </SelectContent>

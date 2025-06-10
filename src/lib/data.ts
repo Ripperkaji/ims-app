@@ -147,7 +147,7 @@ const initialMockSales: Sale[] = [
     cashPaid: 0,
     digitalPaid: 41.97,
     amountDue: 0,
-    formPaymentMethod: 'Credit Card',
+    formPaymentMethod: 'Digital',
     date: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
     status: 'Paid',
     createdBy: 'staff_user',
@@ -198,7 +198,7 @@ const initialMockLogEntries: LogEntry[] = [
     timestamp: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5*60*1000)),
     user: 'staff_user',
     action: 'Sale Created',
-    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Credit Card. Status: Paid. Origin: store.'
+    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Digital. Status: Paid. Origin: store.'
   },
   ...initialDamageLogEntries
 ];
@@ -276,8 +276,8 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
   const totalAmount = saleItems.reduce((sum, item) => sum + item.totalPrice, 0);
   let cashPaid = 0, digitalPaid = 0, amountDue = 0, formPaymentMethod: Sale['formPaymentMethod'] = 'Cash', status: Sale['status'] = 'Paid';
   const paymentTypeRoll = Math.random();
-  if (paymentTypeRoll < 0.5) { formPaymentMethod = 'Cash'; cashPaid = totalAmount; }
-  else if (paymentTypeRoll < 0.8) { formPaymentMethod = 'Credit Card'; digitalPaid = totalAmount; }
+  if (paymentTypeRoll < 0.4) { formPaymentMethod = 'Cash'; cashPaid = totalAmount; }
+  else if (paymentTypeRoll < 0.8) { formPaymentMethod = 'Digital'; digitalPaid = totalAmount; }
   else { formPaymentMethod = 'Due'; amountDue = totalAmount; status = 'Due'; }
 
   const newSale: Sale = {

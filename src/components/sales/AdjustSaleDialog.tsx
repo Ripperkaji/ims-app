@@ -24,7 +24,7 @@ import { calculateCurrentStock } from '@/app/(app)/products/page';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 interface EditableSaleItem extends SaleItem {
   selectedCategory: ProductType | '';
@@ -284,7 +284,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     } else {
       switch (editedFormPaymentMethod) {
         case 'Cash': finalCashPaid = dialogTotalAmount; break;
-        case 'Credit Card': case 'Debit Card': finalDigitalPaid = dialogTotalAmount; break;
+        case 'Digital': finalDigitalPaid = dialogTotalAmount; break;
         case 'Due': finalAmountDue = dialogTotalAmount; break;
       }
     }
@@ -477,8 +477,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     </SelectTrigger>
                     <SelectContent>
                     <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Credit Card">Credit Card</SelectItem>
-                    <SelectItem value="Debit Card">Debit Card</SelectItem>
+                    <SelectItem value="Digital">Digital Payment</SelectItem>
                     <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
                     <SelectItem value="Due">Full Amount Due</SelectItem>
                     </SelectContent>
@@ -552,5 +551,3 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
-
-    

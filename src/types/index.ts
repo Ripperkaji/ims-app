@@ -65,7 +65,7 @@ export interface Sale {
   digitalPaid: number;
   amountDue: number;
 
-  formPaymentMethod: 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+  formPaymentMethod: 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
   date: string;
   status: 'Paid' | 'Due';
