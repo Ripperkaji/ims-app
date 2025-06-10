@@ -3,7 +3,7 @@
 
 import { useMemo, useEffect } from 'react';
 import { useAuthStore } from "@/stores/authStore";
-import { mockProducts, mockLogEntries } from "@/lib/data";
+import { mockProducts, mockLogEntries, mockSales } from "@/lib/data";
 import type { Product } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
