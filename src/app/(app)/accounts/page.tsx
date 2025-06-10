@@ -5,15 +5,13 @@ import { useEffect, useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Users, Landmark, UserPlus, UserCog } from "lucide-react";
+import { Banknote, Landmark } from "lucide-react"; // Changed Users to Banknote
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from '@/components/ui/button';
-import { mockLogEntries, mockProducts, mockManagedUsers, addManagedUser } from "@/lib/data";
-import type { LogEntry, Product, AcquisitionPaymentMethod, AcquisitionBatch, ManagedUser, UserRole } from "@/types";
+import { mockLogEntries, mockProducts } from "@/lib/data";
+import type { LogEntry, AcquisitionPaymentMethod, ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
-import AddUserDialog from '@/components/accounts/AddUserDialog'; // New Import
 
 type PayableType = 'supplier' | 'expense' | '';
 
@@ -47,8 +45,6 @@ export default function AccountsPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
-  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
-  const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>(mockManagedUsers); // State for users
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -156,31 +152,12 @@ export default function AccountsPage() {
     return details;
   };
 
-  const handleUserAdded = (name: string, role: UserRole) => {
-    if (!user) return;
-    const newUser = addManagedUser(name, role, user.name);
-    if (newUser) {
-      setManagedUsersList([...mockManagedUsers]); // Refresh list from source
-      toast({
-        title: "User Added",
-        description: `User '${newUser.name}' with role '${newUser.role}' has been added.`,
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to add user. Please check inputs.",
-        variant: "destructive",
-      });
-    }
-    setIsAddUserDialogOpen(false);
-  };
-
 
   return (
-    <div className="space-y-8"> {/* Increased spacing for new card */}
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-          <Users className="h-7 w-7 text-primary" /> Accounts Management
+          <Banknote className="h-7 w-7 text-primary" /> Accounts Payable
         </h1>
       </div>
 
@@ -284,56 +261,6 @@ export default function AccountsPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* User Management Section */}
-      <Card className="shadow-lg">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <UserCog className="h-5 w-5 text-primary" /> User Management
-            </CardTitle>
-            <CardDescription>
-              View and add system users. Note: This is a mock interface for now.
-            </CardDescription>
-          </div>
-          <Button onClick={() => setIsAddUserDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" /> Add New User
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {managedUsersList.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Created At</TableHead>
-                  {/* Add actions column later if needed */}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {managedUsersList.map((managedUser) => (
-                  <TableRow key={managedUser.id}>
-                    <TableCell className="font-medium">{managedUser.name}</TableCell>
-                    <TableCell className="capitalize">{managedUser.role}</TableCell>
-                    <TableCell>{format(new Date(managedUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-center py-4 text-muted-foreground">No managed users found.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {isAddUserDialogOpen && user && (
-        <AddUserDialog
-          isOpen={isAddUserDialogOpen}
-          onClose={() => setIsAddUserDialogOpen(false)}
-          onUserAdded={handleUserAdded}
-        />
-      )}
     </div>
   );
 }

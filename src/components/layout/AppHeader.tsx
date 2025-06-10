@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, UserCircle, ChevronsLeftRight, Users } from 'lucide-react';
+import { LogOut, UserCircle, ChevronsLeftRight, Users, UserCog, Banknote } from 'lucide-react'; // Added UserCog, Banknote
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
 import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical, AlertOctagon, BarChart3 } from 'lucide-react';
@@ -27,7 +27,8 @@ const navItems: NavItem[] = [
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
-  { href: '/accounts', label: 'Accounts', icon: Users, roles: ['admin'] },
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] }, // New
+  { href: '/accounts', label: 'Accounts Payable', icon: Banknote, roles: ['admin'] }, // Icon changed
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
 ];

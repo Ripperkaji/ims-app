@@ -12,7 +12,8 @@ import {
   ShoppingCart,
   Package,
   CreditCard,
-  Users,
+  UserCog, // Added
+  Banknote, // Added
   FileText,
   Settings,
   AlertTriangle,
@@ -20,14 +21,14 @@ import {
   FlaskConical,
   AlertOctagon,
   BarChart3,
-  MessageSquare // Added for Chat
+  MessageSquare
 } from 'lucide-react';
-import { useState } from 'react'; // Added for chat dialog state
-import LiveChatDialog from '@/components/chat/LiveChatDialog'; // Added for Chat
+import { useState } from 'react';
+import LiveChatDialog from '@/components/chat/LiveChatDialog';
 
 interface NavItem {
-  href?: string; // Make href optional for non-navigation items like chat
-  action?: () => void; // Add action for buttons like chat
+  href?: string;
+  action?: () => void;
   label: string;
   icon: React.ElementType;
   roles: ('admin' | 'staff')[];
@@ -41,7 +42,8 @@ const navItems: NavItem[] = [
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
-  { href: '/accounts', label: 'Accounts', icon: Users, roles: ['admin'] },
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] }, // New
+  { href: '/accounts', label: 'Accounts Payable', icon: Banknote, roles: ['admin'] }, // Icon changed, label clarified
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
@@ -88,9 +90,8 @@ export default function AppSidebar() {
                     {item.label}
                   </a>
                 </Link>
-              ) : null // Placeholder for non-link items if any, though chat is handled separately
+              ) : null
             ))}
-            {/* Chat Button */}
             {chatNavItem.roles.includes(user.role) && (
               <Button
                 variant="ghost"
