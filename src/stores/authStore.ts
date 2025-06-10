@@ -30,8 +30,6 @@ export const useAuthStore = create<AuthState>()(
         logout: (routerPush) => {
           set({ user: null, isLoading: false });
           // Clear any other session-related non-Zustand state if necessary
-          // For example, if other parts of the app rely on localStorage directly for other things
-          // that should be cleared on logout.
           routerPush('/login');
         },
         setLoading: (loading) => set({ isLoading: loading }),
@@ -50,7 +48,8 @@ export const useAuthStore = create<AuthState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ user: state.user }), // Only persist the user object
       onRehydrateStorage: () => {
-        // This is called after the state has been rehydrated
+        // This is called after the state has been rehydrated from localStorage on the client.
+        // It's a good place to set isLoading to false.
         return (state) => {
           if (state) {
             state.actions.setLoading(false);
@@ -63,9 +62,6 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// This attempts to set isLoading to false once hydration is done.
-// However, relying on ClientAuthInitializer might be more robust for initial app load.
-const unsub = useAuthStore.persist.onFinishHydration(() => {
-  useAuthStore.getState().actions.setLoading(false);
-  unsub(); // Ensure it runs only once
-});
+// Ensure no onFinishHydration listener is present here at the module level,
+// as it was causing SSR issues. The onRehydrateStorage callback and ClientAuthInitializer
+// now handle the post-hydration logic correctly.
