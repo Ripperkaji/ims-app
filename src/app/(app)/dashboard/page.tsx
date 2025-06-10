@@ -3,8 +3,8 @@
 
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { mockSales, mockExpenses, mockProducts, mockLogEntries, addSystemExpense } from "@/lib/data";
-import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, TrendingUp, TrendingDown, Users as UsersIcon, Phone, Briefcase, Flag, AlertCircle, ShieldCheck, Archive, Wallet, Smartphone } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { DollarSign, ShoppingCart, Package, AlertTriangle, BarChart3, Users as UsersIcon, Phone, Briefcase, Flag, AlertCircle, ShieldCheck } from "lucide-react"; // Removed Wallet, Archive
+import { useAuthStore } from '@/stores/authStore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -21,34 +21,34 @@ import { calculateCurrentStock } from "../products/page";
 
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const [triggerRefresh, setTriggerRefresh] = useState(0);
 
 
-  const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
-  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]);
+  const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh]);
+  const totalProducts = useMemo(() => mockProducts.length, []);
 
   const criticalStockCount = useMemo(() => {
     return mockProducts.filter(p => {
       const currentStock = calculateCurrentStock(p, mockSales);
       return currentStock === 1;
     }).length;
-  }, [triggerRefresh, mockProducts, mockSales]);
+  }, [triggerRefresh]);
 
   const outOfStockCount = useMemo(() => {
     return mockProducts.filter(p => {
       const currentStock = calculateCurrentStock(p, mockSales);
       return currentStock === 0;
     }).length;
-  }, [triggerRefresh, mockProducts, mockSales]);
+  }, [triggerRefresh]);
 
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh]);
 
 
   const recentSalesForAdmin = useMemo(() =>
     [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5)
-  , [triggerRefresh, mockSales]);
+  , [triggerRefresh]);
 
   const [saleToFlag, setSaleToFlag] = useState<Sale | null>(null);
   const [recentStaffSales, setRecentStaffSales] = useState<Sale[]>([]);
@@ -64,7 +64,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]);
     }
-  }, [user, triggerRefresh, mockSales]);
+  }, [user, triggerRefresh]);
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -117,16 +117,11 @@ export default function DashboardPage() {
             const productIndex = mockProducts.findIndex(p => p.id === itemDetail.productId);
             if (productIndex !== -1) {
               const product = mockProducts[productIndex];
-              const originalStock = calculateCurrentStock(product, mockSales); // Calculate before changing
+              const originalStock = calculateCurrentStock(product, mockSales); 
               const originalDamage = product.damagedQuantity;
 
               product.damagedQuantity += itemDetail.quantitySold;
-              // Stock is not directly manipulated here; it's calculated.
-              // The sale has already removed stock. Damaging means those sold items are now "damaged" instead of "sold and good".
-              // The impact on *sellable* stock is that it *doesn't* go back up as if it were a return.
-              // The effective stock is reduced because these units are damaged.
-              // The `calculateCurrentStock` will now reflect this increased damage.
-
+              
               const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Sellable Stock (before damage): ${originalStock + itemDetail.quantitySold}, New Sellable Stock (after damage): ${calculateCurrentStock(product, mockSales)}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
 
@@ -174,10 +169,10 @@ export default function DashboardPage() {
     return mockSales
       .filter(sale => isSameDay(new Date(sale.date), todayDate))
       .reduce((sum, sale) => sum + sale.totalAmount, 0);
-  }, [triggerRefresh, mockSales]);
+  }, [triggerRefresh]);
 
 
-  if (!user) return null;
+  if (!user) return null; // Should be handled by layout/initializer, but good for safety
 
   return (
     <div className="space-y-6">
@@ -245,7 +240,7 @@ export default function DashboardPage() {
       </div>
 
       {user.role === 'admin' && (
-        <div className="grid gap-4 md:grid-cols-1"> {/* Changed from md:grid-cols-2 */}
+        <div className="grid gap-4 md:grid-cols-1">
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">Recent Sales</CardTitle>
@@ -453,13 +448,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-function PlaceholderChart() {
-  return (
-    <div className="flex items-center justify-center h-full w-full bg-muted/50 rounded-md p-8">
-      <BarChart3 className="h-16 w-16 text-muted-foreground" />
-      <p className="ml-4 text-muted-foreground">Chart data will be displayed here.</p>
-    </div>
-  )
-}
-

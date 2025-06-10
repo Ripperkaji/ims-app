@@ -2,15 +2,15 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { mockProducts, mockLogEntries, mockSales, addSystemExpense } from "@/lib/data";
-import { useAuth } from "@/contexts/AuthContext";
+import { mockProducts, mockLogEntries, mockSales } from "@/lib/data"; // Removed addSystemExpense
+import { useAuthStore } from "@/stores/authStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, Expense, ResolutionData, AttemptedProductData, Sale } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData, Sale } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
@@ -35,7 +35,7 @@ export const calculateCurrentStock = (product: Product | undefined, allSales: Sa
 };
 
 export default function ProductsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   
   const [productsWithCalculatedStock, setProductsWithCalculatedStock] = useState<Array<Product & { currentDisplayStock: number }>>([]);
@@ -55,7 +55,7 @@ export default function ProductsPage() {
       currentDisplayStock: calculateCurrentStock(p, mockSales)
     })).sort((a,b) => a.name.localeCompare(b.name));
     setProductsWithCalculatedStock(updatedProducts);
-  }, [refreshTrigger, mockProducts, mockSales]);
+  }, [refreshTrigger]);
 
 
   const addLog = (action: string, details: string) => {
@@ -94,7 +94,7 @@ export default function ProductsPage() {
     costPrice: number;
   }) => {
     const productIndexGlobal = mockProducts.findIndex(p => p.id === updatedDetails.id);
-    if (productIndexGlobal !== -1) {
+    if (productIndexGlobal !== -1 && user) {
       const originalProduct = mockProducts[productIndexGlobal];
       
       if (updatedDetails.name.toLowerCase() !== originalProduct.name.toLowerCase()) {
@@ -112,13 +112,13 @@ export default function ProductsPage() {
       
       setRefreshTrigger(prev => prev + 1);
 
-      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user?.name}. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
+      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user.name}. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
       toast({
         title: "Product Updated",
         description: `Details for ${updatedDetails.name} have been successfully updated.`,
       });
     } else {
-      toast({ title: "Error", description: "Could not find product to update.", variant: "destructive"});
+      toast({ title: "Error", description: "Could not find product to update or user not available.", variant: "destructive"});
     }
     setIsEditProductDialogOpen(false);
     setProductToEdit(null);
@@ -143,6 +143,10 @@ export default function ProductsPage() {
       totalAcquisitionCost: number;
     };
   }) => {
+    if (!user) {
+       toast({ title: "Error", description: "User not available.", variant: "destructive"});
+       return;
+    }
     const existingProductByName = mockProducts.find(p => p.name.toLowerCase() === newProductData.name.toLowerCase());
 
     if (existingProductByName) {
@@ -191,7 +195,7 @@ export default function ProductsPage() {
     mockProducts.push(newProduct);
     setRefreshTrigger(prev => prev + 1);
 
-    let logDetails = `Product '${newProduct.name}' added by ${user?.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
+    let logDetails = `Product '${newProduct.name}' added by ${user.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
     if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
     if (firstBatch.totalBatchCost > 0) {
       logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
@@ -209,7 +213,7 @@ export default function ProductsPage() {
   const handleProductConflictResolution = (resolutionData: ResolutionData) => {
     const productIndex = mockProducts.findIndex(p => p.id === resolutionData.existingProductId);
     if (productIndex === -1 || !user) {
-      toast({ title: "Error", description: "Could not find existing product.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not find existing product or user not available.", variant: "destructive" });
       setIsHandleExistingProductDialogOpen(false);
       return;
     }
@@ -376,8 +380,8 @@ export default function ProductsPage() {
                         <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
                         <span className="text-xs font-semibold">
                             Stock: {product.currentDisplayStock}
-                            {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                            {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                            {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                            {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
                         </span>
                         {user.role === 'admin' && (
                             <div 
@@ -418,7 +422,7 @@ export default function ProductsPage() {
                                     role="button"
                                     tabIndex={0}
                                     className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 sm:hidden")}
-                                    onClick={(e) => {
+                                    onClick={() => {
                                         handleOpenEditProductDialog(product.id);
                                     }}
                                     onKeyDown={(e) => {
@@ -468,7 +472,7 @@ export default function ProductsPage() {
                                                 )}
                                             >
                                                 {batch.dueToSupplier > 0 ? "Due" : "Paid"}
-                                                {(batch.dueToSupplier ?? 0) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
+                                                {(batch.dueToSupplier) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
                                             </Badge>
                                             </TooltipTrigger>
                                             <TooltipContent side="top" className="text-xs max-w-xs z-50">
@@ -532,8 +536,8 @@ export default function ProductsPage() {
                         <TableCell>NRP {product.currentSellingPrice.toFixed(2)}</TableCell>
                         <TableCell className="text-center">
                             {product.currentDisplayStock}
-                            {(product.currentDisplayStock ?? 0) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                            {(product.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                            {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                            {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
                         </TableCell>
                         </TableRow>
                     ))}
@@ -579,4 +583,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

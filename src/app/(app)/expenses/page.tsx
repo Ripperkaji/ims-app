@@ -2,8 +2,8 @@
 "use client";
 
 import ExpensesForm from "@/components/expenses/ExpensesForm";
-import EditExpenseDialog from "@/components/expenses/EditExpenseDialog"; // Import the new dialog
-import { useAuth } from "@/contexts/AuthContext";
+import EditExpenseDialog from "@/components/expenses/EditExpenseDialog";
+import { useAuthStore } from "@/stores/authStore";
 import { mockExpenses, mockLogEntries } from "@/lib/data"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,13 +23,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export default function ExpensesPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
@@ -47,8 +46,6 @@ export default function ExpensesPage() {
     return [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [refreshTrigger]); 
 
-  // This useEffect might not be strictly necessary if displayedExpenses dependency on refreshTrigger is enough
-  // but it doesn't hurt for cases where mockExpenses.length might not change but content does.
   useEffect(() => {
     setRefreshTrigger(prev => prev + 1);
   }, [mockExpenses.length]);
@@ -83,7 +80,6 @@ export default function ExpensesPage() {
     };
     
     mockExpenses.unshift(newExpense);
-    // mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sorting is handled by useMemo now
     setRefreshTrigger(prev => prev + 1);
 
     let paymentLogString = `Paid via ${paymentDetails.method}.`;
@@ -106,8 +102,7 @@ export default function ExpensesPage() {
   const openEditExpenseDialog = (expense: Expense) => {
     if (["Product Damage", "Tester Allocation"].includes(expense.category)) {
       toast({ title: "Edit Restricted", description: `System-generated expenses like '${expense.category}' cannot be fully edited here. Their amounts are system-derived.`, variant: "default" });
-      // Allow editing some fields if desired, or completely block
-       setExpenseToEdit(expense); // Still allow opening for viewing or partial edit
+       setExpenseToEdit(expense); 
        setIsEditExpenseDialogOpen(true);
       return;
     }
@@ -148,7 +143,7 @@ export default function ExpensesPage() {
       }
       const deletedExpense = mockExpenses.splice(expenseIndex, 1)[0];
       setRefreshTrigger(prev => prev + 1); 
-      addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${deletedExpense.amount.toFixed(2)}) deleted by ${user?.name || 'Admin'}.`);
+      addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${deletedExpense.amount.toFixed(2)}) deleted by ${user?.name || 'System'}.`);
       toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
     } else {
       toast({ title: "Error", description: "Expense not found for deletion.", variant: "destructive" });

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { mockLogEntries } from "@/lib/data";
 import type { LogEntry } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,11 +23,11 @@ import { cn } from "@/lib/utils";
 const ALL_ACTIONS_VALUE = "__ALL_ACTIONS__";
 
 export default function LogsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [allLogs] = useState<LogEntry[]>(mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+  const [allLogs] = useState<LogEntry[]>(() => [...mockLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
   const [filteredLogEntries, setFilteredLogEntries] = useState<LogEntry[]>(allLogs);
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
@@ -110,8 +110,6 @@ export default function LogsPage() {
       return '';
     }
     const stringData = String(cellData);
-    // If the data contains a comma, newline, or double quote, wrap it in double quotes
-    // and escape any existing double quotes by doubling them (e.g., " becomes "")
     if (stringData.includes(',') || stringData.includes('\n') || stringData.includes('"')) {
       return `"${stringData.replace(/"/g, '""')}"`;
     }
@@ -132,7 +130,7 @@ export default function LogsPage() {
 
     const headers = ['ID', 'Timestamp', 'User', 'Action', 'Details'];
     const csvRows = [
-      headers.join(','), // Header row
+      headers.join(','), 
       ...dataToExport.map(log => [
         escapeCsvCell(log.id),
         escapeCsvCell(format(parseISO(log.timestamp), 'yyyy-MM-dd HH:mm:ss')),
@@ -143,7 +141,7 @@ export default function LogsPage() {
     ];
 
     const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' }); // Added BOM for Excel
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -365,10 +363,8 @@ export default function LogsPage() {
   );
 }
 
-// Helper Label component if not already globally available or for local styling
 const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: React.ReactNode, className?: string }) => (
   <label htmlFor={htmlFor} className={cn("text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70", className)}>
     {children}
   </label>
 );
-

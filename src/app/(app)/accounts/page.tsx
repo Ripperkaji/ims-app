@@ -2,15 +2,15 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark } from "lucide-react"; // Changed Users to Banknote
+import { Banknote, Landmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { mockLogEntries, mockProducts } from "@/lib/data";
-import type { LogEntry, AcquisitionPaymentMethod, ManagedUser, UserRole } from "@/types";
+import type { AcquisitionPaymentMethod } from "@/types";
 import { format } from 'date-fns';
 
 type PayableType = 'supplier' | 'expense' | '';
@@ -41,7 +41,7 @@ interface ExpenseDueItem {
 }
 
 export default function AccountsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
@@ -157,7 +157,7 @@ export default function AccountsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-          <Banknote className="h-7 w-7 text-primary" /> Accounts Payable
+          <Banknote className="h-7 w-7 text-primary" /> Accounts
         </h1>
       </div>
 

@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { KeyRound, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { mockLogEntries } from '@/lib/data'; // For addLog
+import { mockLogEntries } from '@/lib/data'; 
 import type { LogEntry } from '@/types';
 
 export default function AdminAccountSettingsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -53,8 +53,7 @@ export default function AdminAccountSettingsPage() {
     e.preventDefault();
     if (!user) return;
 
-    // Mock current password check
-    const MOCK_ADMIN_DEFAULT_PASSWORD = "12345"; // As per previous requirements
+    const MOCK_ADMIN_DEFAULT_PASSWORD = "12345"; 
     if (currentPassword !== MOCK_ADMIN_DEFAULT_PASSWORD) {
       toast({ title: "Error", description: "Current password incorrect.", variant: "destructive" });
       return;
@@ -75,12 +74,10 @@ export default function AdminAccountSettingsPage() {
       return;
     }
 
-    // Simulate password change
     console.log(`Admin ${user.name} 'changed' password from '${currentPassword}' to '${newPassword}'`);
     addLog("Admin Password Changed", `Admin ${user.name} updated their password.`);
     toast({ title: "Success", description: "Password changed successfully (simulated)." });
 
-    // Clear fields
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');

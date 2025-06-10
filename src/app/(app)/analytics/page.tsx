@@ -1,16 +1,16 @@
 
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data"; // Added mockLogEntries
+import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data"; 
 import type { Sale } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from "recharts"; // Removed LineChart, Line
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -22,7 +22,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getDate, getMonth, getYear, isSameDay, getDaysInMonth } from "date-fns";
+import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getMonth, getYear, getDaysInMonth, isSameDay } from "date-fns"; // Removed getDate
 
 interface DailyComparisonRow {
   currentMonthDateDisplay: string;
@@ -32,7 +32,7 @@ interface DailyComparisonRow {
 }
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -43,8 +43,8 @@ export default function AnalyticsPage() {
     }
   }, [user, router, toast]);
 
-  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), [mockSales]);
-  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), [mockExpenses]);
+  const totalSalesAmount = useMemo(() => mockSales.reduce((sum, sale) => sum + sale.totalAmount, 0), []);
+  const totalExpensesAmount = useMemo(() => mockExpenses.reduce((sum, expense) => sum + expense.amount, 0), []);
   const netProfit = useMemo(() => totalSalesAmount - totalExpensesAmount, [totalSalesAmount, totalExpensesAmount]);
 
   const currentStockValuation = useMemo(() => {
@@ -59,9 +59,8 @@ export default function AnalyticsPage() {
       const valuationForProduct = currentStock * product.currentCostPrice;
       return sum + (isNaN(valuationForProduct) ? 0 : valuationForProduct);
     }, 0);
-  }, [mockProducts, mockSales]);
+  }, []);
 
-  // Calculate totalSupplierDue
   const supplierDueItems: Array<{ dueAmount: number }> = [];
   mockProducts.forEach(product => {
     product.acquisitionHistory.forEach(batch => {
@@ -72,7 +71,6 @@ export default function AnalyticsPage() {
   });
   const totalSupplierDue = supplierDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
 
-  // Calculate totalExpenseDue
   const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
   const calculatedExpenseDueItems: Array<{ dueAmount: number }> = [];
   expenseDueExpenseRecordedLogs.forEach(log => {
@@ -98,12 +96,9 @@ export default function AnalyticsPage() {
     }
   });
   const totalExpenseDue = calculatedExpenseDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
-
   const totalAccountPayableAmount = totalSupplierDue + totalExpenseDue;
 
-
-  // Calculate categorySalesData directly on each render to ensure freshness
-  const categorySalesData = (() => {
+  const categorySalesData = useMemo(() => {
     const salesByCategory: { [category: string]: number } = {};
     mockSales.forEach(sale => {
       sale.items.forEach(item => {
@@ -115,9 +110,9 @@ export default function AnalyticsPage() {
     });
     return Object.entries(salesByCategory)
       .map(([name, value]) => ({ name, value }))
-      .filter(entry => entry.value > 0) // Ensure only categories with sales > 0 are included
+      .filter(entry => entry.value > 0) 
       .sort((a, b) => b.value - a.value);
-  })();
+  }, []);
 
   const categoryChartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -128,10 +123,8 @@ export default function AnalyticsPage() {
 
     categorySalesData.forEach((categoryData, index) => {
       const hue = (baseHue + index * hueStep) % 360;
-      let label: React.ReactNode = categoryData.name;
-      
       config[categoryData.name] = {
-        label: label,
+        label: categoryData.name,
         color: `hsl(${hue}, ${saturation}%, ${lightness}%)`,
       };
     });
@@ -157,17 +150,16 @@ export default function AnalyticsPage() {
       monthsData.push({ name: monthName, totalSales: monthlyTotal });
     }
     return monthsData;
-  }, [mockSales]);
+  }, []);
 
   const monthlySalesChartConfig = {
-    totalSales: { // This config remains for tooltip or potential legend label. Individual bar colors are set by <Cell>.
+    totalSales: { 
       label: "Sales",
-      // color: "hsl(var(--chart-1))", // Main color definition for the series, overridden by Cells below.
     },
   } satisfies ChartConfig;
 
 
-  const monthToDateSalesTableData: DailyComparisonRow[] = (() => {
+  const monthToDateSalesTableData: DailyComparisonRow[] = useMemo(() => {
     const tableData: DailyComparisonRow[] = [];
     const today = new Date(); 
     const currentMonth = getMonth(today);
@@ -204,7 +196,7 @@ export default function AnalyticsPage() {
       });
     }
     return tableData;
-  })();
+  }, []);
 
 
   if (!user || user.role !== 'admin') {
@@ -371,4 +363,3 @@ export default function AnalyticsPage() {
     </div>
   );
 }
-

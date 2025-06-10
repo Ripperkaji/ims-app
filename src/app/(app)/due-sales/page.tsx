@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { mockSales, mockLogEntries, mockProducts } from "@/lib/data";
 import type { Sale, Product, LogEntry, SaleItem } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -26,12 +26,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { calculateCurrentStock } from "../products/page"; // Import calculateCurrentStock
+import { calculateCurrentStock } from "../products/page";
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
 export default function DueSalesPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -64,7 +64,7 @@ export default function DueSalesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
   const openMarkAsPaidDialog = (sale: Sale) => {
@@ -125,7 +125,6 @@ export default function DueSalesPage() {
     }
     const originalSale = mockSales[originalSaleIndex];
 
-    // Validate stock for new/adjusted items
     let stockSufficient = true;
     for (const newItem of updatedSaleDataFromDialog.items) {
       const product = mockProducts.find(p => p.id === newItem.productId);
@@ -133,7 +132,6 @@ export default function DueSalesPage() {
         const originalItem = originalSale.items.find(oi => oi.productId === newItem.productId);
         const originalQuantityInThisSale = originalItem ? originalItem.quantity : 0;
         
-        // Calculate stock as if the original sale items were returned
         const currentStockWithOriginalSale = calculateCurrentStock(product, mockSales);
         const availableStockForAdjustment = currentStockWithOriginalSale + originalQuantityInThisSale;
 
@@ -150,13 +148,10 @@ export default function DueSalesPage() {
     }
 
     if (!stockSufficient) {
-      setSaleToAdjust(null); // Close dialog
-      return; // Stop processing
+      setSaleToAdjust(null); 
+      return; 
     }
     
-    // If stock is sufficient, proceed to update the sale
-    // No direct stock manipulation here; changes to sale items list will reflect in future calculateCurrentStock calls.
-
     let finalFlaggedComment = originalSale.flaggedComment || "";
     if (adjustmentComment.trim()) {
         finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + 
@@ -324,8 +319,3 @@ export default function DueSalesPage() {
   );
 }
     
-
-    
-
-
-

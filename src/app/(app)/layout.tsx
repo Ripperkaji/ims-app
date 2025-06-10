@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/authStore';
+import { useRouter } from 'next/navigation'; // Keep for potential direct usage if needed
 import { Loader2 } from 'lucide-react';
 
 export default function AppLayout({
@@ -12,19 +13,35 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const { user, isLoading } = useAuthStore();
+  const router = useRouter(); // Keep router instance for clarity or future direct use
 
+  // The primary redirection logic is now in ClientAuthInitializer.
+  // This useEffect is a safeguard for the app layout itself.
   useEffect(() => {
     if (!isLoading && !user) {
+      // This should ideally not be hit if ClientAuthInitializer works correctly,
+      // but acts as a failsafe for direct navigation to protected layout.
       router.push('/login');
     }
   }, [user, isLoading, router]);
 
-  if (isLoading || !user) {
+  if (isLoading && !user) { // Show loader if actively loading and no user yet
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    // If still no user after loading (e.g. auth failed or cleared),
+    // and redirection hasn't happened, show loader or minimal content
+    // to prevent flashing protected UI. ClientAuthInitializer should handle redirection.
+     return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+         <p className="ml-2">Redirecting...</p>
       </div>
     );
   }

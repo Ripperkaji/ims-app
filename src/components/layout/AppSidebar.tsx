@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -15,7 +15,6 @@ import {
   UserCog,
   Banknote,
   FileText,
-  Settings,
   AlertTriangle,
   Zap,
   FlaskConical,
@@ -46,12 +45,11 @@ const navItems: NavItem[] = [
   { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
-  // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },
 ];
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   if (!user) return null;

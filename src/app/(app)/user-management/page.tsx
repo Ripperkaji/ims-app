@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { UserCog, UserPlus, Edit, Trash2 } from "lucide-react"; // Added Trash2
+import { UserCog, UserPlus, Edit, Trash2 } from "lucide-react"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { mockManagedUsers, addManagedUser, editManagedUser, deleteManagedUser } from "@/lib/data"; // Added deleteManagedUser
+import { mockManagedUsers, addManagedUser, editManagedUser, deleteManagedUser } from "@/lib/data"; 
 import type { ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
 import AddUserDialog from '@/components/accounts/AddUserDialog';
@@ -23,10 +23,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Import AlertDialog components
+} from "@/components/ui/alert-dialog"; 
 
 export default function UserManagementPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -35,8 +35,8 @@ export default function UserManagementPage() {
   const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null);
   const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>([]);
 
-  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null); // State for user to delete
-  const [isDeleteUserConfirmationDialogOpen, setIsDeleteUserConfirmationDialogOpen] = useState(false); // State for delete confirmation dialog
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null); 
+  const [isDeleteUserConfirmationDialogOpen, setIsDeleteUserConfirmationDialogOpen] = useState(false); 
 
   useEffect(() => {
     setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -56,7 +56,7 @@ export default function UserManagementPage() {
 
   const handleUserAdded = (name: string, role: UserRole, defaultPassword: string) => {
     if (!user) return;
-    const newUser = addManagedUser(name, 'staff', defaultPassword, user.name);
+    const newUser = addManagedUser(name, 'staff', defaultPassword, user.name); // Role is fixed to staff here
     if (newUser) {
       setManagedUsersList(prevUsers => [...prevUsers, newUser].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       toast({

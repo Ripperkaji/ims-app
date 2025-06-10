@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from "@/contexts/AuthContext";
-import { mockProducts, mockLogEntries, addSystemExpense, mockSales } from "@/lib/data"; // Added mockSales
+import { useAuthStore } from "@/stores/authStore";
+import { mockProducts, mockLogEntries, addSystemExpense, mockSales } from "@/lib/data"; 
 import type { Product, LogEntry, ProductType, Expense } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -12,23 +12,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FlaskConical, Edit, Save, Info } from "lucide-react";
+import { FlaskConical, Save, Info } from "lucide-react"; // Removed Edit
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { calculateCurrentStock } from '@/app/(app)/products/page'; // Import calculateCurrentStock
+import { calculateCurrentStock } from '@/app/(app)/products/page'; 
 
 interface ProductForTesterCard extends Product {
-  stock: number; // This will hold the calculated stock
+  stock: number; 
 }
 
-// Component to display current stock and tester info for selected product in the card
 const ProductInfoDisplay = ({ productId }: { productId: string | null }) => {
     const productDetails = productId ? mockProducts.find(p => p.id === productId) : null;
     if (!productDetails) {
         return <p className="text-sm text-muted-foreground h-10 flex items-center">Select a product to see details.</p>;
     }
-    const currentStock = calculateCurrentStock(productDetails, mockSales); // Calculate stock here
+    const currentStock = calculateCurrentStock(productDetails, mockSales); 
     return (
         <div className="text-sm space-y-1 h-10">
             <p>Current Sellable Stock: <span className="font-semibold">{currentStock}</span></p>
@@ -37,12 +36,11 @@ const ProductInfoDisplay = ({ productId }: { productId: string | null }) => {
     );
 };
 
-// Component for Product Selection Dropdown
 const ProductSelect = ({
   selectedCategory,
   selectedValue,
   onChange,
-  products, // This will be ProductForTesterCard[] which includes calculated stock
+  products, 
   disabled,
 }: {
   selectedCategory: ProductType | '';
@@ -69,7 +67,7 @@ const ProductSelect = ({
       </SelectTrigger>
       <SelectContent>
         {filteredProducts.length > 0 ? (
-          filteredProducts.map(p => ( // p here is ProductForTesterCard, so p.stock is the calculated one
+          filteredProducts.map(p => ( 
             <SelectItem key={p.id} value={p.id} disabled={p.stock <= 0 && (p.testerQuantity || 0) <= 0 && p.id !== selectedValue}>
               {p.name} (Stock: {p.stock}, Testers: {p.testerQuantity || 0})
             </SelectItem>
@@ -86,7 +84,7 @@ const ProductSelect = ({
 
 
 export default function TestersPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -95,7 +93,7 @@ export default function TestersPage() {
   const [newTesterQuantityInput, setNewTesterQuantityInput] = useState<string>('');
   
   const [productsForTesterAssignmentCard, setProductsForTesterAssignmentCard] = useState<ProductForTesterCard[]>([]);
-  const [productsWithTestersList, setProductsWithTestersList] = useState<ProductForTesterCard[]>([]); // Changed type
+  const [productsWithTestersList, setProductsWithTestersList] = useState<ProductForTesterCard[]>([]); 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
 
@@ -138,7 +136,7 @@ export default function TestersPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
   const handleCategoryChangeForTesterCard = (category: ProductType | '') => {
@@ -170,7 +168,7 @@ export default function TestersPage() {
     
     const currentProductGlobal = mockProducts[productGlobalIndex];
     const oldTesterQty = currentProductGlobal.testerQuantity || 0;
-    const oldStock = calculateCurrentStock(currentProductGlobal, mockSales); // Calculate old stock
+    const oldStock = calculateCurrentStock(currentProductGlobal, mockSales); 
 
     const newDesiredTesterQty = parseInt(newTesterQuantityInput.trim(), 10);
 
@@ -181,12 +179,11 @@ export default function TestersPage() {
 
     if (newDesiredTesterQty === oldTesterQty) {
       toast({ title: "No Change", description: `Tester quantity for ${currentProductGlobal.name} is already ${oldTesterQty}.`, variant: "default" });
-      // No need to reset form here, as it might be confusing if user just wanted to verify
       return;
     }
 
     const deltaTesters = newDesiredTesterQty - oldTesterQty;
-    let newStockAfterUpdate; // To be calculated for logging
+    let newStockAfterUpdate; 
 
     if (deltaTesters > 0) { 
       if (oldStock < deltaTesters) {
@@ -199,7 +196,6 @@ export default function TestersPage() {
         setNewTesterQuantityInput(oldTesterQty.toString()); 
         return;
       }
-      // Stock is not directly manipulated. Change in testers affects calculated stock.
       
       const testerExpense: Omit<Expense, 'id'> = {
         date: new Date().toISOString(),
@@ -218,7 +214,7 @@ export default function TestersPage() {
         description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Sellable stock is now ${newStockAfterUpdate}. Expense of NRP ${(deltaTesters * currentProductGlobal.currentCostPrice).toFixed(2)} logged.`,
       });
 
-    } else { // Decreasing testers
+    } else { 
       mockProducts[productGlobalIndex].testerQuantity = newDesiredTesterQty;
       newStockAfterUpdate = calculateCurrentStock(mockProducts[productGlobalIndex], mockSales);
       toast({
@@ -234,7 +230,6 @@ export default function TestersPage() {
     
     setRefreshTrigger(prev => prev + 1); 
     
-    // Reset form fields after successful update
     setSelectedCategoryForTester('');
     setSelectedProductForTester(null);
     setNewTesterQuantityInput('');
@@ -281,7 +276,7 @@ export default function TestersPage() {
                 selectedCategory={selectedCategoryForTester}
                 selectedValue={selectedProductForTester}
                 onChange={handleProductChangeForTesterCard}
-                products={productsForTesterAssignmentCard} // This list has calculated stock
+                products={productsForTesterAssignmentCard} 
                 disabled={!selectedCategoryForTester}
               />
             </div>
@@ -342,7 +337,7 @@ export default function TestersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {productsWithTestersList.map((product) => ( // product here is ProductForTesterCard
+              {productsWithTestersList.map((product) => ( 
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>{product.category}</TableCell>

@@ -1,16 +1,17 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 import type { UserRole } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Eye, EyeOff, LogIn, UserCircle, Zap, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, LogIn, UserCircle, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 interface LoginFormProps {
   role: UserRole;
@@ -18,12 +19,13 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
-  const [internalUsername, setInternalUsername] = useState(''); // For staff or general admin input
+  const [internalUsername, setInternalUsername] = useState('');
   const [selectedAdminUsername, setSelectedAdminUsername] = useState<string | null>(null);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const { login } = useAuth();
+  const { actions } = useAuthStore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const fixedAdminPasswords: Record<string, string> = {
     "NPS": "12345",
@@ -43,12 +45,8 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
       }
       finalUsername = selectedAdminUsername;
       expectedPassword = fixedAdminPasswords[selectedAdminUsername];
-    } else { // staff
+    } else { 
       finalUsername = internalUsername;
-      // For staff, password validation would typically happen against a stored (hashed) password.
-      // For this mock, we'll allow any password if the username is recognized by AuthContext's simulated login.
-      // Or, if you want to enforce a mock staff password:
-      // expectedPassword = "staffpassword"; // Example
     }
 
     if (!finalUsername) {
@@ -60,21 +58,23 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
       return;
     }
 
-    // Simulated authentication
     if (role === 'admin' && password !== expectedPassword) {
       toast({ title: "Login Failed", description: "Incorrect password for admin.", variant: "destructive" });
       return;
     }
-    // For staff, the AuthContext's login function might handle its own simple validation,
-    // or you could add a check here if you had a list of staff and their (mock) passwords.
-
-    login(role, finalUsername); // AuthContext's login now just takes role and name
+    
+    // For staff, AuthContext's login function would handle its own simple validation
+    // For this mock, if it's a staff role and not an admin, we proceed.
+    // The actual validation of staff username/password would happen in a real backend.
+    // For now, we allow any staff username if the role is 'staff'.
+    
+    actions.login(role, finalUsername, router.push); 
     toast({ title: "Login Successful", description: `Welcome back, ${finalUsername}!`,});
   };
 
   const handleAdminUsernameSelect = (adminName: string) => {
     setSelectedAdminUsername(adminName);
-    setPassword(''); // Clear password when admin changes
+    setPassword(''); 
   };
 
   return (

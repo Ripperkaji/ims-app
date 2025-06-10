@@ -1,11 +1,8 @@
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import './globals.css';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { Toaster } from '@/components/ui/toaster';
 
-// If you directly use google fonts link in <head>, no need to import from next/font
-// const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+import type { Metadata } from 'next';
+import './globals.css';
+import { Toaster } from '@/components/ui/toaster';
+import ClientAuthInitializer from '@/components/auth/ClientAuthInitializer';
 
 export const metadata: Metadata = {
   title: 'VapeTrack',
@@ -25,10 +22,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <AuthProvider>
+        <ClientAuthInitializer>
           {children}
-          <Toaster />
-        </AuthProvider>
+        </ClientAuthInitializer>
+        <Toaster />
       </body>
     </html>
   );

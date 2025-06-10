@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"; // Removed DialogClose
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, MessageSquare } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import { sendMessage, getMessagesSubscription } from '@/lib/chatService';
 import type { ChatMessage } from '@/types';
 import ChatMessageItem from './ChatMessageItem';
@@ -19,24 +19,30 @@ interface LiveChatDialogProps {
 }
 
 export default function LiveChatDialog({ isOpen, onOpenChange }: LiveChatDialogProps) {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isOpen || !user) return;
+    if (!isOpen || !user) {
+      setMessages([]); // Clear messages if dialog is closed or no user
+      return;
+    }
 
     const unsubscribe = getMessagesSubscription((newMessages) => {
       setMessages(newMessages);
     });
 
-    return () => unsubscribe(); // Cleanup subscription on unmount or when dialog closes
+    return () => {
+      if (unsubscribe) {
+        unsubscribe(); 
+      }
+    };
   }, [isOpen, user]);
 
   useEffect(() => {
-    // Scroll to bottom when messages change
     if (scrollAreaRef.current) {
       const scrollableViewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
       if (scrollableViewport) {

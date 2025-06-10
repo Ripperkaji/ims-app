@@ -2,9 +2,9 @@
 "use client";
 
 import SalesEntryForm from "@/components/sales/SalesEntryForm";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuthStore } from "@/stores/authStore";
 import { mockSales, mockLogEntries, mockProducts } from "@/lib/data"; 
-import type { Sale, LogEntry, Product, SaleItem } from "@/types"; 
+import type { Sale, LogEntry, SaleItem } from "@/types"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Eye, Trash2, Phone, Flag, AlertTriangle, ShieldCheck, Landmark, Edit3, CalendarIcon, ListFilter, X, Filter as FilterIcon } from "lucide-react";
+import { Eye, Trash2, Phone, Flag, AlertTriangle, ShieldCheck, Edit3, CalendarIcon, ListFilter, X, Filter as FilterIcon } from "lucide-react"; // Removed Landmark
 import { format, startOfDay, endOfDay, isValid, parse } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -32,7 +32,7 @@ import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
 import { cn } from "@/lib/utils";
-import { calculateCurrentStock } from "../products/page"; // Import calculateCurrentStock
+import { calculateCurrentStock } from "../products/page";
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
@@ -52,10 +52,10 @@ const getPaymentSummary = (sale: Sale): string => {
 
 
 export default function SalesPage() {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   
-  const [allSalesData, setAllSalesData] = useState<Sale[]>(
+  const [allSalesData, setAllSalesData] = useState<Sale[]>(() =>
     [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   );
   const [displayedSales, setDisplayedSales] = useState<Sale[]>(allSalesData);
@@ -64,9 +64,8 @@ export default function SalesPage() {
   const [deleteReason, setDeleteReason] = useState<string>("");
   const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
 
-  // Filter states
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
-  const [filterMonthYear, setFilterMonthYear] = useState<string>(ALL_MONTHS_FILTER_VALUE); // YYYY-MM
+  const [filterMonthYear, setFilterMonthYear] = useState<string>(ALL_MONTHS_FILTER_VALUE); 
   const [filterStatus, setFilterStatus] = useState<FilterStatusType>('all');
   const [filterCommentText, setFilterCommentText] = useState<string>('');
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
@@ -78,7 +77,7 @@ export default function SalesPage() {
     allSalesData.forEach(sale => {
       months.add(format(new Date(sale.date), 'yyyy-MM'));
     });
-    return Array.from(months).sort((a, b) => b.localeCompare(a)); // Sort descending
+    return Array.from(months).sort((a, b) => b.localeCompare(a)); 
   }, [allSalesData]);
 
   useEffect(() => {
@@ -87,11 +86,10 @@ export default function SalesPage() {
     if (!isFilterActive) {
       setDisplayedSales(sortedMockSales);
     } else {
-      // If filters are active, re-apply them with the potentially updated allSalesData
       applyFilters(sortedMockSales);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [mockSales.length]); // Re-run if the underlying mockSales length changes (e.g. a sale is added/deleted elsewhere)
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -103,7 +101,7 @@ export default function SalesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   };
 
   const handleOpenAdjustDialog = (saleId: string) => {
@@ -137,7 +135,6 @@ export default function SalesPage() {
     const originalSale = mockSales[originalSaleIndex];
     const wasInitiallyFlagged = originalSale.isFlagged;
 
-    // Validate stock for new/adjusted items
     let stockSufficient = true;
     for (const newItem of updatedSaleDataFromDialog.items) {
       const product = mockProducts.find(p => p.id === newItem.productId);
@@ -161,11 +158,10 @@ export default function SalesPage() {
     }
 
     if (!stockSufficient) {
-      setSaleToAdjust(null); // Close dialog
-      return; // Stop processing
+      setSaleToAdjust(null); 
+      return; 
     }
     
-    // If stock is sufficient, proceed
     let finalFlaggedComment = originalSale.flaggedComment || "";
     if (wasInitiallyFlagged) {
         finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
@@ -226,9 +222,6 @@ export default function SalesPage() {
       });
       return;
     }
-
-    // Stock reversion for deleted sale items is implicitly handled
-    // by removing the sale from mockSales. calculateCurrentStock will then be accurate.
 
     addLog(
         "Sale Deleted", 
@@ -344,7 +337,6 @@ export default function SalesPage() {
     );
   }
 
-  // Admin View
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold font-headline">Sales Management</h1>
@@ -709,6 +701,3 @@ export default function SalesPage() {
   );
 }
     
-
-
-
