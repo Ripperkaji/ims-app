@@ -5,15 +5,25 @@ import { useEffect, useState } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { UserCog, UserPlus, Edit } from "lucide-react";
+import { UserCog, UserPlus, Edit, Trash2 } from "lucide-react"; // Added Trash2
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { mockManagedUsers, addManagedUser, editManagedUser } from "@/lib/data"; // Added editManagedUser
+import { mockManagedUsers, addManagedUser, editManagedUser, deleteManagedUser } from "@/lib/data"; // Added deleteManagedUser
 import type { ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
 import AddUserDialog from '@/components/accounts/AddUserDialog';
-import EditUserDialog from '@/components/accounts/EditUserDialog'; // Import EditUserDialog
+import EditUserDialog from '@/components/accounts/EditUserDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"; // Import AlertDialog components
 
 export default function UserManagementPage() {
   const { user } = useAuth();
@@ -21,12 +31,14 @@ export default function UserManagementPage() {
   const { toast } = useToast();
   
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
-  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false); // State for edit dialog
-  const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null); // State for user being edited
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null);
   const [managedUsersList, setManagedUsersList] = useState<ManagedUser[]>([]);
 
+  const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null); // State for user to delete
+  const [isDeleteUserConfirmationDialogOpen, setIsDeleteUserConfirmationDialogOpen] = useState(false); // State for delete confirmation dialog
+
   useEffect(() => {
-    // Initial load and sort
     setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
   }, []);
 
@@ -89,6 +101,32 @@ export default function UserManagementPage() {
     setUserToEdit(null);
   };
 
+  const handleOpenDeleteConfirmationDialog = (staffUser: ManagedUser) => {
+    setUserToDelete(staffUser);
+    setIsDeleteUserConfirmationDialogOpen(true);
+  };
+
+  const handleConfirmDeleteUser = () => {
+    if (!userToDelete || !user) return;
+
+    const deletedUser = deleteManagedUser(userToDelete.id, user.name);
+    if (deletedUser) {
+      setManagedUsersList(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+      toast({
+        title: "Staff User Deleted",
+        description: `Staff user '${deletedUser.name}' has been successfully deleted.`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to delete staff user. The user might not exist or cannot be deleted.",
+        variant: "destructive",
+      });
+    }
+    setIsDeleteUserConfirmationDialogOpen(false);
+    setUserToDelete(null);
+  };
+
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -111,7 +149,7 @@ export default function UserManagementPage() {
               <UserCog className="h-5 w-5 text-primary" /> Manage Staff Users
             </CardTitle>
             <CardDescription>
-              View, add, or edit staff users. Admins are fixed and cannot be managed here.
+              View, add, edit, or delete staff users. Admins are fixed and cannot be managed here.
             </CardDescription>
           </div>
           <Button onClick={() => setIsAddUserDialogOpen(true)}>
@@ -135,9 +173,12 @@ export default function UserManagementPage() {
                     <TableCell className="font-medium">{managedStaffUser.name}</TableCell>
                     <TableCell className="capitalize">{managedStaffUser.role}</TableCell>
                     <TableCell>{format(new Date(managedStaffUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-2">
                       <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(managedStaffUser)}>
                         <Edit className="mr-2 h-3.5 w-3.5" /> Edit
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirmationDialog(managedStaffUser)}>
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -165,6 +206,26 @@ export default function UserManagementPage() {
           userToEdit={userToEdit}
           onUserEdited={handleUserEdited}
         />
+      )}
+
+      {isDeleteUserConfirmationDialogOpen && userToDelete && (
+        <AlertDialog open={isDeleteUserConfirmationDialogOpen} onOpenChange={setIsDeleteUserConfirmationDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Staff User Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the staff user "<strong>{userToDelete.name}</strong>"? 
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {setIsDeleteUserConfirmationDialogOpen(false); setUserToDelete(null);}}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteUser} className="bg-destructive hover:bg-destructive/90">
+                Confirm Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

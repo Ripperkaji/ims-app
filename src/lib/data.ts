@@ -189,7 +189,7 @@ const initialMockLogEntries: LogEntry[] = [
    {
     id: 'log0',
     timestamp: formatISO(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 10*60*1000)),
-    user: 'NPS', // Changed from admin_user
+    user: 'NPS',
     action: 'Sale Created',
     details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 45.98. Payment: Hybrid (Cash: 20.00, Digital: 15.98, Due: 10.00). Status: Due. Origin: store.'
   },
@@ -294,9 +294,9 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export const mockExpenses: Expense[] = [
-  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'NPS' }, // Changed from admin_user
-  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'NPS' }, // Changed from admin_user
-  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'SKG' }, // Changed from admin_user
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'NPS' },
+  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'NPS' },
+  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'SKG' },
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
@@ -312,10 +312,7 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
   return newExpense;
 }
 
-// Mock User Management Data
-// The two fixed admins "NPS" and "SKG" are not part of this list as they cannot be managed.
-// This list is for staff users added by admins.
-export const mockManagedUsers: ManagedUser[] = [
+export let mockManagedUsers: ManagedUser[] = [
   { id: 'user-staff-01', name: 'staff_user', role: 'staff', defaultPassword: 'password123', createdAt: formatISO(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)) },
   { id: 'user-staff-02', name: 'alice', role: 'staff', defaultPassword: 'password456', createdAt: formatISO(new Date(Date.now() - 85 * 24 * 60 * 60 * 1000)) },
 ];
@@ -369,4 +366,33 @@ export const editManagedUser = (userId: string, newName: string, editedBy: strin
   mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   
   return mockManagedUsers[userIndex];
+};
+
+export const deleteManagedUser = (userId: string, deletedBy: string): ManagedUser | null => {
+  const userIndex = mockManagedUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    return null;
+  }
+  
+  const deletedUser = mockManagedUsers[userIndex];
+
+  // Prevent deletion of 'admin' role users from this managed list, even if one somehow got there
+  if (deletedUser.role === 'admin') {
+    console.warn(`Attempted to delete an admin role user '${deletedUser.name}' via deleteManagedUser. Admins cannot be deleted this way.`);
+    return null;
+  }
+
+  mockManagedUsers.splice(userIndex, 1); // Remove the user from the array
+
+  const logEntry: LogEntry = {
+    id: `log-user-delete-${userId}`,
+    timestamp: formatISO(new Date()),
+    user: deletedBy,
+    action: 'User Deleted',
+    details: `Staff User '${deletedUser.name}' (ID: ${userId.substring(0,8)}...) deleted by ${deletedBy}.`,
+  };
+  mockLogEntries.unshift(logEntry);
+  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  
+  return deletedUser;
 };
