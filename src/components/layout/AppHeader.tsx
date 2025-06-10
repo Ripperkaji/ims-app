@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, UserCircle, ChevronsLeftRight, Users, UserCog, Banknote } from 'lucide-react'; // Added UserCog, Banknote
+import { LogOut, UserCircle, ChevronsLeftRight, Users, UserCog, Banknote, Settings2 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
 import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical, AlertOctagon, BarChart3 } from 'lucide-react';
@@ -105,6 +105,14 @@ export default function AppHeader() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {user.role === 'admin' && (
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link href="/admin/account-settings">
+                <Settings2 className="mr-2 h-4 w-4" />
+                Manage Account
+              </Link>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={logout} className="cursor-pointer">
             <LogOut className="mr-2 h-4 w-4" />
             Sign Out
