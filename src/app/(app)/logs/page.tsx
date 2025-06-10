@@ -11,8 +11,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Download, Filter, CalendarIcon, ListFilter, X } from "lucide-react";
-import { format, startOfDay, endOfDay, isValid } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Download, Filter, CalendarIcon, ListFilter, X, Info } from "lucide-react";
+import { format, startOfDay, endOfDay, isValid, parseISO } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from "next/navigation";
@@ -32,6 +34,9 @@ export default function LogsPage() {
   const [selectedAction, setSelectedAction] = useState<string>(ALL_ACTIONS_VALUE);
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState<boolean>(false);
+
+  const [selectedLogForDetails, setSelectedLogForDetails] = useState<LogEntry | null>(null);
+  const [isLogDetailsDialogOpen, setIsLogDetailsDialogOpen] = useState<boolean>(false);
 
   const availableActions = useMemo(() => {
     const actions = new Set(allLogs.map(log => log.action));
@@ -106,6 +111,16 @@ export default function LogsPage() {
       title: "Feature Coming Soon", 
       description: `Exporting ${type === 'filtered' && isFilterActive ? 'filtered' : 'all'} ${dataToExport.length} logs to spreadsheet is not yet implemented.` 
     });
+  };
+
+  const handleOpenLogDetails = (log: LogEntry) => {
+    setSelectedLogForDetails(log);
+    setIsLogDetailsDialogOpen(true);
+  };
+
+  const handleCloseLogDetails = () => {
+    setSelectedLogForDetails(null);
+    setIsLogDetailsDialogOpen(false);
   };
 
   if (!user || user.role !== 'admin') {
@@ -227,7 +242,7 @@ export default function LogsPage() {
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>System & User Activity</CardTitle>
-          <CardDescription>Chronological record of actions and modifications within the system.</CardDescription>
+          <CardDescription>Chronological record of actions and modifications within the system. Click a row for details.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -241,7 +256,11 @@ export default function LogsPage() {
             </TableHeader>
             <TableBody>
               {filteredLogEntries.map((log) => (
-                <TableRow key={log.id}>
+                <TableRow 
+                  key={log.id} 
+                  onClick={() => handleOpenLogDetails(log)}
+                  className="cursor-pointer hover:bg-muted/50"
+                >
                   <TableCell>{format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm:ss')}</TableCell>
                   <TableCell className="font-medium">{log.user}</TableCell>
                   <TableCell>{log.action}</TableCell>
@@ -257,6 +276,43 @@ export default function LogsPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedLogForDetails && (
+        <Dialog open={isLogDetailsDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleCloseLogDetails(); }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-primary" /> Log Entry Details
+              </DialogTitle>
+              <DialogDescription>
+                Complete information for log ID: {selectedLogForDetails.id}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 py-4 text-sm">
+              <div>
+                <span className="font-semibold">Timestamp:</span> {format(parseISO(selectedLogForDetails.timestamp), 'MMM dd, yyyy HH:mm:ss.SSS')}
+              </div>
+              <div>
+                <span className="font-semibold">User:</span> {selectedLogForDetails.user}
+              </div>
+              <div>
+                <span className="font-semibold">Action:</span> {selectedLogForDetails.action}
+              </div>
+              <div>
+                <span className="font-semibold">Full Details:</span>
+                <ScrollArea className="h-40 mt-1 rounded-md border p-2 bg-muted/30 whitespace-pre-wrap">
+                  {selectedLogForDetails.details}
+                </ScrollArea>
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" onClick={handleCloseLogDetails}>Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
