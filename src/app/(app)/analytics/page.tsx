@@ -7,7 +7,7 @@ import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
 import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { mockSales, mockExpenses, mockProducts } from "@/lib/data";
+import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data"; // Added mockLogEntries
 import type { Sale } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from "recharts";
@@ -61,11 +61,46 @@ export default function AnalyticsPage() {
     }, 0);
   }, [mockProducts, mockSales]);
 
-  const payableCategories = useMemo(() => ['Rent', 'Utilities', 'Logistics', 'Marketing', 'Software', 'Maintenance'], []);
+  // Calculate totalSupplierDue
+  const supplierDueItems: Array<{ dueAmount: number }> = [];
+  mockProducts.forEach(product => {
+    product.acquisitionHistory.forEach(batch => {
+      if (batch.dueToSupplier > 0) {
+        supplierDueItems.push({ dueAmount: batch.dueToSupplier });
+      }
+    });
+  });
+  const totalSupplierDue = supplierDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
 
-  const totalAccountPayableAmount = mockExpenses
-      .filter(expense => payableCategories.includes(expense.category))
-      .reduce((sum, expense) => sum + expense.amount, 0);
+  // Calculate totalExpenseDue
+  const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
+  const calculatedExpenseDueItems: Array<{ dueAmount: number }> = [];
+  expenseDueExpenseRecordedLogs.forEach(log => {
+    const mainDetailMatch = log.details.match(/Expense for '([^']*)' \(Category: ([^)]+)\), Amount: NRP ([\d.]+)/i);
+    if (!mainDetailMatch) return;
+
+    let outstandingDue = 0;
+    const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i);
+    const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
+
+    if (hybridEntryMatch && hybridEntryMatch[1]) {
+        const detailsStr = hybridEntryMatch[1];
+        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
+        if (duePartMatch && duePartMatch[1]) {
+            outstandingDue = parseFloat(duePartMatch[1]);
+        }
+    } else if (directDueMatch && directDueMatch[1]) {
+        outstandingDue = parseFloat(directDueMatch[1]);
+    }
+    
+    if (outstandingDue > 0) {
+      calculatedExpenseDueItems.push({ dueAmount: outstandingDue });
+    }
+  });
+  const totalExpenseDue = calculatedExpenseDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
+
+  const totalAccountPayableAmount = totalSupplierDue + totalExpenseDue;
+
 
   // Calculate categorySalesData directly on each render to ensure freshness
   const categorySalesData = (() => {
@@ -189,7 +224,13 @@ export default function AnalyticsPage() {
         <AnalyticsCard title="Total Expenses" value={totalExpensesAmount} icon={TrendingDown} description="All recorded business expenses" isCurrency={true}/>
         <AnalyticsCard title="Net Profit" value={netProfit} icon={TrendingUp} description="Sales minus expenses" isCurrency={true}/>
         <AnalyticsCard title="Current Stock Valuation" value={currentStockValuation} icon={Archive} description="Total cost value of current inventory" isCurrency={true}/>
-        <AnalyticsCard title="Account Payable" value={totalAccountPayableAmount} icon={Wallet} description="Total of typically payable expenses (e.g., rent, utilities, supplier costs)." isCurrency={true}/>
+        <AnalyticsCard 
+            title="Account Payable" 
+            value={totalAccountPayableAmount} 
+            icon={Wallet} 
+            description="Total outstanding dues to suppliers and for recorded expenses." 
+            isCurrency={true}
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
