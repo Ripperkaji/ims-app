@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
   } satisfies ChartConfig;
 
 
-  const monthToDateSalesTableData = useMemo((): DailyComparisonRow[] => {
+  const monthToDateSalesTableData: DailyComparisonRow[] = (() => {
     const tableData: DailyComparisonRow[] = [];
     const today = new Date(); 
     const currentMonth = getMonth(today);
@@ -171,7 +171,7 @@ export default function AnalyticsPage() {
       });
     }
     return tableData;
-  }, [mockSales]);
+  })();
 
 
   if (!user || user.role !== 'admin') {
@@ -332,3 +332,4 @@ export default function AnalyticsPage() {
     </div>
   );
 }
+
