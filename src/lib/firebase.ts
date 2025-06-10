@@ -47,7 +47,7 @@ if (!getApps().length) {
   if (!missingKeys || process.env.NODE_ENV === 'test') { // Allow initialization in test env even with missing keys
      app = initializeApp(firebaseConfig);
   } else {
-    console.error("Firebase app initialization skipped due to missing configuration.");
+    // console.error("Firebase app initialization skipped due to missing configuration.");
     // Fallback app or handle error appropriately if needed
   }
 } else {
