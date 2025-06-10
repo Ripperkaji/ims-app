@@ -12,8 +12,8 @@ import {
   ShoppingCart,
   Package,
   CreditCard,
-  UserCog, // Added
-  Banknote, // Added
+  UserCog,
+  Banknote,
   FileText,
   Settings,
   AlertTriangle,
@@ -42,8 +42,8 @@ const navItems: NavItem[] = [
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
-  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] }, // New
-  { href: '/accounts', label: 'Accounts Payable', icon: Banknote, roles: ['admin'] }, // Icon changed, label clarified
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   // { href: '/settings', label: 'Settings', icon: Settings, roles: ['admin'] },

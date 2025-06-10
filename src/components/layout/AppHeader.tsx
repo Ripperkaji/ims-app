@@ -27,8 +27,8 @@ const navItems: NavItem[] = [
   { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
-  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] }, // New
-  { href: '/accounts', label: 'Accounts Payable', icon: Banknote, roles: ['admin'] }, // Icon changed
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
 ];
