@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe } from 'lucide-react';
 import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types'; // Import ALL_PRODUCT_TYPES
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -47,7 +47,7 @@ const calculateCurrentStockForSaleForm = (product: Product | undefined, allSales
 
 
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const { toast } = useToast();
   const [saleOrigin, setSaleOrigin] = useState<'store' | 'online' | null>(null);
   const [customerName, setCustomerName] = useState('');
