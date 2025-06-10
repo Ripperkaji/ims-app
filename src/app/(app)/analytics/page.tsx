@@ -69,7 +69,8 @@ export default function AnalyticsPage() {
       .reduce((sum, expense) => sum + expense.amount, 0);
   }, [mockExpenses, payableCategories]);
 
-  const categorySalesData = useMemo(() => {
+  // Calculate categorySalesData directly on each render to ensure freshness
+  const categorySalesData = (() => {
     const salesByCategory: { [category: string]: number } = {};
     mockSales.forEach(sale => {
       sale.items.forEach(item => {
@@ -81,8 +82,9 @@ export default function AnalyticsPage() {
     });
     return Object.entries(salesByCategory)
       .map(([name, value]) => ({ name, value }))
+      .filter(entry => entry.value > 0) // Ensure only categories with sales > 0 are included
       .sort((a, b) => b.value - a.value);
-  }, [mockSales, mockProducts]);
+  })();
 
   const categoryChartConfig = useMemo(() => {
     const config: ChartConfig = {};
