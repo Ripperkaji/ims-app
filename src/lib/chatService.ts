@@ -23,7 +23,7 @@ export const sendMessage = async (
 ): Promise<void> => {
   if (!text.trim()) return;
   if (!db) {
-    console.error("Firestore database is not initialized. Cannot send message.");
+    console.warn("Firestore database is not initialized. Cannot send message."); // Changed to warn
     throw new Error("Chat service is not available (DB not initialized).");
   }
 
@@ -44,7 +44,7 @@ export const getMessagesSubscription = (
   callback: (messages: ChatMessage[]) => void
 ): (() => void) => { // Returns an unsubscribe function
   if (!db) {
-    console.error("Firestore database is not initialized. Cannot subscribe to messages.");
+    // console.error("Firestore database is not initialized. Cannot subscribe to messages.");
     // Return a no-op unsubscribe function
     return () => {};
   }
