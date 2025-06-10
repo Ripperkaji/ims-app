@@ -32,6 +32,7 @@ import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
 import { cn } from "@/lib/utils";
+import { calculateCurrentStock } from "../products/page"; // Import calculateCurrentStock
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
@@ -102,7 +103,7 @@ export default function SalesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
   };
 
   const handleOpenAdjustDialog = (saleId: string) => {
@@ -136,47 +137,35 @@ export default function SalesPage() {
     const originalSale = mockSales[originalSaleIndex];
     const wasInitiallyFlagged = originalSale.isFlagged;
 
-    originalSale.items.forEach(originalItem => {
-      const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
-      if (productIndex !== -1) {
-        mockProducts[productIndex].stock += originalItem.quantity;
-      }
-    });
-
+    // Validate stock for new/adjusted items
     let stockSufficient = true;
-    const stockChangesToRollback: { productId: string, quantity: number }[] = [];
-
     for (const newItem of updatedSaleDataFromDialog.items) {
-      const productIndex = mockProducts.findIndex(p => p.id === newItem.productId);
-      if (productIndex !== -1) {
-        if (mockProducts[productIndex].stock >= newItem.quantity) {
-          mockProducts[productIndex].stock -= newItem.quantity;
-          stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity });
-        } else {
-          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available. Adjustment cancelled.`, variant: "destructive"});
-          stockChangesToRollback.forEach(change => {
-            const prodIdx = mockProducts.findIndex(p => p.id === change.productId);
-            if (prodIdx !== -1) mockProducts[prodIdx].stock += change.quantity;
-          });
-          originalSale.items.forEach(origItem => {
-            const prodIdx = mockProducts.findIndex(p => p.id === origItem.productId);
-            if (prodIdx !== -1) mockProducts[prodIdx].stock -= origItem.quantity;
-          });
+      const product = mockProducts.find(p => p.id === newItem.productId);
+      if (product) {
+        const originalItem = originalSale.items.find(oi => oi.productId === newItem.productId);
+        const originalQuantityInThisSale = originalItem ? originalItem.quantity : 0;
+        
+        const currentStockWithOriginalSale = calculateCurrentStock(product, mockSales);
+        const availableStockForAdjustment = currentStockWithOriginalSale + originalQuantityInThisSale;
+
+        if (newItem.quantity > availableStockForAdjustment) {
+          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${availableStockForAdjustment} available. Adjustment cancelled.`, variant: "destructive", duration: 7000 });
           stockSufficient = false;
           break;
         }
       } else {
-         toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment. Adjustment cancelled.`, variant: "destructive"});
+         toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock validation. Adjustment cancelled.`, variant: "destructive"});
          stockSufficient = false; 
          break; 
       }
     }
 
     if (!stockSufficient) {
-      setSaleToAdjust(null);
-      return; 
+      setSaleToAdjust(null); // Close dialog
+      return; // Stop processing
     }
     
+    // If stock is sufficient, proceed
     let finalFlaggedComment = originalSale.flaggedComment || "";
     if (wasInitiallyFlagged) {
         finalFlaggedComment = `Original Flag: ${originalSale.flaggedComment || 'N/A'}\nResolved by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`;
@@ -208,7 +197,7 @@ export default function SalesPage() {
     const newAllSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setAllSalesData(newAllSales);
     if (isFilterActive) {
-      applyFilters(newAllSales); // Re-apply filters with updated data
+      applyFilters(newAllSales); 
     } else {
       setDisplayedSales(newAllSales);
     }
@@ -238,12 +227,8 @@ export default function SalesPage() {
       return;
     }
 
-    saleToDelete.items.forEach(item => {
-      const productIndex = mockProducts.findIndex(p => p.id === item.productId);
-      if (productIndex !== -1) {
-        mockProducts[productIndex].stock += item.quantity;
-      }
-    });
+    // Stock reversion for deleted sale items is implicitly handled
+    // by removing the sale from mockSales. calculateCurrentStock will then be accurate.
 
     addLog(
         "Sale Deleted", 
@@ -723,4 +708,5 @@ export default function SalesPage() {
   );
 }
     
+
 

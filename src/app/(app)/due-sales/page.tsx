@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { calculateCurrentStock } from "../products/page"; // Import calculateCurrentStock
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
@@ -64,7 +64,7 @@ export default function DueSalesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
   };
 
   const openMarkAsPaidDialog = (sale: Sale) => {
@@ -125,52 +125,38 @@ export default function DueSalesPage() {
     }
     const originalSale = mockSales[originalSaleIndex];
 
-    // Revert stock for original items
-    originalSale.items.forEach(originalItem => {
-      const productIndex = mockProducts.findIndex(p => p.id === originalItem.productId);
-      if (productIndex !== -1) {
-        mockProducts[productIndex].stock += originalItem.quantity;
-      }
-    });
-
-    // Deduct stock for new/adjusted items and validate
+    // Validate stock for new/adjusted items
     let stockSufficient = true;
-    const stockChangesToRollback: { productId: string, quantity: number }[] = [];
-
     for (const newItem of updatedSaleDataFromDialog.items) {
-      const productIndex = mockProducts.findIndex(p => p.id === newItem.productId);
-      if (productIndex !== -1) {
-        if (mockProducts[productIndex].stock >= newItem.quantity) {
-          mockProducts[productIndex].stock -= newItem.quantity;
-          stockChangesToRollback.push({ productId: newItem.productId, quantity: newItem.quantity });
-        } else {
-          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${mockProducts[productIndex].stock} available. Adjustment cancelled.`, variant: "destructive"});
-          // Rollback stock changes made so far in this attempt
-          stockChangesToRollback.forEach(change => {
-            const prodIdxToRollback = mockProducts.findIndex(p => p.id === change.productId);
-            if (prodIdxToRollback !== -1) mockProducts[prodIdxToRollback].stock += change.quantity;
-          });
-          // Re-deduct original items stock as the adjustment failed
-          originalSale.items.forEach(origItem => {
-            const prodIdxReDeduct = mockProducts.findIndex(p => p.id === origItem.productId);
-            if (prodIdxReDeduct !== -1) mockProducts[prodIdxReDeduct].stock -= origItem.quantity;
-          });
+      const product = mockProducts.find(p => p.id === newItem.productId);
+      if (product) {
+        const originalItem = originalSale.items.find(oi => oi.productId === newItem.productId);
+        const originalQuantityInThisSale = originalItem ? originalItem.quantity : 0;
+        
+        // Calculate stock as if the original sale items were returned
+        const currentStockWithOriginalSale = calculateCurrentStock(product, mockSales);
+        const availableStockForAdjustment = currentStockWithOriginalSale + originalQuantityInThisSale;
+
+        if (newItem.quantity > availableStockForAdjustment) {
+          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName} to make adjustment. Only ${availableStockForAdjustment} available. Adjustment cancelled.`, variant: "destructive", duration: 7000});
           stockSufficient = false;
           break;
         }
       } else {
-         toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock adjustment. Adjustment cancelled.`, variant: "destructive"});
-         // Rollback any stock changes if product not found (similar to above)
+         toast({ title: "Product Error", description: `Product ${newItem.productName} not found during stock validation. Adjustment cancelled.`, variant: "destructive"});
          stockSufficient = false; 
          break; 
       }
     }
 
     if (!stockSufficient) {
-      setSaleToAdjust(null);
-      return; 
+      setSaleToAdjust(null); // Close dialog
+      return; // Stop processing
     }
     
+    // If stock is sufficient, proceed to update the sale
+    // No direct stock manipulation here; changes to sale items list will reflect in future calculateCurrentStock calls.
+
     let finalFlaggedComment = originalSale.flaggedComment || "";
     if (adjustmentComment.trim()) {
         finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + 
@@ -178,7 +164,7 @@ export default function DueSalesPage() {
     }
     
     const finalUpdatedSale: Sale = {
-      ...originalSale, // Retains original flag status and other non-adjusted fields
+      ...originalSale, 
       customerName: updatedSaleDataFromDialog.customerName,
       customerContact: updatedSaleDataFromDialog.customerContact,
       items: updatedSaleDataFromDialog.items,
@@ -187,9 +173,8 @@ export default function DueSalesPage() {
       digitalPaid: updatedSaleDataFromDialog.digitalPaid,
       amountDue: updatedSaleDataFromDialog.amountDue,
       formPaymentMethod: updatedSaleDataFromDialog.formPaymentMethod,
-      flaggedComment: finalFlaggedComment, // Appends adjustment comment
+      flaggedComment: finalFlaggedComment, 
       status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid',
-      // isFlagged status remains originalSale.isFlagged
     };
     
     mockSales[originalSaleIndex] = finalUpdatedSale;
@@ -198,7 +183,6 @@ export default function DueSalesPage() {
     const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
     addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
     
-    // Refresh the list of due sales
     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
         
@@ -332,7 +316,7 @@ export default function DueSalesPage() {
           onClose={() => setSaleToAdjust(null)}
           onSaleAdjusted={handleSaleAdjusted}
           allGlobalProducts={mockProducts}
-          isInitiallyFlagged={false} // Explicitly pass false for "Due Sales" page adjustments
+          isInitiallyFlagged={saleToAdjust.isFlagged || false} 
         />
       )}
     </div>
@@ -341,4 +325,5 @@ export default function DueSalesPage() {
     
 
     
+
 
