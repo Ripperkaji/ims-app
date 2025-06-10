@@ -2,8 +2,9 @@
 "use client";
 
 import ExpensesForm from "@/components/expenses/ExpensesForm";
+import EditExpenseDialog from "@/components/expenses/EditExpenseDialog"; // Import the new dialog
 import { useAuth } from "@/contexts/AuthContext";
-import { mockExpenses, mockLogEntries } from "@/lib/data"; // Added mockLogEntries
+import { mockExpenses, mockLogEntries } from "@/lib/data"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
-import type { Expense, LogEntry } from '@/types'; // Added LogEntry
+import type { Expense, LogEntry } from '@/types'; 
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -32,6 +33,8 @@ export default function ExpensesPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
+  const [isEditExpenseDialogOpen, setIsEditExpenseDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -44,6 +47,8 @@ export default function ExpensesPage() {
     return [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [refreshTrigger]); 
 
+  // This useEffect might not be strictly necessary if displayedExpenses dependency on refreshTrigger is enough
+  // but it doesn't hurt for cases where mockExpenses.length might not change but content does.
   useEffect(() => {
     setRefreshTrigger(prev => prev + 1);
   }, [mockExpenses.length]);
@@ -74,11 +79,11 @@ export default function ExpensesPage() {
     const newExpense: Expense = {
       id: `exp-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
       ...expenseCoreData,
-      recordedBy: user.name, // Ensure recordedBy is set
+      recordedBy: user.name,
     };
     
     mockExpenses.unshift(newExpense);
-    mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // mockExpenses.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sorting is handled by useMemo now
     setRefreshTrigger(prev => prev + 1);
 
     let paymentLogString = `Paid via ${paymentDetails.method}.`;
@@ -92,15 +97,45 @@ export default function ExpensesPage() {
         paymentLogString = `Marked as Due (NRP ${newExpense.amount.toFixed(2)}).`;
     }
 
-
     const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${newExpense.amount.toFixed(2)} recorded by ${user.name}. ${paymentLogString}`;
     addLog("Expense Recorded", logDetails);
 
     toast({ title: "Expense Recorded!", description: `${newExpense.category} expense of NRP ${newExpense.amount.toFixed(2)} recorded.`});
   };
 
-  const handleEditExpense = (expenseId: string) => {
-    toast({ title: "Action Required", description: `Editing expense ${expenseId} - (Not Implemented)` });
+  const openEditExpenseDialog = (expense: Expense) => {
+    if (["Product Damage", "Tester Allocation"].includes(expense.category)) {
+      toast({ title: "Edit Restricted", description: `System-generated expenses like '${expense.category}' cannot be fully edited here. Their amounts are system-derived.`, variant: "default" });
+      // Allow editing some fields if desired, or completely block
+       setExpenseToEdit(expense); // Still allow opening for viewing or partial edit
+       setIsEditExpenseDialogOpen(true);
+      return;
+    }
+    setExpenseToEdit(expense);
+    setIsEditExpenseDialogOpen(true);
+  };
+
+  const handleConfirmEditExpense = (updatedExpense: Expense) => {
+    if (!user) return;
+    const expenseIndex = mockExpenses.findIndex(exp => exp.id === updatedExpense.id);
+    if (expenseIndex > -1) {
+      const originalExpense = mockExpenses[expenseIndex];
+      mockExpenses[expenseIndex] = updatedExpense;
+      setRefreshTrigger(prev => prev + 1);
+
+      let changesSummary = `Expense ID ${updatedExpense.id.substring(0,8)}... edited by ${user.name}.`;
+      if (originalExpense.description !== updatedExpense.description) changesSummary += ` Desc: '${originalExpense.description}' -> '${updatedExpense.description}'.`;
+      if (originalExpense.category !== updatedExpense.category) changesSummary += ` Cat: '${originalExpense.category}' -> '${updatedExpense.category}'.`;
+      if (originalExpense.amount !== updatedExpense.amount) changesSummary += ` Amt: NRP ${originalExpense.amount.toFixed(2)} -> NRP ${updatedExpense.amount.toFixed(2)}.`;
+      if (new Date(originalExpense.date).toDateString() !== new Date(updatedExpense.date).toDateString()) changesSummary += ` Date: ${format(new Date(originalExpense.date), 'MMM dd, yyyy')} -> ${format(new Date(updatedExpense.date), 'MMM dd, yyyy')}.`;
+      
+      addLog("Expense Edited", changesSummary);
+      toast({ title: "Expense Updated", description: `Expense '${updatedExpense.description}' has been updated.` });
+    } else {
+      toast({ title: "Error", description: "Expense not found for update.", variant: "destructive" });
+    }
+    setIsEditExpenseDialogOpen(false);
+    setExpenseToEdit(null);
   };
 
   const handleDeleteExpense = (expenseId: string) => {
@@ -111,8 +146,9 @@ export default function ExpensesPage() {
         toast({ title: "Deletion Restricted", description: `System-generated expenses like '${mockExpenses[expenseIndex].category}' cannot be deleted directly.`, variant: "destructive" });
         return;
       }
-      mockExpenses.splice(expenseIndex, 1);
+      const deletedExpense = mockExpenses.splice(expenseIndex, 1)[0];
       setRefreshTrigger(prev => prev + 1); 
+      addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${deletedExpense.amount.toFixed(2)}) deleted by ${user?.name || 'Admin'}.`);
       toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
     } else {
       toast({ title: "Error", description: "Expense not found for deletion.", variant: "destructive" });
@@ -162,9 +198,8 @@ export default function ExpensesPage() {
                         <Button 
                             variant="outline" 
                             size="icon" 
-                            onClick={() => handleEditExpense(expense.id)}
-                            disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
-                            title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be edited" : "Edit Expense"}
+                            onClick={() => openEditExpenseDialog(expense)}
+                            title="Edit Expense"
                         >
                           <Edit className="h-4 w-4" />
                            <span className="sr-only">Edit Expense</span>
@@ -210,7 +245,14 @@ export default function ExpensesPage() {
           </Card>
         </div>
       </div>
+      {expenseToEdit && (
+        <EditExpenseDialog
+            expense={expenseToEdit}
+            isOpen={isEditExpenseDialogOpen}
+            onClose={() => { setIsEditExpenseDialogOpen(false); setExpenseToEdit(null); }}
+            onConfirmEditExpense={handleConfirmEditExpense}
+        />
+      )}
     </div>
   );
 }
-
