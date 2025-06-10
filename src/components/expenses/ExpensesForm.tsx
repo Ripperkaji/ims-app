@@ -296,4 +296,3 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
     </Card>
   );
 }
-

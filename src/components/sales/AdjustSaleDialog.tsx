@@ -144,7 +144,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         setValidationError(null);
     }
 
-  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, dialogTotalAmount, isHybridPayment]);
+  }, [hybridCashPaid, hybridDigitalPaid, hybridAmountLeftDue, dialogTotalAmount, isHybridPayment, validationError]);
 
 
   const handleAddItem = () => {
@@ -205,17 +205,21 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         }
       }
     } else if (field === 'quantity') {
-      const quantity = Number(value);
-      const productDetails = allGlobalProducts.find(p => p.id === item.productId);
-      const stockToCheck = calculateCurrentStock(productDetails, mockSales) || 0;
-      const originalItem = sale.items.find(i => i.productId === item.productId);
-      const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
-
-      if (quantity > (stockToCheck + quantityAlreadyInSale)) { 
-        toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck + quantityAlreadyInSale} items available for this adjustment.`, variant: "destructive" });
-        item.quantity = stockToCheck + quantityAlreadyInSale;
+      const parsedQuantity = parseInt(value as string, 10);
+      if (isNaN(parsedQuantity) || parsedQuantity < 0) {
+        item.quantity = 0; // Default to 0 if input is invalid
       } else {
-        item.quantity = quantity >= 0 ? quantity : 0; 
+        const productDetails = allGlobalProducts.find(p => p.id === item.productId);
+        const stockToCheck = calculateCurrentStock(productDetails, mockSales) || 0;
+        const originalItem = sale.items.find(i => i.productId === item.productId);
+        const quantityAlreadyInSale = originalItem ? originalItem.quantity : 0;
+
+        if (parsedQuantity > (stockToCheck + quantityAlreadyInSale)) { 
+          toast({ title: "Stock limit", description: `${item.productName} has only ${stockToCheck + quantityAlreadyInSale} items available for this adjustment.`, variant: "destructive" });
+          item.quantity = stockToCheck + quantityAlreadyInSale;
+        } else {
+          item.quantity = parsedQuantity;
+        }
       }
     }
     
@@ -357,7 +361,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
                 <div>
                 <Label htmlFor="editedCustomerContact">Contact (Optional)</Label>
-                <Input id="editedCustomerContact" value={editedCustomerContact} onChange={(e) => setEditedCustomerContact(e.target.value)} />
+                <Input id="editedCustomerContact" type="tel" value={editedCustomerContact} onChange={(e) => setEditedCustomerContact(e.target.value)} />
                 </div>
             </div>
 
@@ -399,7 +403,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                     type="number"
                     min="0"
                     value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                     className="text-center"
                 />
                 </div>
@@ -447,15 +451,15 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 <CardContent className="space-y-3 p-2">
                     <div>
                     <Label htmlFor="hybridCashPaid-edit">Cash Paid (NRP)</Label>
-                    <Input id="hybridCashPaid-edit" type="number" value={hybridCashPaid} onChange={(e) => setHybridCashPaid(e.target.value)} placeholder="0.00" className="mt-1" />
+                    <Input id="hybridCashPaid-edit" type="number" value={hybridCashPaid} onChange={(e) => setHybridCashPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
                     </div>
                     <div>
                     <Label htmlFor="hybridDigitalPaid-edit">Digital Payment (NRP)</Label>
-                    <Input id="hybridDigitalPaid-edit" type="number" value={hybridDigitalPaid} onChange={(e) => setHybridDigitalPaid(e.target.value)} placeholder="0.00" className="mt-1" />
+                    <Input id="hybridDigitalPaid-edit" type="number" value={hybridDigitalPaid} onChange={(e) => setHybridDigitalPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
                     </div>
                     <div>
                     <Label htmlFor="hybridAmountLeftDue-edit">Amount Left Due (NRP)</Label>
-                    <Input id="hybridAmountLeftDue-edit" type="number" value={hybridAmountLeftDue} onChange={(e) => setHybridAmountLeftDue(e.target.value)} placeholder="0.00" className="mt-1" />
+                    <Input id="hybridAmountLeftDue-edit" type="number" value={hybridAmountLeftDue} onChange={(e) => setHybridAmountLeftDue(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-1" />
                     </div>
                     {validationError && (<Alert variant="destructive" className="mt-2"><Info className="h-4 w-4" /><AlertTitle>Payment Error</AlertTitle><AlertDescription>{validationError}</AlertDescription></Alert>)}
                 </CardContent>
@@ -499,5 +503,3 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
-
-    

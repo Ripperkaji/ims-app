@@ -153,7 +153,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
   };
 
   const handleAddItem = () => {
