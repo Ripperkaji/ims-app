@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport, Card
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product, ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
-import { calculateCurrentStock } from '@/app/(app)/products/page';
+import { calculateCurrentStock } from '@/lib/productUtils';
 
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -551,3 +551,5 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
+
+    
