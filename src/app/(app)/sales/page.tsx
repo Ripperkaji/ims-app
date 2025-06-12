@@ -32,7 +32,8 @@ import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
 import { cn } from "@/lib/utils";
-import { calculateCurrentStock } from "../products/page";
+import { calculateCurrentStock } from "@/lib/productUtils";
+import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
 type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 type FilterStatusType = "all" | "flagged" | "due" | "paid" | "resolvedFlagged";
@@ -89,19 +90,11 @@ export default function SalesPage() {
       applyFilters(sortedMockSales);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mockSales.length]); // Re-run if the underlying mockSales length changes (e.g. a sale is added/deleted elsewhere)
+  }, [mockSales.length, mockSales]); // Re-run if the underlying mockSales length changes (e.g. a sale is added/deleted elsewhere)
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
-    const newLog: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: new Date().toISOString(),
-      user: user.name,
-      action,
-      details,
-    };
-    mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    globalAddLog(user.name, action, details);
   };
 
   const handleOpenAdjustDialog = (saleId: string) => {

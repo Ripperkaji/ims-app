@@ -1,6 +1,7 @@
 
 import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType, ManagedUser, UserRole } from '@/types';
 import { formatISO } from 'date-fns';
+import { calculateCurrentStock as calculateStockShared } from './productUtils'; // For internal use if needed
 
 // Helper to create initial acquisition batch
 const createInitialBatch = (
@@ -277,7 +278,7 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
   let cashPaid = 0, digitalPaid = 0, amountDue = 0, formPaymentMethod: Sale['formPaymentMethod'] = 'Cash', status: Sale['status'] = 'Paid';
   const paymentTypeRoll = Math.random();
   if (paymentTypeRoll < 0.4) { formPaymentMethod = 'Cash'; cashPaid = totalAmount; }
-  else if (paymentTypeRoll < 0.8) { formPaymentMethod = 'Digital'; digitalPaid = totalAmount; }
+  else if (paymentTypeRoll < 0.7) { formPaymentMethod = 'Digital'; digitalPaid = totalAmount; } // Adjusted from 0.8 to make 'Due' more common
   else { formPaymentMethod = 'Due'; amountDue = totalAmount; status = 'Due'; }
 
   const newSale: Sale = {
@@ -300,15 +301,35 @@ export const mockExpenses: Expense[] = [
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
-export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+export const mockLogEntries: LogEntry[] = [...initialMockLogEntries, ...generatedLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-export function addSystemExpense(expenseData: Omit<Expense, 'id'>): Expense {
-  const newExpense: Expense = { id: `exp-sys-${Date.now()}`, ...expenseData };
+export function addLogEntry(actorName: string, action: string, details: string): LogEntry {
+    const newLog: LogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      user: actorName,
+      action,
+      details,
+    };
+    mockLogEntries.unshift(newLog);
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return newLog;
+}
+
+export function addSystemExpense(expenseData: Omit<Expense, 'id'>, actorName: string = 'System'): Expense {
+  const newExpense: Expense = { 
+      id: `exp-sys-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, 
+      ...expenseData,
+      recordedBy: actorName // Ensure recordedBy is set
+  };
   mockExpenses.push(newExpense);
   mockExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const logEntry: LogEntry = { id: `log-exp-${newExpense.id}`, timestamp: formatISO(new Date()), user: expenseData.recordedBy || 'System', action: 'System Expense Recorded', details: `Expense Category: ${expenseData.category}, Amount: NRP ${expenseData.amount.toFixed(2)}. Desc: ${expenseData.description}`};
-  mockLogEntries.unshift(logEntry);
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  
+  addLogEntry(
+      actorName, 
+      'System Expense Recorded', 
+      `Expense Category: ${expenseData.category}, Amount: NRP ${expenseData.amount.toFixed(2)}. Desc: ${expenseData.description}`
+  );
   return newExpense;
 }
 
@@ -334,16 +355,7 @@ export const addManagedUser = (name: string, role: UserRole, defaultPassword: st
   mockManagedUsers.push(newUser);
   mockManagedUsers.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const logEntry: LogEntry = {
-    id: `log-user-add-${newUser.id}`,
-    timestamp: newUser.createdAt,
-    user: addedBy,
-    action: 'User Added',
-    details: `Staff User '${newUser.name}' (Role: ${newUser.role}) added by ${addedBy}.`,
-  };
-  mockLogEntries.unshift(logEntry);
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
+  addLogEntry(addedBy, 'User Added', `Staff User '${newUser.name}' (Role: ${newUser.role}) added by ${addedBy}.`);
   return newUser;
 };
 
@@ -355,16 +367,7 @@ export const editManagedUser = (userId: string, newName: string, editedBy: strin
   const originalUser = { ...mockManagedUsers[userIndex] };
   mockManagedUsers[userIndex].name = newName.trim();
   
-  const logEntry: LogEntry = {
-    id: `log-user-edit-${userId}`,
-    timestamp: formatISO(new Date()),
-    user: editedBy,
-    action: 'User Edited',
-    details: `Staff User ID ${userId.substring(0,8)}... name changed from '${originalUser.name}' to '${newName.trim()}' by ${editedBy}.`,
-  };
-  mockLogEntries.unshift(logEntry);
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  
+  addLogEntry(editedBy, 'User Edited', `Staff User ID ${userId.substring(0,8)}... name changed from '${originalUser.name}' to '${newName.trim()}' by ${editedBy}.`);
   return mockManagedUsers[userIndex];
 };
 
@@ -376,23 +379,13 @@ export const deleteManagedUser = (userId: string, deletedBy: string): ManagedUse
   
   const deletedUser = mockManagedUsers[userIndex];
 
-  // Prevent deletion of 'admin' role users from this managed list, even if one somehow got there
   if (deletedUser.role === 'admin') {
     console.warn(`Attempted to delete an admin role user '${deletedUser.name}' via deleteManagedUser. Admins cannot be deleted this way.`);
     return null;
   }
 
-  mockManagedUsers.splice(userIndex, 1); // Remove the user from the array
+  mockManagedUsers.splice(userIndex, 1);
 
-  const logEntry: LogEntry = {
-    id: `log-user-delete-${userId}`,
-    timestamp: formatISO(new Date()),
-    user: deletedBy,
-    action: 'User Deleted',
-    details: `Staff User '${deletedUser.name}' (ID: ${userId.substring(0,8)}...) deleted by ${deletedBy}.`,
-  };
-  mockLogEntries.unshift(logEntry);
-  mockLogEntries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  
+  addLogEntry(deletedBy, 'User Deleted', `Staff User '${deletedUser.name}' (ID: ${userId.substring(0,8)}...) deleted by ${deletedBy}.`);
   return deletedUser;
 };

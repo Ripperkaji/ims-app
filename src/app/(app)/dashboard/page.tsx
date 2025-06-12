@@ -17,7 +17,8 @@ import FlagSaleDialog, { FlaggedItemDetailForUpdate } from "@/components/sales/F
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { calculateCurrentStock } from "../products/page";
+import { calculateCurrentStock } from "@/lib/productUtils";
+import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
 
 export default function DashboardPage() {
@@ -26,29 +27,29 @@ export default function DashboardPage() {
   const [triggerRefresh, setTriggerRefresh] = useState(0);
 
 
-  const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh]);
-  const totalProducts = useMemo(() => mockProducts.length, []);
+  const dueSalesCount = useMemo(() => mockSales.filter(sale => sale.amountDue > 0).length, [triggerRefresh, mockSales]);
+  const totalProducts = useMemo(() => mockProducts.length, [mockProducts]);
 
   const criticalStockCount = useMemo(() => {
     return mockProducts.filter(p => {
       const currentStock = calculateCurrentStock(p, mockSales);
       return currentStock === 1;
     }).length;
-  }, [triggerRefresh]);
+  }, [triggerRefresh, mockProducts, mockSales]);
 
   const outOfStockCount = useMemo(() => {
     return mockProducts.filter(p => {
       const currentStock = calculateCurrentStock(p, mockSales);
       return currentStock === 0;
     }).length;
-  }, [triggerRefresh]);
+  }, [triggerRefresh, mockProducts, mockSales]);
 
-  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh]);
+  const flaggedSalesCount = useMemo(() => mockSales.filter(sale => sale.isFlagged).length, [triggerRefresh, mockSales]);
 
 
   const recentSalesForAdmin = useMemo(() =>
     [...mockSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,5)
-  , [triggerRefresh]);
+  , [triggerRefresh, mockSales]);
 
   const [saleToFlag, setSaleToFlag] = useState<Sale | null>(null);
   const [recentStaffSales, setRecentStaffSales] = useState<Sale[]>([]);
@@ -64,7 +65,7 @@ export default function DashboardPage() {
     } else {
       setRecentStaffSales([]);
     }
-  }, [user, triggerRefresh]);
+  }, [user, triggerRefresh, mockSales]);
 
 
   const handleOpenFlagDialog = (sale: Sale) => {
@@ -76,15 +77,7 @@ export default function DashboardPage() {
   };
 
   const addLogEntry = (action: string, details: string, userName: string) => {
-    const newLog: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: new Date().toISOString(),
-      user: userName,
-      action,
-      details,
-    };
-    mockLogEntries.unshift(newLog);
-     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    globalAddLog(userName, action, details);
   };
 
 
@@ -130,9 +123,9 @@ export default function DashboardPage() {
                 description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
                 category: "Product Damage",
                 amount: itemDetail.quantitySold * product.currentCostPrice,
-                recordedBy: user.name,
+                recordedBy: user.name, // actorName for addSystemExpense
               };
-              addSystemExpense(damageExpense);
+              addSystemExpense(damageExpense, user.name); // Pass user.name as actorName
 
               allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.currentCostPrice).toFixed(2)}. `;
             } else {
@@ -169,7 +162,7 @@ export default function DashboardPage() {
     return mockSales
       .filter(sale => isSameDay(new Date(sale.date), todayDate))
       .reduce((sum, sale) => sum + sale.totalAmount, 0);
-  }, [triggerRefresh]);
+  }, [triggerRefresh, mockSales]);
 
 
   if (!user) return null; // Should be handled by layout/initializer, but good for safety

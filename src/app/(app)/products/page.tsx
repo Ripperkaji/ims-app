@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { mockProducts, mockLogEntries, mockSales } from "@/lib/data"; // Removed addSystemExpense
+import { mockProducts, mockLogEntries, mockSales } from "@/lib/data"; 
 import { useAuthStore } from "@/stores/authStore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData, Sale } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData } from '@/types'; // Removed Sale
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
@@ -21,18 +21,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
+import { calculateCurrentStock } from "@/lib/productUtils";
+import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
-export const calculateCurrentStock = (product: Product | undefined, allSales: Sale[]): number => {
-  if (!product || !product.acquisitionHistory) return 0;
-  const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
-  
-  const totalSold = allSales
-    .flatMap(sale => sale.items)
-    .filter(item => item.productId === product.id)
-    .reduce((sum, item) => sum + item.quantity, 0);
-    
-  return totalAcquired - totalSold - (product.damagedQuantity || 0) - (product.testerQuantity || 0);
-};
 
 export default function ProductsPage() {
   const { user } = useAuthStore();
@@ -55,20 +46,12 @@ export default function ProductsPage() {
       currentDisplayStock: calculateCurrentStock(p, mockSales)
     })).sort((a,b) => a.name.localeCompare(b.name));
     setProductsWithCalculatedStock(updatedProducts);
-  }, [refreshTrigger]);
+  }, [refreshTrigger, mockProducts, mockSales]);
 
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
-    const newLog: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: new Date().toISOString(),
-      user: user.name,
-      action,
-      details,
-    };
-    mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    globalAddLog(user.name, action, details);
   };
 
   const displayedProducts = useMemo(() => {

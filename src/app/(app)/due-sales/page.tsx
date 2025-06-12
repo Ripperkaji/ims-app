@@ -26,9 +26,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { calculateCurrentStock } from "../products/page";
+import { calculateCurrentStock } from "@/lib/productUtils"; 
+import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
-type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
+type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export default function DueSalesPage() {
   const { user } = useAuthStore();
@@ -44,7 +45,7 @@ export default function DueSalesPage() {
      const updatedDueSales = mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
      setCurrentDueSales(updatedDueSales);
-  }, []); 
+  }, [mockSales]); 
 
 
   useEffect(() => {
@@ -56,15 +57,7 @@ export default function DueSalesPage() {
   
   const addLog = (action: string, details: string) => {
     if (!user) return;
-    const newLog: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: new Date().toISOString(),
-      user: user.name,
-      action,
-      details,
-    };
-    mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    globalAddLog(user.name, action, details);
   };
 
   const openMarkAsPaidDialog = (sale: Sale) => {

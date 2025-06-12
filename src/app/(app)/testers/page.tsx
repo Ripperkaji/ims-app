@@ -16,7 +16,8 @@ import { FlaskConical, Save, Info } from "lucide-react"; // Removed Edit
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { calculateCurrentStock } from '@/app/(app)/products/page'; 
+import { calculateCurrentStock } from '@/lib/productUtils'; 
+import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
 interface ProductForTesterCard extends Product {
   stock: number; 
@@ -123,20 +124,12 @@ export default function TestersPage() {
     }
     refreshDerivedProductStates();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, router, toast, refreshTrigger]); 
+  }, [user, router, toast, refreshTrigger, mockProducts, mockSales]); 
 
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
-    const newLog: LogEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      timestamp: new Date().toISOString(),
-      user: user.name,
-      action,
-      details,
-    };
-    mockLogEntries.unshift(newLog);
-     mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    globalAddLog(user.name, action, details);
   };
 
   const handleCategoryChangeForTesterCard = (category: ProductType | '') => {
@@ -204,7 +197,7 @@ export default function TestersPage() {
         amount: deltaTesters * currentProductGlobal.currentCostPrice,
         recordedBy: user.name,
       };
-      addSystemExpense(testerExpense);
+      addSystemExpense(testerExpense, user.name);
       
       mockProducts[productGlobalIndex].testerQuantity = newDesiredTesterQty;
       newStockAfterUpdate = calculateCurrentStock(mockProducts[productGlobalIndex], mockSales);
