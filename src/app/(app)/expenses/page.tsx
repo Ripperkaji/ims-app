@@ -4,15 +4,19 @@
 import ExpensesForm from "@/components/expenses/ExpensesForm";
 import EditExpenseDialog from "@/components/expenses/EditExpenseDialog";
 import { useAuthStore } from "@/stores/authStore";
-import { mockExpenses, mockLogEntries } from "@/lib/data"; 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { mockExpenses, mockLogEntries } from "@/lib/data";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import { format } from 'date-fns';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Edit, Trash2, CalendarIcon, Filter, X } from "lucide-react";
+import { format, parseISO, startOfDay, endOfDay, isValid } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
-import type { Expense, LogEntry } from '@/types'; 
+import type { Expense, LogEntry } from '@/types';
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -23,8 +27,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
@@ -32,9 +36,30 @@ export default function ExpensesPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
-  const [refreshTrigger, setRefreshTrigger] = useState(0); 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [expenseToEdit, setExpenseToEdit] = useState<Expense | null>(null);
   const [isEditExpenseDialogOpen, setIsEditExpenseDialogOpen] = useState(false);
+
+  const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
+  const [displayedExpenses, setDisplayedExpenses] = useState<Expense[]>([]);
+
+  const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterRecordedBy, setFilterRecordedBy] = useState<string>('');
+  const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
+  const [isCalendarPopoverOpen, setIsCalendarPopoverOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const sortedExpenses = [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setAllExpenses(sortedExpenses);
+    if (!isFilterActive) {
+      setDisplayedExpenses(sortedExpenses);
+    } else {
+      applyFiltersHandler(sortedExpenses); // Apply active filters if any, on initial load or data change
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger, mockExpenses.length]);
+
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -43,13 +68,6 @@ export default function ExpensesPage() {
     }
   }, [user, router, toast]);
 
-  const displayedExpenses = useMemo(() => {
-    return [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [refreshTrigger]); 
-
-  useEffect(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, [mockExpenses.length]);
 
   const addLog = (action: string, details: string) => {
     if (!user) return;
@@ -61,8 +79,50 @@ export default function ExpensesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
   };
+
+  const applyFiltersHandler = (sourceData = allExpenses) => {
+    let tempFilteredExpenses = [...sourceData];
+
+    if (filterDate) {
+        const fDateStart = startOfDay(filterDate);
+        const fDateEnd = endOfDay(filterDate);
+        tempFilteredExpenses = tempFilteredExpenses.filter(expense => {
+            const expenseDate = parseISO(expense.date);
+            return isValid(expenseDate) && expenseDate >= fDateStart && expenseDate <= fDateEnd;
+        });
+    }
+
+    if (filterCategory.trim()) {
+        tempFilteredExpenses = tempFilteredExpenses.filter(expense =>
+            expense.category.toLowerCase().includes(filterCategory.toLowerCase().trim())
+        );
+    }
+
+    if (filterRecordedBy.trim()) {
+        tempFilteredExpenses = tempFilteredExpenses.filter(expense =>
+            expense.recordedBy.toLowerCase().includes(filterRecordedBy.toLowerCase().trim())
+        );
+    }
+    
+    setDisplayedExpenses(tempFilteredExpenses);
+    const activeFilters = !!filterDate || !!filterCategory.trim() || !!filterRecordedBy.trim();
+    setIsFilterActive(activeFilters);
+    if (activeFilters) {
+        toast({ title: "Filters Applied", description: `${tempFilteredExpenses.length} expenses found.`});
+    }
+  };
+
+  const clearFiltersHandler = () => {
+    setFilterDate(undefined);
+    setFilterCategory('');
+    setFilterRecordedBy('');
+    setDisplayedExpenses(allExpenses);
+    setIsFilterActive(false);
+    toast({ title: "Filters Cleared", description: "Showing all expenses."});
+  };
+
 
   const handleExpenseAdded = (
     expenseCoreData: Omit<Expense, 'id'>,
@@ -81,7 +141,7 @@ export default function ExpensesPage() {
     };
     
     mockExpenses.unshift(newExpense);
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger(prev => prev + 1); // This will trigger useEffect to re-sort and re-filter
 
     let paymentLogString = `Paid via ${paymentDetails.method}.`;
     if (paymentDetails.method === 'Hybrid') {
@@ -103,7 +163,7 @@ export default function ExpensesPage() {
   const openEditExpenseDialog = (expense: Expense) => {
     if (["Product Damage", "Tester Allocation"].includes(expense.category)) {
       toast({ title: "Edit Restricted", description: `System-generated expenses like '${expense.category}' cannot be fully edited here. Their amounts are system-derived.`, variant: "default" });
-       setExpenseToEdit(expense); 
+       setExpenseToEdit(expense);
        setIsEditExpenseDialogOpen(true);
       return;
     }
@@ -143,7 +203,7 @@ export default function ExpensesPage() {
         return;
       }
       const deletedExpense = mockExpenses.splice(expenseIndex, 1)[0];
-      setRefreshTrigger(prev => prev + 1); 
+      setRefreshTrigger(prev => prev + 1);
       addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${deletedExpense.amount.toFixed(2)}) deleted by ${user?.name || 'System'}.`);
       toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
     } else {
@@ -152,7 +212,7 @@ export default function ExpensesPage() {
   };
 
   if (!user || user.role !== 'admin') {
-    return null; 
+    return null;
   }
 
   return (
@@ -168,9 +228,64 @@ export default function ExpensesPage() {
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle>Recorded Expenses</CardTitle>
-              <CardDescription>List of all business expenses. Payment details are in logs.</CardDescription>
+              <CardDescription>List of all business expenses. Use filters to refine the list.</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="mb-4 p-3 border rounded-md bg-muted/50">
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Filter className="h-4 w-4 text-primary"/> Filter Expenses</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div>
+                        <Label htmlFor="filterDate" className="text-xs">Date</Label>
+                        <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant={"outline"}
+                                className={cn(
+                                    "w-full justify-start text-left font-normal mt-0.5 h-9 text-xs",
+                                    !filterDate && "text-muted-foreground"
+                                )}
+                                >
+                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                                {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                mode="single"
+                                selected={filterDate}
+                                onSelect={(date) => {setFilterDate(date); setIsCalendarPopoverOpen(false);}}
+                                initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div>
+                        <Label htmlFor="filterCategory" className="text-xs">Category</Label>
+                        <Input 
+                            id="filterCategory" 
+                            value={filterCategory} 
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                            placeholder="Search category..."
+                            className="mt-0.5 h-9 text-xs"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="filterRecordedBy" className="text-xs">Recorded By</Label>
+                        <Input 
+                            id="filterRecordedBy" 
+                            value={filterRecordedBy} 
+                            onChange={(e) => setFilterRecordedBy(e.target.value)}
+                            placeholder="Search user..."
+                            className="mt-0.5 h-9 text-xs"
+                        />
+                    </div>
+                </div>
+                <div className="mt-3 flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={clearFiltersHandler} className="text-xs"><X className="mr-1 h-3.5 w-3.5"/>Clear</Button>
+                    <Button size="sm" onClick={() => applyFiltersHandler()} className="text-xs"><Filter className="mr-1 h-3.5 w-3.5"/>Apply</Button>
+                </div>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -185,7 +300,7 @@ export default function ExpensesPage() {
                 <TableBody>
                   {displayedExpenses.map((expense) => (
                     <TableRow key={expense.id}>
-                      <TableCell>{format(new Date(expense.date), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell>{format(parseISO(expense.date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell className="font-medium">{expense.category}</TableCell>
                       <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
                       <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
@@ -234,7 +349,7 @@ export default function ExpensesPage() {
               </Table>
               {displayedExpenses.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  No expenses recorded yet.
+                  {isFilterActive ? "No expenses found matching your filters." : "No expenses recorded yet."}
                 </div>
               )}
             </CardContent>
