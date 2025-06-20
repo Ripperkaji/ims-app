@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mockExpenses, addLogEntry } from '@/lib/data';
 import type { Expense } from '@/types';
 import { z } from 'zod';
-import { formatISO, parseISO, startOfDay, endOfDay, isValid } from 'date-fns';
+import { formatISO, parseISO, startOfMonth, endOfMonth, startOfDay, endOfDay, isValid, parse } from 'date-fns';
 
 const expenseSchema = z.object({
   date: z.string().refine(val => isValid(parseISO(val)), { message: "Invalid date format. Use ISO string."}),
@@ -25,6 +25,7 @@ const expenseSchema = z.object({
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const dateParam = searchParams.get('date');
+  const monthYearParam = searchParams.get('monthYear'); // e.g., "2023-10"
   const categoryParam = searchParams.get('category');
   const recordedByParam = searchParams.get('recordedBy');
 
@@ -42,7 +43,20 @@ export async function GET(request: NextRequest) {
         });
       }
     } catch (e) { /* Ignore invalid date */ }
+  } else if (monthYearParam) {
+    try {
+      const filterMonth = parse(monthYearParam, 'yyyy-MM', new Date());
+      if (isValid(filterMonth)) {
+        const startDate = startOfMonth(filterMonth);
+        const endDate = endOfMonth(filterMonth);
+        filteredExpenses = filteredExpenses.filter(expense => {
+          const expenseDate = parseISO(expense.date);
+          return isValid(expenseDate) && expenseDate >= startDate && expenseDate <= endDate;
+        });
+      }
+    } catch (e) { /* Ignore invalid monthYear format */ }
   }
+
 
   if (categoryParam) {
     filteredExpenses = filteredExpenses.filter(expense =>
@@ -103,5 +117,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create expense.", details: errorMessage }, { status: 500 });
   }
 }
-
     

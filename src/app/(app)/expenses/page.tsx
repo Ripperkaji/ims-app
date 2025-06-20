@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Trash2, CalendarIcon, Filter, X } from "lucide-react";
-import { format, parseISO, startOfDay, endOfDay, isValid } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isValid, parse } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from 'react';
 import type { Expense, LogEntry } from '@/types';
@@ -32,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
+const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
 
 export default function ExpensesPage() {
   const { user } = useAuthStore();
@@ -45,10 +47,19 @@ export default function ExpensesPage() {
   const [displayedExpenses, setDisplayedExpenses] = useState<Expense[]>([]);
 
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  const [filterMonthYear, setFilterMonthYear] = useState<string>(ALL_MONTHS_FILTER_VALUE);
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [filterRecordedBy, setFilterRecordedBy] = useState<string>('');
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isCalendarPopoverOpen, setIsCalendarPopoverOpen] = useState<boolean>(false);
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    allExpenses.forEach(expense => {
+      months.add(format(parseISO(expense.date), 'yyyy-MM'));
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [allExpenses]);
 
   useEffect(() => {
     const sortedExpenses = [...mockExpenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -56,7 +67,7 @@ export default function ExpensesPage() {
     if (!isFilterActive) {
       setDisplayedExpenses(sortedExpenses);
     } else {
-      applyFiltersHandler(sortedExpenses); // Apply active filters if any, on initial load or data change
+      applyFiltersHandler(sortedExpenses);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger, mockExpenses.length]);
@@ -93,7 +104,12 @@ export default function ExpensesPage() {
             const expenseDate = parseISO(expense.date);
             return isValid(expenseDate) && expenseDate >= fDateStart && expenseDate <= fDateEnd;
         });
+    } else if (filterMonthYear && filterMonthYear !== ALL_MONTHS_FILTER_VALUE) {
+        tempFilteredExpenses = tempFilteredExpenses.filter(expense => {
+            return format(parseISO(expense.date), 'yyyy-MM') === filterMonthYear;
+        });
     }
+
 
     if (filterCategory.trim()) {
         tempFilteredExpenses = tempFilteredExpenses.filter(expense =>
@@ -108,7 +124,7 @@ export default function ExpensesPage() {
     }
     
     setDisplayedExpenses(tempFilteredExpenses);
-    const activeFilters = !!filterDate || !!filterCategory.trim() || !!filterRecordedBy.trim();
+    const activeFilters = !!filterDate || (!!filterMonthYear && filterMonthYear !== ALL_MONTHS_FILTER_VALUE) || !!filterCategory.trim() || !!filterRecordedBy.trim();
     setIsFilterActive(activeFilters);
     if (activeFilters) {
         toast({ title: "Filters Applied", description: `${tempFilteredExpenses.length} expenses found.`});
@@ -117,6 +133,7 @@ export default function ExpensesPage() {
 
   const clearFiltersHandler = () => {
     setFilterDate(undefined);
+    setFilterMonthYear(ALL_MONTHS_FILTER_VALUE);
     setFilterCategory('');
     setFilterRecordedBy('');
     setDisplayedExpenses(allExpenses);
@@ -142,7 +159,7 @@ export default function ExpensesPage() {
     };
     
     mockExpenses.unshift(newExpense);
-    setRefreshTrigger(prev => prev + 1); // This will trigger useEffect to re-sort and re-filter
+    setRefreshTrigger(prev => prev + 1);
 
     let paymentLogString = `Paid via ${paymentDetails.method}.`;
     if (paymentDetails.method === 'Hybrid') {
@@ -234,7 +251,7 @@ export default function ExpensesPage() {
             <CardContent>
               <div className="mb-4 p-3 border rounded-md bg-muted/50">
                 <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Filter className="h-4 w-4 text-primary"/> Filter Expenses</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div>
                         <Label htmlFor="filterDate" className="text-xs">Date</Label>
                         <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
@@ -245,6 +262,7 @@ export default function ExpensesPage() {
                                     "w-full justify-start text-left font-normal mt-0.5 h-9 text-xs",
                                     !filterDate && "text-muted-foreground"
                                 )}
+                                onClick={() => { setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
                                 >
                                 <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
                                 {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
@@ -254,11 +272,33 @@ export default function ExpensesPage() {
                                 <Calendar
                                 mode="single"
                                 selected={filterDate}
-                                onSelect={(date) => {setFilterDate(date); setIsCalendarPopoverOpen(false);}}
+                                onSelect={(date) => {setFilterDate(date); setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(false);}}
                                 initialFocus
                                 />
                             </PopoverContent>
                         </Popover>
+                    </div>
+                    <div>
+                        <Label htmlFor="filterMonthYear" className="text-xs">Month/Year</Label>
+                        <Select
+                            value={filterMonthYear || ALL_MONTHS_FILTER_VALUE}
+                            onValueChange={(value) => {
+                                setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? ALL_MONTHS_FILTER_VALUE : value);
+                                setFilterDate(undefined); // Clear specific date if month is chosen
+                            }}
+                        >
+                            <SelectTrigger id="filterMonthYear" className="mt-0.5 h-9 text-xs">
+                                <SelectValue placeholder="Select Month/Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={ALL_MONTHS_FILTER_VALUE} className="text-xs">All Months</SelectItem>
+                                {availableMonths.map(month => (
+                                <SelectItem key={month} value={month} className="text-xs">
+                                    {format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}
+                                </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Label htmlFor="filterCategory" className="text-xs">Category</Label>
@@ -368,5 +408,4 @@ export default function ExpensesPage() {
     </div>
   );
 }
-
     
