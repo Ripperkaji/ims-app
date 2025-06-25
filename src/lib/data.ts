@@ -312,7 +312,7 @@ export function addLogEntry(actorName: string, action: string, details: string):
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
     return newLog;
 }
 
@@ -388,4 +388,23 @@ export const deleteManagedUser = (userId: string, deletedBy: string): ManagedUse
 
   addLogEntry(deletedBy, 'User Deleted', `Staff User '${deletedUser.name}' (ID: ${userId.substring(0,8)}...) deleted by ${deletedBy}.`);
   return deletedUser;
+};
+
+export let mockCapital = {
+  cashInHand: 50000.00,
+  lastUpdated: '2024-01-01T12:00:00.000Z',
+};
+
+export const updateCashInHand = (newAmount: number, actorName: string): { newAmount: number; lastUpdated: string } => {
+  const oldAmount = mockCapital.cashInHand;
+  mockCapital.cashInHand = newAmount;
+  mockCapital.lastUpdated = new Date().toISOString();
+  
+  addLogEntry(
+    actorName,
+    'Capital Updated',
+    `Cash in Hand updated by ${actorName}. Old: NRP ${oldAmount.toFixed(2)}, New: NRP ${newAmount.toFixed(2)}.`
+  );
+  
+  return { newAmount: mockCapital.cashInHand, lastUpdated: mockCapital.lastUpdated };
 };

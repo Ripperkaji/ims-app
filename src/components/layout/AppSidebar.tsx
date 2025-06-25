@@ -20,7 +20,8 @@ import {
   FlaskConical,
   AlertOctagon,
   BarChart3,
-  MessageSquare
+  MessageSquare,
+  Wallet
 } from 'lucide-react';
 import { useState } from 'react';
 import LiveChatDialog from '@/components/chat/LiveChatDialog';
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
   { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/capital', label: 'Capital', icon: Wallet, roles: ['admin'] },
   { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
