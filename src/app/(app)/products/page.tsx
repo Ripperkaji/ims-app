@@ -133,15 +133,14 @@ export default function ProductsPage() {
     setIsAddProductDialogOpen(true);
   };
 
-  const handleConfirmAddProduct = (newProductData: {
+  const handleConfirmAddMultipleProducts = (data: {
     name: string;
     modelName?: string;
-    flavorName?: string;
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
-    totalAcquiredStock: number; 
     supplierName?: string;
+    flavors: { flavorName?: string; totalAcquiredStock: number }[];
     acquisitionPaymentDetails: {
       method: AcquisitionPaymentMethod;
       cashPaid: number;
@@ -151,79 +150,86 @@ export default function ProductsPage() {
     };
   }) => {
     if (!user) {
-       toast({ title: "Error", description: "User not available.", variant: "destructive"});
-       return;
-    }
-    const existingProduct = mockProducts.find(p => 
-        p.name.toLowerCase() === newProductData.name.toLowerCase() &&
-        p.modelName?.toLowerCase() === newProductData.modelName?.toLowerCase() &&
-        p.flavorName?.toLowerCase() === newProductData.flavorName?.toLowerCase()
-    );
-
-
-    if (existingProduct) {
-      setProductConflictData({
-        existingProduct: existingProduct,
-        attemptedData: {
-            name: newProductData.name,
-            modelName: newProductData.modelName,
-            flavorName: newProductData.flavorName,
-            category: newProductData.category,
-            sellingPrice: newProductData.sellingPrice,
-            costPrice: newProductData.costPrice,
-            totalAcquiredStock: newProductData.totalAcquiredStock 
-        }
-      });
-      setIsHandleExistingProductDialogOpen(true);
-      setIsAddProductDialogOpen(false); 
-      return; 
+      toast({ title: "Error", description: "User not available.", variant: "destructive" });
+      return;
     }
 
-    const newProductId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const firstBatch: AcquisitionBatch = {
-      batchId: `batch-${newProductId}-${Date.now()}`,
-      date: new Date().toISOString(),
-      condition: "Product Added", 
-      supplierName: newProductData.supplierName,
-      quantityAdded: newProductData.totalAcquiredStock,
-      costPricePerUnit: newProductData.costPrice,
-      sellingPricePerUnitAtAcquisition: newProductData.sellingPrice,
-      paymentMethod: newProductData.acquisitionPaymentDetails.method,
-      totalBatchCost: newProductData.acquisitionPaymentDetails.totalAcquisitionCost,
-      cashPaid: newProductData.acquisitionPaymentDetails.cashPaid,
-      digitalPaid: newProductData.acquisitionPaymentDetails.digitalPaid,
-      dueToSupplier: newProductData.acquisitionPaymentDetails.dueAmount,
-    };
+    // Step 1: Check for conflicts first (all or nothing approach)
+    for (const flavorInfo of data.flavors) {
+      const existingProduct = mockProducts.find(p =>
+        p.name.toLowerCase() === data.name.toLowerCase() &&
+        p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
+        p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
+      );
 
-    const newProduct: Product = {
-      id: newProductId,
-      name: newProductData.name,
-      modelName: newProductData.modelName,
-      flavorName: newProductData.flavorName,
-      category: newProductData.category,
-      currentSellingPrice: newProductData.sellingPrice,
-      currentCostPrice: newProductData.costPrice,
-      acquisitionHistory: [firstBatch],
-      damagedQuantity: 0,
-      testerQuantity: 0, 
-    };
-    
-    mockProducts.push(newProduct);
-    setRefreshTrigger(prev => prev + 1);
-
-    const fullProductName = `${newProduct.name}${newProductData.modelName ? ` (${newProductData.modelName})` : ''}${newProductData.flavorName ? ` - ${newProductData.flavorName}` : ''}`;
-    let logDetails = `Product '${fullProductName}' added by ${user.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
-    if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
-    if (firstBatch.totalBatchCost > 0) {
-      logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
-      if (firstBatch.paymentMethod === 'Hybrid') {
-        logDetails += ` (Cash: ${firstBatch.cashPaid.toFixed(2)}, Digital: ${firstBatch.digitalPaid.toFixed(2)}, Due: ${firstBatch.dueToSupplier.toFixed(2)})`;
-      } else if (firstBatch.paymentMethod === 'Due') {
-        logDetails += ` (Due: ${firstBatch.dueToSupplier.toFixed(2)})`;
+      if (existingProduct) {
+        const conflictDisplayName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}${flavorInfo.flavorName ? ` - ${flavorInfo.flavorName}` : ''}`;
+        toast({
+          title: "Product Exists",
+          description: `A product variant named '${conflictDisplayName}' already exists. Please remove it or change the name. No products were added.`,
+          variant: "destructive",
+          duration: 7000,
+        });
+        return; // Abort the entire operation
       }
     }
-    addLog("Product Added", logDetails);
-    toast({ title: "Product Added", description: `${fullProductName} successfully added.`});
+
+    // Step 2: If no conflicts, add all products
+    const productsAddedDetails: string[] = [];
+    for (const flavorInfo of data.flavors) {
+      const newProductId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const totalAcquiredStock = flavorInfo.totalAcquiredStock;
+
+      const firstBatch: AcquisitionBatch = {
+        batchId: `batch-${newProductId}-${Date.now()}`,
+        date: new Date().toISOString(),
+        condition: "Product Added",
+        supplierName: data.supplierName,
+        quantityAdded: totalAcquiredStock,
+        costPricePerUnit: data.costPrice,
+        sellingPricePerUnitAtAcquisition: data.sellingPrice,
+        paymentMethod: data.acquisitionPaymentDetails.method,
+        // The payment details are for the whole batch, so we need to pro-rate them per product.
+        // For simplicity, let's log the full payment on the first item and zero on others if needed,
+        // but for now, the log will summarize the total.
+        totalBatchCost: data.costPrice * totalAcquiredStock,
+        // Pro-rate payment for this specific item in the batch
+        cashPaid: (data.acquisitionPaymentDetails.cashPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
+        digitalPaid: (data.acquisitionPaymentDetails.digitalPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
+        dueToSupplier: (data.acquisitionPaymentDetails.dueAmount / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
+      };
+
+      const newProduct: Product = {
+        id: newProductId,
+        name: data.name,
+        modelName: data.modelName,
+        flavorName: flavorInfo.flavorName,
+        category: data.category,
+        currentSellingPrice: data.sellingPrice,
+        currentCostPrice: data.costPrice,
+        acquisitionHistory: [firstBatch],
+        damagedQuantity: 0,
+        testerQuantity: 0,
+      };
+
+      mockProducts.push(newProduct);
+      productsAddedDetails.push(`${flavorInfo.flavorName || 'N/A'} (Qty: ${totalAcquiredStock})`);
+    }
+
+    setRefreshTrigger(prev => prev + 1);
+
+    const fullProductName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}`;
+    let logDetails = `Batch product add for '${fullProductName}' by ${user.name}. Variants: ${productsAddedDetails.join('; ')}. Cost/Unit: ${data.costPrice.toFixed(2)}, MRP/Unit: ${data.sellingPrice.toFixed(2)}.`;
+    if (data.supplierName) logDetails += ` Supplier: ${data.supplierName}.`;
+    if (data.acquisitionPaymentDetails.totalAcquisitionCost > 0) {
+      logDetails += ` Total Batch Cost: NRP ${data.acquisitionPaymentDetails.totalAcquisitionCost.toFixed(2)} via ${data.acquisitionPaymentDetails.method}.`;
+      if (data.acquisitionPaymentDetails.method === 'Hybrid') {
+        logDetails += ` (Cash: ${data.acquisitionPaymentDetails.cashPaid.toFixed(2)}, Digital: ${data.acquisitionPaymentDetails.digitalPaid.toFixed(2)}, Due: ${data.acquisitionPaymentDetails.dueAmount.toFixed(2)})`;
+      }
+    }
+    
+    addLog("Batch Product Add", logDetails);
+    toast({ title: "Products Added", description: `${productsAddedDetails.length} new product variants for ${fullProductName} have been added.` });
     setIsAddProductDialogOpen(false);
   };
   
@@ -580,7 +586,7 @@ export default function ProductsPage() {
         <AddProductDialog
           isOpen={isAddProductDialogOpen}
           onClose={() => setIsAddProductDialogOpen(false)}
-          onConfirmAddProduct={handleConfirmAddProduct}
+          onConfirmAddMultipleProducts={handleConfirmAddMultipleProducts}
         />
       )}
       {productToEdit && isEditProductDialogOpen && (
