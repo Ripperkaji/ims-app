@@ -290,7 +290,39 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   <div key={item.tempId} className="grid grid-cols-[1fr_1fr_1.5fr_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
                     <div className="space-y-1"> <Label htmlFor={`category-${index}`} className="text-xs">Category</Label> <Select value={item.selectedCategory} onValueChange={(value) => handleItemCategoryChange(index, value as ProductType | '')}> <SelectTrigger id={`category-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger> <SelectContent> {ALL_PRODUCT_TYPES.map(type => (<SelectItem key={type} value={type} className="text-xs">{type}</SelectItem>))} </SelectContent> </Select> </div>
                     <div className="space-y-1"> <Label htmlFor={`company-${index}`} className="text-xs">Company</Label> <Select value={item.selectedCompanyName} onValueChange={(value) => handleItemCompanyChange(index, value)} disabled={!item.selectedCategory}> <SelectTrigger id={`company-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger> <SelectContent> {availableCompanies.length > 0 ? availableCompanies.map(c => (<SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)) : (<SelectItem value="no-companies" disabled>No companies</SelectItem>)} </SelectContent> </Select> </div>
-                    <div className="space-y-1"> <Label htmlFor={`variant-${index}`} className="text-xs">Variant/Type</Label> <Select value={item.productId} onValueChange={(value) => handleItemProductChange(index, value)} disabled={!item.selectedCompanyName}> <SelectTrigger id={`variant-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger> <SelectContent> {availableVariants.length > 0 ? availableVariants.map(p => { const variantName = [p.modelName, p.flavorName].filter(Boolean).join(' - ') || 'Base'; const currentStock = calculateCurrentStockForSaleForm(p, mockSales); const isSelected = item.productId === p.id || selectedItems.some((si, siIndex) => si.productId === p.id && siIndex !== index); return (<SelectItem key={p.id} value={p.id} disabled={currentStock <= 0 && !isSelected} className="text-xs">{variantName} (Stock: {currentStock})</SelectItem>);}) : (<SelectItem value="no-variants" disabled>No variants</SelectItem>)} </SelectContent> </Select> </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`variant-${index}`} className="text-xs">Variant/Type</Label>
+                      <Select value={item.productId} onValueChange={(value) => handleItemProductChange(index, value)} disabled={!item.selectedCompanyName}>
+                        <SelectTrigger id={`variant-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger>
+                        <SelectContent>
+                          {availableVariants.length > 0 ? (
+                            availableVariants.map(p => {
+                              const currentStock = calculateCurrentStockForSaleForm(p, mockSales);
+                              const isSelected = item.productId === p.id || selectedItems.some((si, siIndex) => si.productId === p.id && siIndex !== index);
+                              return (
+                                <SelectItem key={p.id} value={p.id} disabled={currentStock <= 0 && !isSelected}>
+                                  <div className="flex w-full items-center justify-between">
+                                    <span className="truncate">
+                                      {p.modelName ? (
+                                        <>
+                                          <span className="font-bold text-base">{p.modelName}</span>
+                                          {p.flavorName && <span className="text-muted-foreground"> - {p.flavorName}</span>}
+                                        </>
+                                      ) : (
+                                        <span className="font-semibold">{p.flavorName || 'Base'}</span>
+                                      )}
+                                    </span>
+                                    <span className="font-semibold text-muted-foreground pl-2">Stock: {currentStock}</span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })
+                          ) : (
+                            <SelectItem value="no-variants" disabled>No variants</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="w-20 space-y-1"> <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label> <Input id={`quantity-${index}`} type="number" min="0" value={item.quantity} onChange={(e) => handleItemQuantityChange(index, e.target.value)} className="text-center h-9 text-xs" disabled={!item.productId} /> </div>
                     <div className="text-right w-24 space-y-1"> <Label className="text-xs">Subtotal</Label> <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p> </div>
                     <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0 self-center h-8 w-8"> <Trash2 className="h-3.5 w-3.5" /> </Button>
@@ -307,7 +339,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
             {isHybridPayment && (
               <Card className="p-3 border-primary/50 bg-primary/5">
-                <CardHeader className="p-1.5 pt-0"> <CardTitle className="text-base font-semibold">Hybrid Payment Details</CardTitle> <CardDescription className="text-xs">Amounts must sum to total sale amount.</CardDescription> </CardHeader>
+                <CardHeader className="p-1.5 pt-0"> <CardTitle className="text-base font-semibold">Hybrid Payment Details</CardTitle> <CardDescription className="text-sm">Amounts must sum to total sale amount.</CardDescription> </CardHeader>
                 <CardContent className="space-y-2 p-1.5">
                   <div> <Label htmlFor="hybridCashPaid" className="text-xs">Cash Paid (NRP)</Label> <Input id="hybridCashPaid" type="number" value={hybridCashPaid} onChange={(e) => setHybridCashPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-0.5 h-9 text-xs" /> </div>
                   <div> <Label htmlFor="hybridDigitalPaid" className="text-xs">Digital Payment Paid (NRP)</Label> <Input id="hybridDigitalPaid" type="number" value={hybridDigitalPaid} onChange={(e) => setHybridDigitalPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="mt-0.5 h-9 text-xs" /> </div>
