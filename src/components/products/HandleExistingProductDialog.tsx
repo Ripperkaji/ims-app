@@ -187,9 +187,9 @@ export default function HandleExistingProductDialog({
 
     if (totalAcquisitionCost > 0) { 
         if (isAcquisitionHybridPayment) {
-            finalCashPaid = parseFloat(acquisitionCashPaid) || 0;
-            finalDigitalPaid = parseFloat(acquisitionDigitalPaid) || 0;
-            finalAmountDue = parseFloat(acquisitionAmountDueToSupplier) || 0;
+            finalCashPaid = Math.round(Number(acquisitionCashPaid) * 100) / 100;
+            finalDigitalPaid = Math.round(Number(acquisitionDigitalPaid) * 100) / 100;
+            finalAmountDue = Math.round(Number(acquisitionAmountDueToSupplier) * 100) / 100;
 
             if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) {
                 toast({ title: "Invalid Payment", description: "Acquisition payment amounts cannot be negative.", variant: "destructive" }); return;

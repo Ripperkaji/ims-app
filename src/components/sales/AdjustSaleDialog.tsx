@@ -269,9 +269,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     let finalAmountDue = 0;
 
     if (isHybridPayment) {
-      finalCashPaid = parseFloat(hybridCashPaid) || 0;
-      finalDigitalPaid = parseFloat(hybridDigitalPaid) || 0;
-      finalAmountDue = parseFloat(hybridAmountLeftDue) || 0;
+      finalCashPaid = Math.round(Number(hybridCashPaid) * 100) / 100;
+      finalDigitalPaid = Math.round(Number(hybridDigitalPaid) * 100) / 100;
+      finalAmountDue = Math.round(Number(hybridAmountLeftDue) * 100) / 100;
 
       if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) {
         toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" });
