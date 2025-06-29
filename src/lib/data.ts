@@ -34,7 +34,7 @@ const createInitialBatch = (
 export const mockProducts: Product[] = [
   {
     id: 'prod1',
-    name: 'Vape Juice',
+    name: 'VAPEJUICE',
     flavorName: 'Mango Tango',
     category: 'E-liquid Nic Salt',
     currentSellingPrice: 15.99,
@@ -47,7 +47,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod2',
-    name: 'Smok',
+    name: 'SMOK',
     modelName: 'X-Priv',
     category: 'POD/MOD Devices',
     currentSellingPrice: 49.99,
@@ -60,7 +60,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod3',
-    name: 'Geekvape Coils',
+    name: 'GEEKVAPECOILS',
     modelName: 'Z Series',
     category: 'Coils',
     currentSellingPrice: 9.99,
@@ -73,7 +73,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod4',
-    name: 'Elf Bar',
+    name: 'ELFBAR',
     modelName: 'BC5000',
     flavorName: 'Blueberry Ice',
     category: 'Disposables',
@@ -87,7 +87,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod5',
-    name: 'Vape Pen Kit',
+    name: 'VAPEPENKIT',
     modelName: 'Starter',
     category: 'POD/MOD Devices',
     currentSellingPrice: 29.99,
@@ -100,7 +100,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'disp1',
-    name: 'Lost Mary',
+    name: 'LOSTMARY',
     modelName: 'OS5000',
     flavorName: 'Watermelon Chill',
     category: 'Disposables',
@@ -114,7 +114,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'nicsalt1',
-    name: 'Pod Juice',
+    name: 'PODJUICE',
     flavorName: 'Strawberry Kiwi',
     category: 'E-liquid Nic Salt',
     currentSellingPrice: 16.50,
@@ -127,7 +127,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'cotton2',
-    name: 'Cotton Bacon',
+    name: 'COTTONBACON',
     modelName: 'Bits V2',
     category: 'Cotton',
     currentSellingPrice: 6.50,
