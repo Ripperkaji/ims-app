@@ -36,10 +36,10 @@ export const mockProducts: Product[] = [
     name: 'VAPEJUICE',
     flavorName: 'Mango Tango',
     category: 'E-liquid Nic Salt',
-    currentSellingPrice: 16.00,
-    currentCostPrice: 9.50,
+    currentSellingPrice: 16.50,
+    currentCostPrice: 10.00,
     acquisitionHistory: [
-      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 9.50, 16.00, 'Cash', 70 * 9.50, 0, 0, 'Bulk Vapes Ltd.')
+      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 10.00, 16.50, 'Cash', 70 * 10.00, 0, 0, 'Bulk Vapes Ltd.')
     ],
     damagedQuantity: 2,
     testerQuantity: 1,
@@ -157,12 +157,12 @@ const initialMockSales: Sale[] = [
     customerName: 'John Doe',
     customerContact: '98XXXXXXXX',
     items: [
-      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 16.00, totalPrice: 32.00 },
+      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 16.50, totalPrice: 33.00 },
       { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 10.00, totalPrice: 10.00 },
     ],
-    totalAmount: 42.00,
+    totalAmount: 43.00,
     cashPaid: 0,
-    digitalPaid: 42.00,
+    digitalPaid: 43.00,
     amountDue: 0,
     formPaymentMethod: 'Digital',
     date: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),

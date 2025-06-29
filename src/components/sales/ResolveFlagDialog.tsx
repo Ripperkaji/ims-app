@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product } from '@/types';
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 
 type PaymentMethodSelection = 'Cash' | 'Credit Card' | 'Debit Card' | 'Due' | 'Hybrid';
 
@@ -75,9 +76,9 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
       setEditedItems(JSON.parse(JSON.stringify(sale.items))); 
       setEditedFormPaymentMethod(sale.formPaymentMethod);
       setIsHybridPayment(sale.formPaymentMethod === 'Hybrid');
-      setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
-      setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
-      setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
+      setHybridCashPaid(sale.cashPaid > 0 ? formatCurrency(sale.cashPaid) : '');
+      setHybridDigitalPaid(sale.digitalPaid > 0 ? formatCurrency(sale.digitalPaid) : '');
+      setHybridAmountLeftDue(sale.amountDue > 0 ? formatCurrency(sale.amountDue) : '');
       setResolutionComment('');
       setValidationError(null);
     }
@@ -111,17 +112,17 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
         const remainingForDue = currentTotalAmount - cash - digital;
          if (parseFloat(hybridAmountLeftDue || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
-            setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+            setHybridAmountLeftDue(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
          }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
         const remainingForDigital = currentTotalAmount - cash - due;
          if (parseFloat(hybridDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
-            setHybridDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+            setHybridDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
         const calculatedCash = currentTotalAmount - digital - due;
         if (parseFloat(hybridCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
-            setHybridCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+            setHybridCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -132,7 +133,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     const sumOfPayments = currentCashForValidation + currentDigitalForValidation + currentDueForValidation;
 
     if (Math.abs(sumOfPayments - currentTotalAmount) > 0.001 && (sumOfPayments > 0 || currentTotalAmount > 0)) {
-        setValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`);
+        setValidationError(`Hybrid payments (NRP ${formatCurrency(sumOfPayments)}) must sum up to Total Amount (NRP ${formatCurrency(currentTotalAmount)}).`);
     } else {
         setValidationError(null);
     }
@@ -157,8 +158,8 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
           productId: firstAvailableProduct.id,
           productName: firstAvailableProduct.name,
           quantity: 1,
-          unitPrice: firstAvailableProduct.sellingPrice, // Corrected: Use sellingPrice
-          totalPrice: firstAvailableProduct.sellingPrice, // Corrected: Use sellingPrice
+          unitPrice: firstAvailableProduct.currentSellingPrice,
+          totalPrice: firstAvailableProduct.currentSellingPrice,
         },
       ]);
     } else {
@@ -179,7 +180,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
       if (newProduct) {
         item.productId = newProduct.id;
         item.productName = newProduct.name;
-        item.unitPrice = newProduct.sellingPrice; // Corrected: Use sellingPrice
+        item.unitPrice = newProduct.currentSellingPrice;
         
         const originalItem = sale.items.find(i => i.productId === newProduct.id);
         const currentGlobalStock = allGlobalProducts.find(p => p.id === newProduct.id)?.stock || 0;
@@ -253,8 +254,8 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
         return;
       }
       if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - currentTotalAmount) > 0.001) {
-        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`);
-        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Amount (NRP ${currentTotalAmount.toFixed(2)}).`, variant: "destructive" });
+        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${formatCurrency(currentTotalAmount)}).`);
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum to Total Amount (NRP ${formatCurrency(currentTotalAmount)}).`, variant: "destructive" });
         return;
       }
     } else {
@@ -285,9 +286,9 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
     setEditedCustomerContact(sale.customerContact || '');
     setEditedItems(JSON.parse(JSON.stringify(sale.items)));
     setEditedFormPaymentMethod(sale.formPaymentMethod);
-    setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
-    setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
-    setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
+    setHybridCashPaid(sale.cashPaid > 0 ? formatCurrency(sale.cashPaid) : '');
+    setHybridDigitalPaid(sale.digitalPaid > 0 ? formatCurrency(sale.digitalPaid) : '');
+    setHybridAmountLeftDue(sale.amountDue > 0 ? formatCurrency(sale.amountDue) : '');
     setResolutionComment('');
     setValidationError(null);
     onClose();
@@ -361,7 +362,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                           <SelectItem key={p.id} value={p.id}
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                           >
-                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.sellingPrice.toFixed(2)} {/* Corrected */}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {formatCurrency(p.currentSellingPrice)}
                           </SelectItem>
                         );
                     })}
@@ -381,7 +382,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </div>
                 <div className="text-right w-28 space-y-1">
                     <Label>Subtotal</Label>
-                    <p className="font-semibold text-lg h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
+                    <p className="font-semibold text-lg h-9 flex items-center justify-end">NRP {formatCurrency(item.totalPrice)}</p>
                 </div>
                 <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0">
                 <Trash2 className="h-4 w-4" />
@@ -410,7 +411,7 @@ export default function ResolveFlagDialog({ sale, isOpen, onClose, onFlagResolve
                 </div>
                 <div className="text-right">
                 <p className="text-sm text-muted-foreground">New Total Sale Amount</p>
-                <p className="text-3xl font-bold">NRP {currentTotalAmount.toFixed(2)}</p>
+                <p className="text-3xl font-bold">NRP {formatCurrency(currentTotalAmount)}</p>
                 </div>
             </div>
 
