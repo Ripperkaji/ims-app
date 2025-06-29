@@ -172,15 +172,21 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     if (isNaN(numCostPrice) || numCostPrice <= 0) { toast({ title: "Invalid Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return; }
     if (numCostPrice > numSellingPrice) { toast({ title: "Logical Error", description: "Cost price cannot be greater than selling price.", variant: "destructive" }); return; }
     if (flavors.some(f => (parseInt(f.totalAcquiredStock, 10) || 0) < 0)) { toast({ title: "Invalid Stock", description: "Stock quantity cannot be negative.", variant: "destructive" }); return; }
-    if (flavors.every(f => (parseInt(f.totalAcquiredStock, 10) || 0) === 0)) { toast({ title: "No Stock Added", description: "Please add stock to at least one variant.", variant: "destructive" }); return; }
     
-    // Corrected flavor name validation
+    if (totalAcquiredStockForCosting <= 0) {
+      toast({ title: "No Stock Added", description: "Please add a positive stock quantity to at least one variant.", variant: "destructive" });
+      return;
+    }
+    
     if (flavors.length > 1 && flavors.some(f => !f.flavorName?.trim())) { 
         toast({ title: "Flavor Name Required", description: "When adding multiple variants in a batch, each must have a unique flavor name.", variant: "destructive"}); 
         return; 
     }
     
-    if (totalAcquiredStockForCosting > 0 && totalAcquisitionCost <= 0) { toast({ title: "Invalid Acquisition Cost", description: "Total acquisition cost must be positive if stock is being added.", variant: "destructive"}); return; }
+    if (totalAcquisitionCost <= 0) {
+      toast({ title: "Invalid Acquisition Cost", description: "Total acquisition cost must be positive if stock is being added.", variant: "destructive"});
+      return;
+    }
 
     let finalCashPaid = 0;
     let finalDigitalPaid = 0;
@@ -354,5 +360,3 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     </Dialog>
   );
 }
-
-    
