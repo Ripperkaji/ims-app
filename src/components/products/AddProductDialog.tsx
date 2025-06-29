@@ -173,7 +173,12 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     if (numCostPrice > numSellingPrice) { toast({ title: "Logical Error", description: "Cost price cannot be greater than selling price.", variant: "destructive" }); return; }
     if (flavors.some(f => (parseInt(f.totalAcquiredStock, 10) || 0) < 0)) { toast({ title: "Invalid Stock", description: "Stock quantity cannot be negative.", variant: "destructive" }); return; }
     if (flavors.every(f => (parseInt(f.totalAcquiredStock, 10) || 0) === 0)) { toast({ title: "No Stock Added", description: "Please add stock to at least one variant.", variant: "destructive" }); return; }
-    if (flavors.some(f => !f.flavorName && flavors.length > 1)) { toast({ title: "Flavor Name Required", description: "Please specify a flavor name for each variant when adding multiple.", variant: "destructive"}); return; }
+    
+    // Corrected flavor name validation
+    if (flavors.length > 1 && flavors.some(f => !f.flavorName?.trim())) { 
+        toast({ title: "Flavor Name Required", description: "When adding multiple variants in a batch, each must have a unique flavor name.", variant: "destructive"}); 
+        return; 
+    }
     
     if (totalAcquiredStockForCosting > 0 && totalAcquisitionCost <= 0) { toast({ title: "Invalid Acquisition Cost", description: "Total acquisition cost must be positive if stock is being added.", variant: "destructive"}); return; }
 
