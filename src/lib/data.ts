@@ -1,4 +1,3 @@
-
 import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType, ManagedUser, UserRole } from '@/types';
 import { formatISO } from 'date-fns';
 import { calculateCurrentStock as calculateStockShared } from './productUtils'; // For internal use if needed
@@ -60,7 +59,7 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod3',
-    name: 'GEEKVAPECOILS',
+    name: 'GEEKVAPE',
     modelName: 'Z Series',
     category: 'Coils',
     currentSellingPrice: 9.99,
