@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
   // Apply action filter
   if (actionParam) {
-    filteredLogs = filteredLogs.filter(log => log.action.toLowerCase().includes(actionParam.toLowerCase()));
+    filteredLogs = filteredLogs.filter(log => log.action === actionParam);
   }
 
   // Apply user filter

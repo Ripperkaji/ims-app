@@ -7,6 +7,7 @@ import type { LogEntry } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,6 +33,7 @@ export default function LogsPage() {
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [selectedAction, setSelectedAction] = useState<string>(ALL_ACTIONS_VALUE);
+  const [filterUser, setFilterUser] = useState<string>('');
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState<boolean>(false);
 
@@ -83,9 +85,15 @@ export default function LogsPage() {
     if (selectedAction && selectedAction !== ALL_ACTIONS_VALUE) {
       tempFilteredLogs = tempFilteredLogs.filter(log => log.action === selectedAction);
     }
+    
+    if (filterUser.trim()) {
+        tempFilteredLogs = tempFilteredLogs.filter(log =>
+            log.user.toLowerCase().includes(filterUser.toLowerCase().trim())
+        );
+    }
 
     setFilteredLogEntries(tempFilteredLogs);
-    const activeFilters = !!dateRange.from || !!dateRange.to || (!!selectedAction && selectedAction !== ALL_ACTIONS_VALUE);
+    const activeFilters = !!dateRange.from || !!dateRange.to || (!!selectedAction && selectedAction !== ALL_ACTIONS_VALUE) || !!filterUser.trim();
     setIsFilterActive(activeFilters);
     setIsFilterPopoverOpen(false);
 
@@ -99,6 +107,7 @@ export default function LogsPage() {
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
     setSelectedAction(ALL_ACTIONS_VALUE);
+    setFilterUser('');
     setFilteredLogEntries(allLogs);
     setIsFilterActive(false);
     setIsFilterPopoverOpen(false);
@@ -189,7 +198,7 @@ export default function LogsPage() {
                 <div className="space-y-2">
                   <h4 className="font-medium leading-none">Filter Logs</h4>
                   <p className="text-sm text-muted-foreground">
-                    Refine logs by date and action.
+                    Refine logs by date, action, and user.
                   </p>
                 </div>
                 <div className="grid gap-2">
@@ -255,6 +264,16 @@ export default function LogsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                 <div className="grid gap-2">
+                    <Label htmlFor="filterUser">User</Label>
+                    <Input
+                        id="filterUser"
+                        value={filterUser}
+                        onChange={(e) => setFilterUser(e.target.value)}
+                        placeholder="Search by user name..."
+                        className="h-9 text-sm"
+                    />
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" onClick={clearFilters}><X className="mr-2 h-4 w-4"/>Clear</Button>
