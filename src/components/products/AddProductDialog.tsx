@@ -29,6 +29,8 @@ interface AddProductDialogProps {
   onClose: () => void;
   onConfirmAddProduct: (newProductData: {
     name: string;
+    modelName?: string;
+    flavorName?: string;
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
@@ -48,6 +50,8 @@ const DialogCardTitle = DialogCardTitleImport;
 
 export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct }: AddProductDialogProps) {
   const [name, setName] = useState<string>('');
+  const [modelName, setModelName] = useState<string>('');
+  const [flavorName, setFlavorName] = useState<string>('');
   const [category, setCategory] = useState<ProductType | ''>('');
   const [sellingPrice, setSellingPrice] = useState<string>('');
   const [costPrice, setCostPrice] = useState<string>('');
@@ -193,7 +197,9 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
 
 
     onConfirmAddProduct({
-      name,
+      name: name.trim(),
+      modelName: modelName.trim() || undefined,
+      flavorName: flavorName.trim() || undefined,
       category,
       sellingPrice: numSellingPrice,
       costPrice: numCostPrice,
@@ -214,6 +220,8 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
 
   const resetForm = () => {
     setName('');
+    setModelName('');
+    setFlavorName('');
     setCategory('');
     setSellingPrice('');
     setCostPrice('');
@@ -248,7 +256,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
         <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-1.5">
             <Label htmlFor="productName">Product Name</Label>
-            <Input id="productName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., Premium Vape Juice" />
+            <Input id="productName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., Smok, Elf Bar, Pod Juice" />
           </div>
 
           <div className="space-y-1.5">
@@ -261,6 +269,28 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
           
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
+              <Label htmlFor="productModelName">Model Name (Optional)</Label>
+              <Input id="productModelName" value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="E.g., RPM 5, BC5000" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="productFlavorName">Flavor Name (Optional)</Label>
+              <Input id="productFlavorName" value={flavorName} onChange={(e) => setFlavorName(e.target.value)} placeholder="E.g., Mango Tango" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+             <div className="space-y-1.5">
+              <Label htmlFor="productTotalAcquiredStock">Initial Stock Quantity</Label>
+              <Input id="productTotalAcquiredStock" type="number" value={totalAcquiredStock} onChange={(e) => setTotalAcquiredStock(e.target.value)} placeholder="Units (e.g., 50)" min="0"/>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="supplierName">Supplier Name (Optional)</Label>
+              <Input id="supplierName" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="E.g., Vape Supplies Co."/>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
               <Label htmlFor="productSellingPrice">Selling Price (MRP)</Label>
               <Input id="productSellingPrice" type="number" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01"/>
             </div>
@@ -268,16 +298,6 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddProduct 
               <Label htmlFor="productCostPrice">Cost Price (Unit)</Label>
               <Input id="productCostPrice" type="number" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01"/>
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="productTotalAcquiredStock">Initial Stock Quantity</Label>
-            <Input id="productTotalAcquiredStock" type="number" value={totalAcquiredStock} onChange={(e) => setTotalAcquiredStock(e.target.value)} placeholder="Units (e.g., 50)" min="0"/>
-          </div>
-          
-          <div className="space-y-1.5">
-            <Label htmlFor="supplierName">Supplier Name (Optional)</Label>
-            <Input id="supplierName" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="E.g., Vape Supplies Co."/>
           </div>
 
           { (parseFloat(costPrice) > 0 && parseInt(totalAcquiredStock, 10) > 0) &&

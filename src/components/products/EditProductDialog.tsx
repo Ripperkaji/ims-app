@@ -27,6 +27,8 @@ interface EditProductDialogProps {
   onConfirmEditProduct: (updatedDetails: {
     id: string;
     name: string;
+    modelName?: string;
+    flavorName?: string;
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
@@ -35,6 +37,8 @@ interface EditProductDialogProps {
 
 export default function EditProductDialog({ product, isOpen, onClose, onConfirmEditProduct }: EditProductDialogProps) {
   const [name, setName] = useState<string>(product.name);
+  const [modelName, setModelName] = useState<string>(product.modelName || '');
+  const [flavorName, setFlavorName] = useState<string>(product.flavorName || '');
   const [category, setCategory] = useState<ProductType>(product.category);
   const [sellingPrice, setSellingPrice] = useState<string>(product.currentSellingPrice.toString());
   const [costPrice, setCostPrice] = useState<string>(product.currentCostPrice.toString());
@@ -43,6 +47,8 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
   useEffect(() => {
     if (product && isOpen) {
       setName(product.name);
+      setModelName(product.modelName || '');
+      setFlavorName(product.flavorName || '');
       setCategory(product.category);
       setSellingPrice(product.currentSellingPrice.toString());
       setCostPrice(product.currentCostPrice.toString());
@@ -57,7 +63,7 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
       toast({ title: "Invalid Name", description: "Product name cannot be empty.", variant: "destructive" });
       return;
     }
-    if (!category) { // Should always be selected as it's pre-filled
+    if (!category) { 
       toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" });
       return;
     }
@@ -77,6 +83,8 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
     onConfirmEditProduct({
       id: product.id,
       name,
+      modelName,
+      flavorName,
       category,
       sellingPrice: numSellingPrice,
       costPrice: numCostPrice,
@@ -85,12 +93,12 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
   };
 
   const handleCloseDialog = () => {
-    // Reset state to original product values on cancel/close if needed,
-    // or simply call onClose which parent handles.
     onClose();
   };
 
   if (!isOpen) return null;
+  const displayName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseDialog}>
@@ -100,27 +108,42 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
             <Edit className="h-6 w-6 text-primary" /> Edit Product Details
           </DialogTitle>
           <DialogDescription>
-            Modify the details for '{product.name}'. Click save to apply changes.
+            Modify the details for '{displayName}'. Click save to apply changes.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="editProductName" className="text-right col-span-1">
-              <Tag className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Name
-            </Label>
+            <Label htmlFor="editProductName" className="text-right col-span-1">Name</Label>
             <Input
               id="editProductName"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="col-span-3"
-              placeholder="E.g., Premium Vape Juice"
+              placeholder="E.g., Smok, Elf Bar"
             />
           </div>
-
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="editProductCategory" className="text-right col-span-1">
-              <Layers className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Category
-            </Label>
+            <Label htmlFor="editModelName" className="text-right col-span-1">Model</Label>
+            <Input
+              id="editModelName"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+              className="col-span-3"
+              placeholder="Optional: e.g., RPM 5, BC5000"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="editFlavorName" className="text-right col-span-1">Flavor</Label>
+            <Input
+              id="editFlavorName"
+              value={flavorName}
+              onChange={(e) => setFlavorName(e.target.value)}
+              className="col-span-3"
+              placeholder="Optional: e.g., Mango Tango"
+            />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="editProductCategory" className="text-right col-span-1">Category</Label>
             <Select value={category} onValueChange={(value) => setCategory(value as ProductType)}>
               <SelectTrigger id="editProductCategory" className="col-span-3">
                 <SelectValue placeholder="Select category" />
@@ -134,9 +157,7 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="editProductSellingPrice" className="text-right col-span-1">
-              <DollarSignIcon className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Sell Price
-            </Label>
+            <Label htmlFor="editProductSellingPrice" className="text-right col-span-1">Sell Price</Label>
             <Input
               id="editProductSellingPrice"
               type="number"
@@ -150,9 +171,7 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
           </div>
 
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="editProductCostPrice" className="text-right col-span-1">
-              <DollarSignIcon className="inline-block mr-1 h-4 w-4 text-muted-foreground" /> Cost Price
-            </Label>
+            <Label htmlFor="editProductCostPrice" className="text-right col-span-1">Cost Price</Label>
             <Input
               id="editProductCostPrice"
               type="number"

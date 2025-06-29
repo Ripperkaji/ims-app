@@ -34,7 +34,8 @@ const createInitialBatch = (
 export const mockProducts: Product[] = [
   {
     id: 'prod1',
-    name: 'Vape Juice - Mango Tango',
+    name: 'Vape Juice',
+    flavorName: 'Mango Tango',
     category: 'E-liquid Nic Salt',
     currentSellingPrice: 15.99,
     currentCostPrice: 9.50,
@@ -46,7 +47,8 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod2',
-    name: 'Vape Mod - Smok X',
+    name: 'Smok',
+    modelName: 'X-Priv',
     category: 'POD/MOD Devices',
     currentSellingPrice: 49.99,
     currentCostPrice: 30.00,
@@ -58,7 +60,8 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod3',
-    name: 'Coils - Standard Pack (5pcs)',
+    name: 'Geekvape Coils',
+    modelName: 'Z Series',
     category: 'Coils',
     currentSellingPrice: 9.99,
     currentCostPrice: 5.00,
@@ -70,7 +73,9 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod4',
-    name: 'Disposable Vape - Blueberry Ice',
+    name: 'Elf Bar',
+    modelName: 'BC5000',
+    flavorName: 'Blueberry Ice',
     category: 'Disposables',
     currentSellingPrice: 7.50,
     currentCostPrice: 3.75,
@@ -82,7 +87,8 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'prod5',
-    name: 'Vape Pen Kit - Starter',
+    name: 'Vape Pen Kit',
+    modelName: 'Starter',
     category: 'POD/MOD Devices',
     currentSellingPrice: 29.99,
     currentCostPrice: 18.00,
@@ -94,7 +100,9 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'disp1',
-    name: 'Disposable - Watermelon Chill',
+    name: 'Lost Mary',
+    modelName: 'OS5000',
+    flavorName: 'Watermelon Chill',
     category: 'Disposables',
     currentSellingPrice: 8.00,
     currentCostPrice: 4.00,
@@ -106,7 +114,8 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'nicsalt1',
-    name: 'Nic Salt - Strawberry Kiwi',
+    name: 'Pod Juice',
+    flavorName: 'Strawberry Kiwi',
     category: 'E-liquid Nic Salt',
     currentSellingPrice: 16.50,
     currentCostPrice: 10.00,
@@ -118,7 +127,8 @@ export const mockProducts: Product[] = [
   },
   {
     id: 'cotton2',
-    name: 'Cotton Bacon Bits - V2',
+    name: 'Cotton Bacon',
+    modelName: 'Bits V2',
     category: 'Cotton',
     currentSellingPrice: 6.50,
     currentCostPrice: 3.00,
@@ -135,14 +145,21 @@ mockProducts.forEach(p => {
   if (p.damagedQuantity === undefined) p.damagedQuantity = 0;
 });
 
+const getFullProductName = (p: {name: string, modelName?: string, flavorName?: string}) => {
+    let fullName = p.name;
+    if (p.modelName) fullName += ` (${p.modelName})`;
+    if (p.flavorName) fullName += ` - ${p.flavorName}`;
+    return fullName;
+}
+
 const initialMockSales: Sale[] = [
   {
     id: 'sale1',
     customerName: 'John Doe',
     customerContact: '98XXXXXXXX',
     items: [
-      { productId: 'prod1', productName: 'Vape Juice - Mango Tango', quantity: 2, unitPrice: 15.99, totalPrice: 31.98 },
-      { productId: 'prod3', productName: 'Coils - Standard Pack (5pcs)', quantity: 1, unitPrice: 9.99, totalPrice: 9.99 },
+      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 15.99, totalPrice: 31.98 },
+      { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 9.99, totalPrice: 9.99 },
     ],
     totalAmount: 41.97,
     cashPaid: 0,
@@ -161,7 +178,7 @@ const initialMockSales: Sale[] = [
     customerName: 'Jane Smith',
     customerContact: '97YYYYYYYY',
     items: [
-      { productId: 'prod4', productName: 'Disposable Vape - Blueberry Ice', quantity: 5, unitPrice: 7.50, totalPrice: 37.50 },
+      { productId: 'prod4', productName: getFullProductName(mockProducts.find(p => p.id === 'prod4')!), quantity: 5, unitPrice: 7.50, totalPrice: 37.50 },
     ],
     totalAmount: 37.50,
     cashPaid: 0,
@@ -182,7 +199,7 @@ const initialDamageLogEntries: LogEntry[] = [
     id: 'log-dmg-prod1-init',
     timestamp: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)),
     user: 'System', action: 'Product Damage & Stock Update (Exchange)',
-    details: "Product Damage & Stock Update (Exchange): Item 'Vape Juice - Mango Tango' (Qty: 2) from Sale ID MOCK_DMG_S1... marked damaged & exchanged by System. Prev Stock: 52, New Stock: 50, Prev Dmg: 0, New Dmg: 2."
+    details: `Product Damage & Stock Update (Exchange): Item '${getFullProductName(mockProducts.find(p => p.id === 'prod1')!)}' (Qty: 2) from Sale ID MOCK_DMG_S1... marked damaged & exchanged by System. Prev Stock: 52, New Stock: 50, Prev Dmg: 0, New Dmg: 2.`
   },
 ];
 
@@ -268,7 +285,7 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
     tempSelectedProductIds.push(productInfo.id);
     const quantity = getRandomInt(1, Math.min(3, productInfo.currentStock));
     saleItems.push({
-      productId: productInfo.id, productName: productInfo.name, quantity,
+      productId: productInfo.id, productName: getFullProductName(productInfo), quantity,
       unitPrice: productInfo.currentSellingPrice, totalPrice: quantity * productInfo.currentSellingPrice,
     });
   }

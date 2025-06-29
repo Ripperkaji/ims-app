@@ -34,12 +34,12 @@ export interface AcquisitionBatch {
 export interface Product {
   id: string;
   name: string;
+  modelName?: string;
+  flavorName?: string;
   category: ProductType;
   currentSellingPrice: number;
   currentCostPrice: number;
-
   acquisitionHistory: AcquisitionBatch[];
-
   damagedQuantity: number;
   testerQuantity: number;
 }
@@ -94,6 +94,8 @@ export interface LogEntry {
 
 export interface AttemptedProductData {
   name: string;
+  modelName?: string;
+  flavorName?: string;
   category: ProductType;
   sellingPrice: number;
   costPrice: number;

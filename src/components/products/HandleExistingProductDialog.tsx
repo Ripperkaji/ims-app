@@ -253,16 +253,18 @@ export default function HandleExistingProductDialog({
     onClose();
   };
 
+  const existingProductName = `${existingProduct.name}${existingProduct.modelName ? ` (${existingProduct.modelName})` : ''}${existingProduct.flavorName ? ` - ${existingProduct.flavorName}` : ''}`;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {if(!open) onClose()}}>
       <DialogContent className="sm:max-w-lg md:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <PackageOpen className="h-6 w-6 text-primary" /> Product Exists: {existingProduct.name}
+            <PackageOpen className="h-6 w-6 text-primary" /> Product Exists: {existingProductName}
           </DialogTitle>
           <DialogDescription>
-            A product named "{existingProduct.name}" (Category: {existingProduct.category}) already exists.
+            A product matching these details already exists.
             You attempted to add {quantityToRestock} unit(s). How would you like to proceed?
             Current Cost: NRP {existingProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP {existingProduct.currentSellingPrice.toFixed(2)}.
           </DialogDescription>

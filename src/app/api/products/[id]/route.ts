@@ -7,6 +7,8 @@ import { z } from 'zod';
 
 const productUpdateSchema = z.object({
   name: z.string().min(1, "Product name cannot be empty.").optional(),
+  modelName: z.string().optional(),
+  flavorName: z.string().optional(),
   category: z.custom<ProductType>((val) => typeof val === 'string' && val.length > 0, "Category is required.").optional(),
   sellingPrice: z.number().positive("Selling price must be positive.").optional(),
   costPrice: z.number().positive("Cost price must be positive.").optional(),
@@ -14,12 +16,10 @@ const productUpdateSchema = z.object({
     if (data.costPrice !== undefined && data.sellingPrice !== undefined) {
         return data.costPrice <= data.sellingPrice;
     }
-    // If one is defined and the other isn't, we need the existing value to check
-    // This logic will be handled in the PUT handler after fetching the product
     return true; 
 }, {
   message: "Cost price cannot be greater than selling price.",
-  path: ["costPrice"], // Or path: ["sellingPrice"]
+  path: ["costPrice"], 
 });
 
 
@@ -64,7 +64,6 @@ export async function PUT(
     const updates = validation.data;
     const originalProduct = mockProducts[productIndex];
     
-    // Refinement for costPrice vs sellingPrice if one is updated and the other is not
     let finalCostPrice = updates.costPrice !== undefined ? updates.costPrice : originalProduct.currentCostPrice;
     let finalSellingPrice = updates.sellingPrice !== undefined ? updates.sellingPrice : originalProduct.currentSellingPrice;
 
@@ -72,22 +71,49 @@ export async function PUT(
         return NextResponse.json({ error: "Cost price cannot be greater than selling price." }, { status: 400 });
     }
 
-    if (updates.name && updates.name.toLowerCase() !== originalProduct.name.toLowerCase()) {
-      const existingProductWithNewName = mockProducts.find(p => p.name.toLowerCase() === updates.name?.toLowerCase() && p.id !== productId);
-      if (existingProductWithNewName) {
-        return NextResponse.json({ error: `Another product already exists with the name '${updates.name}'. Please choose a different name.` }, { status: 409 });
+    const newName = updates.name?.trim() || originalProduct.name;
+    const newModelName = updates.modelName?.trim() || originalProduct.modelName;
+    const newFlavorName = updates.flavorName?.trim() || originalProduct.flavorName;
+
+    const isChangingIdentifier = newName.toLowerCase() !== originalProduct.name.toLowerCase() ||
+                                newModelName?.toLowerCase() !== originalProduct.modelName?.toLowerCase() ||
+                                newFlavorName?.toLowerCase() !== originalProduct.flavorName?.toLowerCase();
+
+    if (isChangingIdentifier) {
+      const existingProductWithNewIdentifiers = mockProducts.find(p => 
+          p.id !== productId &&
+          p.name.toLowerCase() === newName.toLowerCase() &&
+          p.modelName?.toLowerCase() === newModelName?.toLowerCase() &&
+          p.flavorName?.toLowerCase() === newFlavorName?.toLowerCase()
+      );
+      if (existingProductWithNewIdentifiers) {
+        const conflictDisplayName = `${newName}${newModelName ? ` (${newModelName})` : ''}${newFlavorName ? ` - ${newFlavorName}` : ''}`;
+        return NextResponse.json({ error: `Another product variant already exists with the name '${conflictDisplayName}'.` }, { status: 409 });
       }
     }
     
     const updatedProduct = { ...originalProduct };
     let changesMade = false;
-    let logDetails = `Details for product '${originalProduct.name}' (ID: ${productId.substring(0,8)}...) updated via API.`;
+    const originalDisplayName = `${originalProduct.name}${originalProduct.modelName ? ` (${originalProduct.modelName})` : ''}${originalProduct.flavorName ? ` - ${originalProduct.flavorName}` : ''}`;
+    let logDetails = `Details for product '${originalDisplayName}' (ID: ${productId.substring(0,8)}...) updated via API.`;
 
     if (updates.name !== undefined && updates.name !== originalProduct.name) {
         updatedProduct.name = updates.name;
-        logDetails += ` Name: ${originalProduct.name} -> ${updates.name}.`;
         changesMade = true;
     }
+    if (updates.modelName !== undefined && (updates.modelName || '') !== (originalProduct.modelName || '')) {
+        updatedProduct.modelName = updates.modelName || undefined;
+        changesMade = true;
+    }
+    if (updates.flavorName !== undefined && (updates.flavorName || '') !== (originalProduct.flavorName || '')) {
+        updatedProduct.flavorName = updates.flavorName || undefined;
+        changesMade = true;
+    }
+    if (changesMade) {
+      const newDisplayName = `${updatedProduct.name}${updatedProduct.modelName ? ` (${updatedProduct.modelName})` : ''}${updatedProduct.flavorName ? ` - ${updatedProduct.flavorName}` : ''}`;
+      logDetails += ` Identifier changed to '${newDisplayName}'.`;
+    }
+
     if (updates.category !== undefined && updates.category !== originalProduct.category) {
         updatedProduct.category = updates.category;
         logDetails += ` Category: ${originalProduct.category} -> ${updates.category}.`;

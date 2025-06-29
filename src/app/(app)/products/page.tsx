@@ -72,6 +72,8 @@ export default function ProductsPage() {
   const handleConfirmEditProduct = (updatedDetails: {
     id: string;
     name: string;
+    modelName?: string;
+    flavorName?: string;
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
@@ -80,25 +82,45 @@ export default function ProductsPage() {
     if (productIndexGlobal !== -1 && user) {
       const originalProduct = mockProducts[productIndexGlobal];
       
-      if (updatedDetails.name.toLowerCase() !== originalProduct.name.toLowerCase()) {
-        const existingProductWithNewName = mockProducts.find(p => p.name.toLowerCase() === updatedDetails.name.toLowerCase() && p.id !== updatedDetails.id);
-        if (existingProductWithNewName) {
-          toast({ title: "Name Conflict", description: `Another product already exists with the name '${updatedDetails.name}'. Please choose a different name.`, variant: "destructive" });
+      const newName = updatedDetails.name.trim();
+      const newModelName = updatedDetails.modelName?.trim();
+      const newFlavorName = updatedDetails.flavorName?.trim();
+      
+      const isChangingIdentifier = newName.toLowerCase() !== originalProduct.name.toLowerCase() ||
+                                  newModelName?.toLowerCase() !== originalProduct.modelName?.toLowerCase() ||
+                                  newFlavorName?.toLowerCase() !== originalProduct.flavorName?.toLowerCase();
+      
+      if (isChangingIdentifier) {
+        const existingProductWithNewIdentifiers = mockProducts.find(p => 
+            p.id !== updatedDetails.id &&
+            p.name.toLowerCase() === newName.toLowerCase() &&
+            p.modelName?.toLowerCase() === newModelName?.toLowerCase() &&
+            p.flavorName?.toLowerCase() === newFlavorName?.toLowerCase()
+        );
+        if (existingProductWithNewIdentifiers) {
+          const conflictDisplayName = `${newName}${newModelName ? ` (${newModelName})` : ''}${newFlavorName ? ` - ${newFlavorName}` : ''}`;
+          toast({ title: "Name Conflict", description: `Another product variant already exists with the name '${conflictDisplayName}'. Please choose a different combination.`, variant: "destructive" });
           return;
         }
       }
 
-      mockProducts[productIndexGlobal].name = updatedDetails.name;
-      mockProducts[productIndexGlobal].category = updatedDetails.category;
-      mockProducts[productIndexGlobal].currentSellingPrice = updatedDetails.sellingPrice;
-      mockProducts[productIndexGlobal].currentCostPrice = updatedDetails.costPrice;
+      mockProducts[productIndexGlobal] = {
+        ...originalProduct,
+        name: newName,
+        modelName: newModelName || undefined,
+        flavorName: newFlavorName || undefined,
+        category: updatedDetails.category,
+        currentSellingPrice: updatedDetails.sellingPrice,
+        currentCostPrice: updatedDetails.costPrice,
+      };
       
       setRefreshTrigger(prev => prev + 1);
 
-      addLog("Product Details Updated", `Details for product '${updatedDetails.name}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user.name}. Name: ${updatedDetails.name}, Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
+      const displayName = `${updatedDetails.name}${updatedDetails.modelName ? ` (${updatedDetails.modelName})` : ''}${updatedDetails.flavorName ? ` - ${updatedDetails.flavorName}` : ''}`;
+      addLog("Product Details Updated", `Details for product '${displayName}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user.name}. Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
       toast({
         title: "Product Updated",
-        description: `Details for ${updatedDetails.name} have been successfully updated.`,
+        description: `Details for ${displayName} have been successfully updated.`,
       });
     } else {
       toast({ title: "Error", description: "Could not find product to update or user not available.", variant: "destructive"});
@@ -113,6 +135,8 @@ export default function ProductsPage() {
 
   const handleConfirmAddProduct = (newProductData: {
     name: string;
+    modelName?: string;
+    flavorName?: string;
     category: ProductType;
     sellingPrice: number;
     costPrice: number;
@@ -130,13 +154,20 @@ export default function ProductsPage() {
        toast({ title: "Error", description: "User not available.", variant: "destructive"});
        return;
     }
-    const existingProductByName = mockProducts.find(p => p.name.toLowerCase() === newProductData.name.toLowerCase());
+    const existingProduct = mockProducts.find(p => 
+        p.name.toLowerCase() === newProductData.name.toLowerCase() &&
+        p.modelName?.toLowerCase() === newProductData.modelName?.toLowerCase() &&
+        p.flavorName?.toLowerCase() === newProductData.flavorName?.toLowerCase()
+    );
 
-    if (existingProductByName) {
+
+    if (existingProduct) {
       setProductConflictData({
-        existingProduct: existingProductByName,
+        existingProduct: existingProduct,
         attemptedData: {
             name: newProductData.name,
+            modelName: newProductData.modelName,
+            flavorName: newProductData.flavorName,
             category: newProductData.category,
             sellingPrice: newProductData.sellingPrice,
             costPrice: newProductData.costPrice,
@@ -167,6 +198,8 @@ export default function ProductsPage() {
     const newProduct: Product = {
       id: newProductId,
       name: newProductData.name,
+      modelName: newProductData.modelName,
+      flavorName: newProductData.flavorName,
       category: newProductData.category,
       currentSellingPrice: newProductData.sellingPrice,
       currentCostPrice: newProductData.costPrice,
@@ -178,7 +211,8 @@ export default function ProductsPage() {
     mockProducts.push(newProduct);
     setRefreshTrigger(prev => prev + 1);
 
-    let logDetails = `Product '${newProduct.name}' added by ${user.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
+    const fullProductName = `${newProduct.name}${newProductData.modelName ? ` (${newProductData.modelName})` : ''}${newProductData.flavorName ? ` - ${newProductData.flavorName}` : ''}`;
+    let logDetails = `Product '${fullProductName}' added by ${user.name}. Current Cost: NRP ${newProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP ${newProduct.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
     if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
     if (firstBatch.totalBatchCost > 0) {
       logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
@@ -189,7 +223,7 @@ export default function ProductsPage() {
       }
     }
     addLog("Product Added", logDetails);
-    toast({ title: "Product Added", description: `${newProduct.name} successfully added.`});
+    toast({ title: "Product Added", description: `${fullProductName} successfully added.`});
     setIsAddProductDialogOpen(false);
   };
   
@@ -203,7 +237,8 @@ export default function ProductsPage() {
 
     const productToUpdate = mockProducts[productIndex];
     let logAction = "Product Restocked"; 
-    let logDetails = `Product '${productToUpdate.name}' restocked by ${user.name}. `;
+    const fullProductName = `${productToUpdate.name}${productToUpdate.modelName ? ` (${productToUpdate.modelName})` : ''}${productToUpdate.flavorName ? ` - ${productToUpdate.flavorName}` : ''}`;
+    let logDetails = `Product '${fullProductName}' restocked by ${user.name}. `;
     
     const costPriceFromDialog = resolutionData.newCostPrice; 
     const sellingPriceFromDialog = resolutionData.newSellingPrice;
@@ -273,7 +308,7 @@ export default function ProductsPage() {
     setRefreshTrigger(prev => prev + 1);
     
     addLog(logAction, logDetails);
-    toast({ title: "Product Update Successful", description: `${productToUpdate.name} has been updated.` });
+    toast({ title: "Product Update Successful", description: `${fullProductName} has been updated.` });
     setIsHandleExistingProductDialogOpen(false);
     setProductConflictData(null);
   };
@@ -336,7 +371,9 @@ export default function ProductsPage() {
             <CardContent className="p-0 sm:p-2">
             {displayedProducts.length > 0 ? (
                 <Accordion type="multiple" className="w-full">
-                {displayedProducts.map((product) => (
+                {displayedProducts.map((product) => {
+                    const displayName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+                    return (
                     <AccordionItem value={product.id} key={product.id} className="border-b">
                     <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-[auto_2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
@@ -355,8 +392,8 @@ export default function ProductsPage() {
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                        <span className="font-medium truncate col-span-full sm:col-span-1">
-                            {product.name}
+                        <span className="font-medium truncate col-span-full sm:col-span-1" title={displayName}>
+                            {displayName}
                         </span>
                         <span className="text-xs text-muted-foreground ">{product.category}</span>
                         <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
@@ -482,7 +519,7 @@ export default function ProductsPage() {
                         )}
                     </AccordionContent>
                     </AccordionItem>
-                ))}
+                )})}
                 </Accordion>
             ) : (
                 <div className="text-center py-8 text-muted-foreground">
@@ -512,18 +549,21 @@ export default function ProductsPage() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {displayedProducts.map((product) => (
-                        <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>NRP {product.currentSellingPrice.toFixed(2)}</TableCell>
-                        <TableCell className="text-center">
-                            {product.currentDisplayStock}
-                            {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                            {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
-                        </TableCell>
-                        </TableRow>
-                    ))}
+                    {displayedProducts.map((product) => {
+                        const displayName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+                        return (
+                            <TableRow key={product.id}>
+                            <TableCell className="font-medium">{displayName}</TableCell>
+                            <TableCell>{product.category}</TableCell>
+                            <TableCell>NRP {product.currentSellingPrice.toFixed(2)}</TableCell>
+                            <TableCell className="text-center">
+                                {product.currentDisplayStock}
+                                {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                                {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                            </TableCell>
+                            </TableRow>
+                        )
+                    })}
                     </TableBody>
                 </Table>
                 ) : (

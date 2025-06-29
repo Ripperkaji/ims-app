@@ -7,6 +7,8 @@ import { z } from 'zod';
 
 const productSchema = z.object({
   name: z.string().min(1, "Product name cannot be empty."),
+  modelName: z.string().optional(),
+  flavorName: z.string().optional(),
   category: z.custom<ProductType>((val) => typeof val === 'string' && val.length > 0, "Category is required."),
   sellingPrice: z.number().positive("Selling price must be positive."),
   costPrice: z.number().positive("Cost price must be positive."),
@@ -50,10 +52,18 @@ export async function POST(request: NextRequest) {
     }
 
     const newProductData = validation.data;
+    const modelName = newProductData.modelName?.trim() || undefined;
+    const flavorName = newProductData.flavorName?.trim() || undefined;
 
-    const existingProductByName = mockProducts.find(p => p.name.toLowerCase() === newProductData.name.toLowerCase());
-    if (existingProductByName) {
-      return NextResponse.json({ error: `Product with name "${newProductData.name}" already exists.` }, { status: 409 });
+    const existingProduct = mockProducts.find(p => 
+        p.name.toLowerCase() === newProductData.name.toLowerCase() &&
+        p.modelName?.toLowerCase() === modelName?.toLowerCase() &&
+        p.flavorName?.toLowerCase() === flavorName?.toLowerCase()
+    );
+
+    if (existingProduct) {
+      const displayName = `${newProductData.name}${modelName ? ` (${modelName})` : ''}${flavorName ? ` - ${flavorName}` : ''}`;
+      return NextResponse.json({ error: `Product variant "${displayName}" already exists.` }, { status: 409 });
     }
     
     if (newProductData.totalAcquiredStock > 0 && newProductData.acquisitionPaymentDetails.totalAcquisitionCost <= 0 && newProductData.costPrice > 0) {
@@ -80,6 +90,8 @@ export async function POST(request: NextRequest) {
     const productToAdd: Product = {
       id: newProductId,
       name: newProductData.name,
+      modelName,
+      flavorName,
       category: newProductData.category,
       currentSellingPrice: newProductData.sellingPrice,
       currentCostPrice: newProductData.costPrice,
@@ -90,7 +102,8 @@ export async function POST(request: NextRequest) {
 
     mockProducts.push(productToAdd);
     
-    let logDetails = `Product '${productToAdd.name}' added via API. Current Cost: NRP ${productToAdd.currentCostPrice.toFixed(2)}, Current MRP: NRP ${productToAdd.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
+    const fullProductName = `${productToAdd.name}${productToAdd.modelName ? ` (${productToAdd.modelName})` : ''}${productToAdd.flavorName ? ` - ${productToAdd.flavorName}` : ''}`;
+    let logDetails = `Product '${fullProductName}' added via API. Current Cost: NRP ${productToAdd.currentCostPrice.toFixed(2)}, Current MRP: NRP ${productToAdd.currentSellingPrice.toFixed(2)}. Initial Batch Qty: ${newProductData.totalAcquiredStock}.`;
     if (newProductData.supplierName) logDetails += ` Supplier: ${newProductData.supplierName}.`;
     if (firstBatch.totalBatchCost > 0) {
       logDetails += ` Batch Cost: NRP ${firstBatch.totalBatchCost.toFixed(2)} via ${firstBatch.paymentMethod}.`;
