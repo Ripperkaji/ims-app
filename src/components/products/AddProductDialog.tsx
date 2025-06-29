@@ -163,8 +163,8 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
   };
 
   const handleConfirm = () => {
-    const numSellingPrice = parseFloat(sellingPrice);
-    const numCostPrice = parseFloat(costPrice);
+    const numSellingPrice = parseFloat(Number(sellingPrice).toFixed(2));
+    const numCostPrice = parseFloat(Number(costPrice).toFixed(2));
 
     if (!name.trim()) { toast({ title: "Invalid Name", description: "Product name cannot be empty.", variant: "destructive" }); return; }
     if (!category) { toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" }); return; }

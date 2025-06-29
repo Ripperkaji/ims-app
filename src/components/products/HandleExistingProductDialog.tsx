@@ -162,8 +162,8 @@ export default function HandleExistingProductDialog({
 
 
     if (selectedCondition === 'condition2' || selectedCondition === 'condition3') {
-      numNewCostPrice = parseFloat(newCostPrice);
-      numNewSellingPrice = parseFloat(newSellingPrice);
+      numNewCostPrice = parseFloat(Number(newCostPrice).toFixed(2));
+      numNewSellingPrice = parseFloat(Number(newSellingPrice).toFixed(2));
       if (isNaN(numNewCostPrice) || numNewCostPrice <= 0) {
         toast({ title: "Invalid New Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return;
       }

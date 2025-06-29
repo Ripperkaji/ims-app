@@ -56,8 +56,8 @@ export default function EditProductDialog({ product, isOpen, onClose, onConfirmE
   }, [product, isOpen]);
 
   const handleConfirm = () => {
-    const numSellingPrice = parseFloat(sellingPrice);
-    const numCostPrice = parseFloat(costPrice);
+    const numSellingPrice = parseFloat(Number(sellingPrice).toFixed(2));
+    const numCostPrice = parseFloat(Number(costPrice).toFixed(2));
 
     if (!name.trim()) {
       toast({ title: "Invalid Name", description: "Product name cannot be empty.", variant: "destructive" });
