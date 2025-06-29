@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const ALL_ACTIONS_VALUE = "__ALL_ACTIONS__";
+const ALL_USERS_VALUE = "__ALL_USERS__";
 
 export default function LogsPage() {
   const { user } = useAuthStore();
@@ -33,7 +34,7 @@ export default function LogsPage() {
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [selectedAction, setSelectedAction] = useState<string>(ALL_ACTIONS_VALUE);
-  const [filterUser, setFilterUser] = useState<string>('');
+  const [selectedUser, setSelectedUser] = useState<string>(ALL_USERS_VALUE);
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState<boolean>(false);
 
@@ -42,7 +43,12 @@ export default function LogsPage() {
 
   const availableActions = useMemo(() => {
     const actions = new Set(allLogs.map(log => log.action));
-    return Array.from(actions);
+    return Array.from(actions).sort();
+  }, [allLogs]);
+
+  const availableUsers = useMemo(() => {
+    const users = new Set(allLogs.map(log => log.user));
+    return Array.from(users).sort();
   }, [allLogs]);
 
   useEffect(() => {
@@ -86,14 +92,12 @@ export default function LogsPage() {
       tempFilteredLogs = tempFilteredLogs.filter(log => log.action === selectedAction);
     }
     
-    if (filterUser.trim()) {
-        tempFilteredLogs = tempFilteredLogs.filter(log =>
-            log.user.toLowerCase().includes(filterUser.toLowerCase().trim())
-        );
+    if (selectedUser && selectedUser !== ALL_USERS_VALUE) {
+      tempFilteredLogs = tempFilteredLogs.filter(log => log.user === selectedUser);
     }
 
     setFilteredLogEntries(tempFilteredLogs);
-    const activeFilters = !!dateRange.from || !!dateRange.to || (!!selectedAction && selectedAction !== ALL_ACTIONS_VALUE) || !!filterUser.trim();
+    const activeFilters = !!dateRange.from || !!dateRange.to || (!!selectedAction && selectedAction !== ALL_ACTIONS_VALUE) || (!!selectedUser && selectedUser !== ALL_USERS_VALUE);
     setIsFilterActive(activeFilters);
     setIsFilterPopoverOpen(false);
 
@@ -107,7 +111,7 @@ export default function LogsPage() {
   const clearFilters = () => {
     setDateRange({ from: undefined, to: undefined });
     setSelectedAction(ALL_ACTIONS_VALUE);
-    setFilterUser('');
+    setSelectedUser(ALL_USERS_VALUE);
     setFilteredLogEntries(allLogs);
     setIsFilterActive(false);
     setIsFilterPopoverOpen(false);
@@ -267,13 +271,17 @@ export default function LogsPage() {
                 </div>
                  <div className="grid gap-2">
                     <Label htmlFor="filterUser">User</Label>
-                    <Input
-                        id="filterUser"
-                        value={filterUser}
-                        onChange={(e) => setFilterUser(e.target.value)}
-                        placeholder="Search by user name..."
-                        className="h-9 text-sm"
-                    />
+                    <Select value={selectedUser} onValueChange={setSelectedUser}>
+                      <SelectTrigger id="filterUser">
+                        <SelectValue placeholder="Select user" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_USERS_VALUE}>All Users</SelectItem>
+                        {availableUsers.map(user => (
+                          <SelectItem key={user} value={user}>{user}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="ghost" onClick={clearFilters}><X className="mr-2 h-4 w-4"/>Clear</Button>
@@ -387,3 +395,5 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
     {children}
   </label>
 );
+
+    
