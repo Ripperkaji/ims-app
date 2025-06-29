@@ -237,166 +237,161 @@ export default function ExpensesPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold font-headline">Expenses Management</h1>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <ExpensesForm onExpenseAdded={handleExpenseAdded} />
-        </div>
-        
-        <div className="lg:col-span-2">
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle>Recorded Expenses</CardTitle>
-              <CardDescription>List of all business expenses. Use filters to refine the list.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 p-3 border rounded-md bg-muted/50">
-                <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Filter className="h-4 w-4 text-primary"/> Filter Expenses</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div>
-                        <Label htmlFor="filterDate" className="text-xs">Date</Label>
-                        <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal mt-0.5 h-9 text-xs",
-                                    !filterDate && "text-muted-foreground"
-                                )}
-                                onClick={() => { setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
-                                >
-                                <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
-                                {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                mode="single"
-                                selected={filterDate}
-                                onSelect={(date) => {setFilterDate(date); setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(false);}}
-                                initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                    <div>
-                        <Label htmlFor="filterMonthYear" className="text-xs">Month/Year</Label>
-                        <Select
-                            value={filterMonthYear || ALL_MONTHS_FILTER_VALUE}
-                            onValueChange={(value) => {
-                                setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? ALL_MONTHS_FILTER_VALUE : value);
-                                setFilterDate(undefined); // Clear specific date if month is chosen
-                            }}
-                        >
-                            <SelectTrigger id="filterMonthYear" className="mt-0.5 h-9 text-xs">
-                                <SelectValue placeholder="Select Month/Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={ALL_MONTHS_FILTER_VALUE} className="text-xs">All Months</SelectItem>
-                                {availableMonths.map(month => (
-                                <SelectItem key={month} value={month} className="text-xs">
-                                    {format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}
-                                </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div>
-                        <Label htmlFor="filterCategory" className="text-xs">Category</Label>
-                        <Input 
-                            id="filterCategory" 
-                            value={filterCategory} 
-                            onChange={(e) => setFilterCategory(e.target.value)}
-                            placeholder="Search category..."
-                            className="mt-0.5 h-9 text-xs"
-                        />
-                    </div>
-                    <div>
-                        <Label htmlFor="filterRecordedBy" className="text-xs">Recorded By</Label>
-                        <Input 
-                            id="filterRecordedBy" 
-                            value={filterRecordedBy} 
-                            onChange={(e) => setFilterRecordedBy(e.target.value)}
-                            placeholder="Search user..."
-                            className="mt-0.5 h-9 text-xs"
-                        />
-                    </div>
-                </div>
-                <div className="mt-3 flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={clearFiltersHandler} className="text-xs"><X className="mr-1 h-3.5 w-3.5"/>Clear</Button>
-                    <Button size="sm" onClick={() => applyFiltersHandler()} className="text-xs"><Filter className="mr-1 h-3.5 w-3.5"/>Apply</Button>
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Recorded By</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                      <TableCell>{format(parseISO(expense.date), 'MMM dd, yyyy')}</TableCell>
-                      <TableCell className="font-medium">{expense.category}</TableCell>
-                      <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
-                      <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
-                      <TableCell>{expense.recordedBy}</TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button 
-                            variant="outline" 
-                            size="icon" 
-                            onClick={() => openEditExpenseDialog(expense)}
-                            title="Edit Expense"
-                        >
-                          <Edit className="h-4 w-4" />
-                           <span className="sr-only">Edit Expense</span>
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                                variant="destructive" 
-                                size="icon"
-                                disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
-                                title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be deleted" : "Delete Expense"}
+      <ExpensesForm onExpenseAdded={handleExpenseAdded} />
+      
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Recorded Expenses</CardTitle>
+          <CardDescription>List of all business expenses. Use filters to refine the list.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 p-3 border rounded-md bg-muted/50">
+            <h3 className="text-sm font-semibold mb-2 flex items-center gap-1"><Filter className="h-4 w-4 text-primary"/> Filter Expenses</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                    <Label htmlFor="filterDate" className="text-xs">Date</Label>
+                    <Popover open={isCalendarPopoverOpen} onOpenChange={setIsCalendarPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full justify-start text-left font-normal mt-0.5 h-9 text-xs",
+                                !filterDate && "text-muted-foreground"
+                            )}
+                            onClick={() => { setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(!isCalendarPopoverOpen);}}
                             >
-                              <Trash2 className="h-4 w-4" />
-                               <span className="sr-only">Delete Expense</span>
+                            <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                            {filterDate ? format(filterDate, "PPP") : <span>Pick a date</span>}
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the expense record for '{expense.description}'.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteExpense(expense.id)}>
-                                Continue
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {displayedExpenses.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  {isFilterActive ? "No expenses found matching your filters." : "No expenses recorded yet."}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={filterDate}
+                            onSelect={(date) => {setFilterDate(date); setFilterMonthYear(ALL_MONTHS_FILTER_VALUE); setIsCalendarPopoverOpen(false);}}
+                            initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                <div>
+                    <Label htmlFor="filterMonthYear" className="text-xs">Month/Year</Label>
+                    <Select
+                        value={filterMonthYear || ALL_MONTHS_FILTER_VALUE}
+                        onValueChange={(value) => {
+                            setFilterMonthYear(value === ALL_MONTHS_FILTER_VALUE ? ALL_MONTHS_FILTER_VALUE : value);
+                            setFilterDate(undefined); // Clear specific date if month is chosen
+                        }}
+                    >
+                        <SelectTrigger id="filterMonthYear" className="mt-0.5 h-9 text-xs">
+                            <SelectValue placeholder="Select Month/Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={ALL_MONTHS_FILTER_VALUE} className="text-xs">All Months</SelectItem>
+                            {availableMonths.map(month => (
+                            <SelectItem key={month} value={month} className="text-xs">
+                                {format(parse(month, 'yyyy-MM', new Date()), 'MMMM yyyy')}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="filterCategory" className="text-xs">Category</Label>
+                    <Input 
+                        id="filterCategory" 
+                        value={filterCategory} 
+                        onChange={(e) => setFilterCategory(e.target.value)}
+                        placeholder="Search category..."
+                        className="mt-0.5 h-9 text-xs"
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="filterRecordedBy" className="text-xs">Recorded By</Label>
+                    <Input 
+                        id="filterRecordedBy" 
+                        value={filterRecordedBy} 
+                        onChange={(e) => setFilterRecordedBy(e.target.value)}
+                        placeholder="Search user..."
+                        className="mt-0.5 h-9 text-xs"
+                    />
+                </div>
+            </div>
+            <div className="mt-3 flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={clearFiltersHandler} className="text-xs"><X className="mr-1 h-3.5 w-3.5"/>Clear</Button>
+                <Button size="sm" onClick={() => applyFiltersHandler()} className="text-xs"><Filter className="mr-1 h-3.5 w-3.5"/>Apply</Button>
+            </div>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Total Amount</TableHead>
+                <TableHead>Recorded By</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayedExpenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell>{format(parseISO(expense.date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell className="font-medium">{expense.category}</TableCell>
+                  <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
+                  <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
+                  <TableCell>{expense.recordedBy}</TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => openEditExpenseDialog(expense)}
+                        title="Edit Expense"
+                    >
+                      <Edit className="h-4 w-4" />
+                       <span className="sr-only">Edit Expense</span>
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                            variant="destructive" 
+                            size="icon"
+                            disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
+                            title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be deleted" : "Delete Expense"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                           <span className="sr-only">Delete Expense</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the expense record for '{expense.description}'.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteExpense(expense.id)}>
+                            Continue
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          {displayedExpenses.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              {isFilterActive ? "No expenses found matching your filters." : "No expenses recorded yet."}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
       {expenseToEdit && (
         <EditExpenseDialog
             expense={expenseToEdit}
