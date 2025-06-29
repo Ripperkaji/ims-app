@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
 import type { Expense } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
@@ -81,18 +82,18 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
     if (filledFields === 2 && numericTotalExpenseAmount > 0) {
       if (expenseCashPaid !== '' && expenseDigitalPaid !== '' && expenseAmountDue === '') {
         const remainingForDue = numericTotalExpenseAmount - cash - digital;
-         if (parseFloat(expenseAmountDue || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
-            setExpenseAmountDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+         if (parseFloat(expenseAmountDue || "0").toFixed(2) !== formatCurrency(remainingForDue)) {
+            setExpenseAmountDue(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
          }
       } else if (expenseCashPaid !== '' && expenseAmountDue !== '' && expenseDigitalPaid === '') {
         const remainingForDigital = numericTotalExpenseAmount - cash - due;
-         if (parseFloat(expenseDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
-            setExpenseDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+         if (parseFloat(expenseDigitalPaid || "0").toFixed(2) !== formatCurrency(remainingForDigital)) {
+            setExpenseDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (expenseDigitalPaid !== '' && expenseAmountDue !== '' && expenseCashPaid === '') {
         const calculatedCash = numericTotalExpenseAmount - digital - due;
-        if (parseFloat(expenseCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
-            setExpenseCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+        if (parseFloat(expenseCashPaid || "0").toFixed(2) !== formatCurrency(calculatedCash)) {
+            setExpenseCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -103,7 +104,7 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
     const sumOfPayments = currentCashVal + currentDigitalVal + currentDueVal;
 
     if (Math.abs(sumOfPayments - numericTotalExpenseAmount) > 0.001 && (sumOfPayments > 0 || numericTotalExpenseAmount > 0)) {
-        setPaymentValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Expense Amount (NRP ${numericTotalExpenseAmount.toFixed(2)}).`);
+        setPaymentValidationError(`Hybrid payments (NRP ${formatCurrency(sumOfPayments)}) must sum up to Total Expense Amount (NRP ${formatCurrency(numericTotalExpenseAmount)}).`);
     } else {
         setPaymentValidationError(null);
     }
@@ -138,8 +139,8 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
         toast({ title: "Invalid Payment", description: "Expense payment amounts cannot be negative.", variant: "destructive" }); return;
       }
       if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - numericAmount) > 0.001 && numericAmount > 0) {
-        setPaymentValidationError(`Hybrid payments must sum to Total Expense Amount (NRP ${numericAmount.toFixed(2)}).`);
-        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Expense Amount (NRP ${numericAmount.toFixed(2)}).`, variant: "destructive" });
+        setPaymentValidationError(`Hybrid payments must sum to Total Expense Amount (NRP ${formatCurrency(numericAmount)}).`);
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum to Total Expense Amount (NRP ${formatCurrency(numericAmount)}).`, variant: "destructive" });
         return;
       }
     } else {

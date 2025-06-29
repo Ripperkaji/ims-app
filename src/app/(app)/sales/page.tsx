@@ -31,7 +31,7 @@ import {
 import { useState, useEffect, useMemo }  from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog"; 
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { calculateCurrentStock } from "@/lib/productUtils";
 import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
 
@@ -43,9 +43,9 @@ const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
 const getPaymentSummary = (sale: Sale): string => {
   if (sale.formPaymentMethod === 'Hybrid') {
     const parts = [];
-    if (sale.cashPaid > 0) parts.push(`Cash: ${sale.cashPaid.toFixed(2)}`);
-    if (sale.digitalPaid > 0) parts.push(`Digital: ${sale.digitalPaid.toFixed(2)}`);
-    if (sale.amountDue > 0) parts.push(`Due: ${sale.amountDue.toFixed(2)}`);
+    if (sale.cashPaid > 0) parts.push(`Cash: ${formatCurrency(sale.cashPaid)}`);
+    if (sale.digitalPaid > 0) parts.push(`Digital: ${formatCurrency(sale.digitalPaid)}`);
+    if (sale.amountDue > 0) parts.push(`Due: ${formatCurrency(sale.amountDue)}`);
     return parts.length > 0 ? `Hybrid (${parts.join(', ')})` : 'Hybrid (N/A)';
   }
   return sale.formPaymentMethod;
@@ -181,7 +181,7 @@ export default function SalesPage() {
     
     const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
     const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
-    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
+    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${formatCurrency(finalUpdatedSale.totalAmount)}. ${commentForLog}`);
     
     const newAllSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setAllSalesData(newAllSales);
@@ -218,7 +218,7 @@ export default function SalesPage() {
 
     addLog(
         "Sale Deleted", 
-        `Sale ID ${saleToDelete.id.substring(0,8)}... (Customer: ${saleToDelete.customerName}, Amount: NRP ${saleToDelete.totalAmount.toFixed(2)}) deleted by ${user.name}. Reason: ${deleteReason}`
+        `Sale ID ${saleToDelete.id.substring(0,8)}... (Customer: ${saleToDelete.customerName}, Amount: NRP ${formatCurrency(saleToDelete.totalAmount)}) deleted by ${user.name}. Reason: ${deleteReason}`
     );
     
     const saleIndex = mockSales.findIndex(s => s.id === saleToDelete.id);
@@ -475,7 +475,7 @@ export default function SalesPage() {
                     <TableCell className="py-2.5 max-w-xs truncate">
                       {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
                     </TableCell>
-                    <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                    <TableCell className="py-2.5">NRP {formatCurrency(sale.totalAmount)}</TableCell>
                     <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
                     <TableCell className="py-2.5">
                       <div className="flex items-center space-x-1">
@@ -489,7 +489,7 @@ export default function SalesPage() {
                                 <AlertTriangle className="h-3.5 w-3.5 text-orange-500 cursor-default" />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
+                                <p>Outstanding: NRP {formatCurrency(sale.amountDue)}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
@@ -580,7 +580,7 @@ export default function SalesPage() {
                        <TableCell className="py-2.5 max-w-xs truncate">
                         {sale.items.map(item => `${item.productName} (Qty: ${item.quantity})`).join(', ')}
                       </TableCell>
-                      <TableCell className="py-2.5">NRP {sale.totalAmount.toFixed(2)}</TableCell>
+                      <TableCell className="py-2.5">NRP {formatCurrency(sale.totalAmount)}</TableCell>
                       <TableCell className="py-2.5">{getPaymentSummary(sale)}</TableCell>
                       <TableCell className="py-2.5">
                         <div className="flex items-center space-x-1">
@@ -594,7 +594,7 @@ export default function SalesPage() {
                                   <AlertTriangle className="h-3.5 w-3.5 text-orange-500 cursor-default" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>Outstanding: NRP {sale.amountDue.toFixed(2)}</p>
+                                  <p>Outstanding: NRP {formatCurrency(sale.amountDue)}</p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
@@ -652,7 +652,7 @@ export default function SalesPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Sale Deletion</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {saleToDelete.totalAmount.toFixed(2)})? This action cannot be undone. Stock for items in this sale will be reverted.
+                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {formatCurrency(saleToDelete.totalAmount)})? This action cannot be undone. Stock for items in this sale will be reverted.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4 space-y-2">

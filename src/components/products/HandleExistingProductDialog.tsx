@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PackageOpen, Edit, DollarSign, Users, Landmark, Info, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Product, ProductType, ResolutionData, AttemptedProductData, AcquisitionPaymentMethod } from '@/types';
+import { formatCurrency } from '@/lib/utils';
 
 const DialogCardTitle = DialogCardTitleImport;
 
@@ -116,18 +117,18 @@ export default function HandleExistingProductDialog({
     if (filledFields === 2 && totalAcquisitionCost > 0) {
       if (acquisitionCashPaid !== '' && acquisitionDigitalPaid !== '' && acquisitionAmountDueToSupplier === '') {
         const remainingForDue = totalAcquisitionCost - cash - digital;
-         if (parseFloat(acquisitionAmountDueToSupplier || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
-            setAcquisitionAmountDueToSupplier(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+         if (parseFloat(acquisitionAmountDueToSupplier || "0").toFixed(2) !== formatCurrency(remainingForDue)) {
+            setAcquisitionAmountDueToSupplier(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
          }
       } else if (acquisitionCashPaid !== '' && acquisitionAmountDueToSupplier !== '' && acquisitionDigitalPaid === '') {
         const remainingForDigital = totalAcquisitionCost - cash - due;
-         if (parseFloat(acquisitionDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
-            setAcquisitionDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+         if (parseFloat(acquisitionDigitalPaid || "0").toFixed(2) !== formatCurrency(remainingForDigital)) {
+            setAcquisitionDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (acquisitionDigitalPaid !== '' && acquisitionAmountDueToSupplier !== '' && acquisitionCashPaid === '') {
         const calculatedCash = totalAcquisitionCost - digital - due;
-        if (parseFloat(acquisitionCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
-            setAcquisitionCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+        if (parseFloat(acquisitionCashPaid || "0").toFixed(2) !== formatCurrency(calculatedCash)) {
+            setAcquisitionCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -138,7 +139,7 @@ export default function HandleExistingProductDialog({
     const sumOfPayments = currentCashVal + currentDigitalVal + currentDueVal;
 
     if (Math.abs(sumOfPayments - totalAcquisitionCost) > 0.001 && (sumOfPayments > 0 || totalAcquisitionCost > 0)) {
-        setAcquisitionPaymentValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Acquisition Cost (NRP ${totalAcquisitionCost.toFixed(2)}).`);
+        setAcquisitionPaymentValidationError(`Hybrid payments (NRP ${formatCurrency(sumOfPayments)}) must sum up to Total Acquisition Cost (NRP ${formatCurrency(totalAcquisitionCost)}).`);
     } else {
         setAcquisitionPaymentValidationError(null);
     }
@@ -195,8 +196,8 @@ export default function HandleExistingProductDialog({
                 toast({ title: "Invalid Payment", description: "Acquisition payment amounts cannot be negative.", variant: "destructive" }); return;
             }
             if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAcquisitionCost) > 0.001) {
-                setAcquisitionPaymentValidationError(`Hybrid payments must sum to Total Acquisition Cost (NRP ${totalAcquisitionCost.toFixed(2)}).`);
-                toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Acquisition Cost (NRP ${totalAcquisitionCost.toFixed(2)}).`, variant: "destructive" });
+                setAcquisitionPaymentValidationError(`Hybrid payments must sum to Total Acquisition Cost (NRP ${formatCurrency(totalAcquisitionCost)}).`);
+                toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum to Total Acquisition Cost (NRP ${formatCurrency(totalAcquisitionCost)}).`, variant: "destructive" });
                 return;
             }
         } else {
@@ -266,7 +267,7 @@ export default function HandleExistingProductDialog({
           <DialogDescription>
             A product matching these details already exists.
             You attempted to add {quantityToRestock} unit(s). How would you like to proceed?
-            Current Cost: NRP {existingProduct.currentCostPrice.toFixed(2)}, Current MRP: NRP {existingProduct.currentSellingPrice.toFixed(2)}.
+            Current Cost: NRP {formatCurrency(existingProduct.currentCostPrice)}, Current MRP: NRP {formatCurrency(existingProduct.currentSellingPrice)}.
           </DialogDescription>
         </DialogHeader>
         
@@ -278,7 +279,7 @@ export default function HandleExistingProductDialog({
                   <RadioGroupItem value="condition1" id="condition1" />
                   <span className="font-semibold">Restock (Same Supplier/Price)</span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {existingProduct.currentCostPrice.toFixed(2)}.</p>
+                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {formatCurrency(existingProduct.currentCostPrice)}.</p>
               </Label>
 
               <Label htmlFor="condition2" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
@@ -318,11 +319,11 @@ export default function HandleExistingProductDialog({
                     <div className="grid grid-cols-2 gap-2">
                         <div>
                             <Label htmlFor="newCostPriceC3" className="text-xs">New Cost Price/Unit (Optional)</Label>
-                            <Input id="newCostPriceC3" type="number" value={newCostPrice} onChange={(e) => setNewCostPrice(e.target.value)} placeholder={`NRP ${existingProduct.currentCostPrice.toFixed(2)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
+                            <Input id="newCostPriceC3" type="number" value={newCostPrice} onChange={(e) => setNewCostPrice(e.target.value)} placeholder={`NRP ${formatCurrency(existingProduct.currentCostPrice)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
                         </div>
                         <div>
                             <Label htmlFor="newSellingPriceC3" className="text-xs">New Selling Price (MRP) (Optional)</Label>
-                            <Input id="newSellingPriceC3" type="number" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder={`NRP ${existingProduct.currentSellingPrice.toFixed(2)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
+                            <Input id="newSellingPriceC3" type="number" value={newSellingPrice} onChange={(e) => setNewSellingPrice(e.target.value)} placeholder={`NRP ${formatCurrency(existingProduct.currentSellingPrice)}`} min="0.01" step="0.01" className="h-8 text-xs"/>
                         </div>
                     </div>
                   </div>
@@ -333,7 +334,7 @@ export default function HandleExistingProductDialog({
 
           {selectedCondition && quantityToRestock > 0 && (
             <div className="mt-4 pt-4 border-t">
-              <p className="text-sm font-semibold mb-1">Payment for this Batch (Cost: NRP {totalAcquisitionCost.toFixed(2)})</p>
+              <p className="text-sm font-semibold mb-1">Payment for this Batch (Cost: NRP {formatCurrency(totalAcquisitionCost)})</p>
               <div className="space-y-2">
                 <div>
                     <Label htmlFor="resAcqPaymentMethod" className="text-xs">Payment Method</Label>

@@ -20,6 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { Sale, SaleItem, Product, ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { calculateCurrentStock } from '@/lib/productUtils';
+import { formatCurrency } from '@/lib/utils';
 
 import { ShieldCheck, PlusCircle, Trash2, Info, Landmark, Edit3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -93,9 +94,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       );
       setEditedFormPaymentMethod(sale.formPaymentMethod);
       setIsHybridPayment(sale.formPaymentMethod === 'Hybrid');
-      setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
-      setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
-      setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
+      setHybridCashPaid(sale.cashPaid > 0 ? formatCurrency(sale.cashPaid) : '');
+      setHybridDigitalPaid(sale.digitalPaid > 0 ? formatCurrency(sale.digitalPaid) : '');
+      setHybridAmountLeftDue(sale.amountDue > 0 ? formatCurrency(sale.amountDue) : '');
       setAdjustmentComment('');
       setValidationError(null);
     }
@@ -131,18 +132,18 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     if (filledFields === 2 && dialogTotalAmount > 0) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
         const remainingForDue = dialogTotalAmount - cash - digital;
-         if (parseFloat(hybridAmountLeftDue || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
-            setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+         if (parseFloat(hybridAmountLeftDue || "0").toFixed(2) !== formatCurrency(remainingForDue)) {
+            setHybridAmountLeftDue(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
          }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
         const remainingForDigital = dialogTotalAmount - cash - due;
-         if (parseFloat(hybridDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
-            setHybridDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+         if (parseFloat(hybridDigitalPaid || "0").toFixed(2) !== formatCurrency(remainingForDigital)) {
+            setHybridDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
         const calculatedCash = dialogTotalAmount - digital - due;
-        if (parseFloat(hybridCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
-            setHybridCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+        if (parseFloat(hybridCashPaid || "0").toFixed(2) !== formatCurrency(calculatedCash)) {
+            setHybridCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -153,7 +154,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     const sumOfPayments = currentCashForValidation + currentDigitalForValidation + currentDueForValidation;
 
     if (Math.abs(sumOfPayments - dialogTotalAmount) > 0.001 && (sumOfPayments > 0 || dialogTotalAmount > 0)) {
-        setValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`);
+        setValidationError(`Hybrid payments (NRP ${formatCurrency(sumOfPayments)}) must sum up to Total Amount (NRP ${formatCurrency(dialogTotalAmount)}).`);
     } else {
         setValidationError(null);
     }
@@ -278,8 +279,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
         return;
       }
       if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - dialogTotalAmount) > 0.001) {
-        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`);
-        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum to Total Amount (NRP ${dialogTotalAmount.toFixed(2)}).`, variant: "destructive" });
+        setValidationError(`Hybrid payments must sum to Total Amount (NRP ${formatCurrency(dialogTotalAmount)}).`);
+        toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum to Total Amount (NRP ${formatCurrency(dialogTotalAmount)}).`, variant: "destructive" });
         return;
       }
     } else {
@@ -327,9 +328,9 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       })
     );
     setEditedFormPaymentMethod(sale.formPaymentMethod);
-    setHybridCashPaid(sale.cashPaid > 0 ? sale.cashPaid.toFixed(2) : '');
-    setHybridDigitalPaid(sale.digitalPaid > 0 ? sale.digitalPaid.toFixed(2) : '');
-    setHybridAmountLeftDue(sale.amountDue > 0 ? sale.amountDue.toFixed(2) : '');
+    setHybridCashPaid(sale.cashPaid > 0 ? formatCurrency(sale.cashPaid) : '');
+    setHybridDigitalPaid(sale.digitalPaid > 0 ? formatCurrency(sale.digitalPaid) : '');
+    setHybridAmountLeftDue(sale.amountDue > 0 ? formatCurrency(sale.amountDue) : '');
     setAdjustmentComment('');
     setValidationError(null);
     onClose();
@@ -437,7 +438,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                                       disabled={effectiveStockDisplay === 0 && p.id !== item.productId}
                                       className="text-xs"
                           >
-                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {p.currentSellingPrice.toFixed(2)}
+                          {p.name} - Eff. Stock: {effectiveStockDisplay}, Price: NRP {formatCurrency(p.currentSellingPrice)}
                           </SelectItem>
                         );
                     })}
@@ -458,7 +459,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
                 <div className="text-right w-24 space-y-1">
                     <Label className="text-xs">Subtotal</Label>
-                    <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p>
+                    <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {formatCurrency(item.totalPrice)}</p>
                 </div>
                 <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0 h-8 w-8">
                 <Trash2 className="h-3.5 w-3.5" />
@@ -486,7 +487,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
                 </div>
                 <div className="text-right">
                 <p className="text-sm text-muted-foreground">New Total Sale Amount</p>
-                <p className="text-3xl font-bold">NRP {dialogTotalAmount.toFixed(2)}</p>
+                <p className="text-3xl font-bold">NRP {formatCurrency(dialogTotalAmount)}</p>
                 </div>
             </div>
 

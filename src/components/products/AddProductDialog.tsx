@@ -21,6 +21,7 @@ import { PackagePlus, Landmark, Info, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
+import { formatCurrency } from '@/lib/utils';
 
 type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 interface FlavorStock {
@@ -122,18 +123,18 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     if (filledFields === 2 && totalAcquisitionCost > 0) {
       if (acquisitionCashPaid !== '' && acquisitionDigitalPaid !== '' && acquisitionAmountDueToSupplier === '') {
         const remainingForDue = totalAcquisitionCost - cash - digital;
-         if (parseFloat(acquisitionAmountDueToSupplier || "0").toFixed(2) !== remainingForDue.toFixed(2)) {
-            setAcquisitionAmountDueToSupplier(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+         if (parseFloat(acquisitionAmountDueToSupplier || "0").toFixed(2) !== formatCurrency(remainingForDue)) {
+            setAcquisitionAmountDueToSupplier(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
          }
       } else if (acquisitionCashPaid !== '' && acquisitionAmountDueToSupplier !== '' && acquisitionDigitalPaid === '') {
         const remainingForDigital = totalAcquisitionCost - cash - due;
-         if (parseFloat(acquisitionDigitalPaid || "0").toFixed(2) !== remainingForDigital.toFixed(2)) {
-            setAcquisitionDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+         if (parseFloat(acquisitionDigitalPaid || "0").toFixed(2) !== formatCurrency(remainingForDigital)) {
+            setAcquisitionDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (acquisitionDigitalPaid !== '' && acquisitionAmountDueToSupplier !== '' && acquisitionCashPaid === '') {
         const calculatedCash = totalAcquisitionCost - digital - due;
-        if (parseFloat(acquisitionCashPaid || "0").toFixed(2) !== calculatedCash.toFixed(2)) {
-            setAcquisitionCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+        if (parseFloat(acquisitionCashPaid || "0").toFixed(2) !== formatCurrency(calculatedCash)) {
+            setAcquisitionCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -144,7 +145,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     const sumOfPayments = currentCashVal + currentDigitalVal + currentDueVal;
 
     if (Math.abs(sumOfPayments - totalAcquisitionCost) > 0.001 && (sumOfPayments > 0 || totalAcquisitionCost > 0)) {
-        setAcquisitionPaymentValidationError(`Hybrid payments (NRP ${sumOfPayments.toFixed(2)}) must sum up to Total Acquisition Cost (NRP ${totalAcquisitionCost.toFixed(2)}).`);
+        setAcquisitionPaymentValidationError(`Hybrid payments (NRP ${formatCurrency(sumOfPayments)}) must sum up to Total Acquisition Cost (NRP ${formatCurrency(totalAcquisitionCost)}).`);
     } else {
         setAcquisitionPaymentValidationError(null);
     }
@@ -205,7 +206,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
 
       if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) { toast({ title: "Invalid Payment", description: "Acquisition payment amounts cannot be negative.", variant: "destructive" }); return; }
       if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAcquisitionCost) > 0.001 && totalAcquisitionCost > 0) {
-        setAcquisitionPaymentValidationError(`Hybrid payments must sum to Total Acquisition Cost (NRP ${totalAcquisitionCost.toFixed(2)}).`);
+        setAcquisitionPaymentValidationError(`Hybrid payments must sum to Total Acquisition Cost (NRP ${formatCurrency(totalAcquisitionCost)}).`);
         toast({ title: "Payment Mismatch", description: `Hybrid payments must sum up.`, variant: "destructive" });
         return;
       }
@@ -327,7 +328,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
             {totalAcquisitionCost > 0 &&
               <div className="p-3 my-1 rounded-md border border-dashed border-primary bg-primary/5">
                   <p className="text-sm font-medium text-primary">Total Acquisition Cost for this Batch:</p>
-                  <p className="text-2xl font-bold text-primary">NRP {totalAcquisitionCost.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalAcquisitionCost)}</p>
               </div>
             }
 

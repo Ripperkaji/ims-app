@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { mockLogEntries, mockProducts } from "@/lib/data";
 import type { AcquisitionPaymentMethod } from "@/types";
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 type PayableType = 'supplier' | 'expense' | '';
 
@@ -141,11 +142,11 @@ export default function AccountsPage() {
   const getSupplierPaymentDetails = (item: SupplierDueItem): string => {
     if (!item.paymentMethod) return 'N/A';
 
-    let details = `Method: ${item.paymentMethod}. Batch Cost: NRP ${(item.totalBatchCost).toFixed(2)}. `;
+    let details = `Method: ${item.paymentMethod}. Batch Cost: NRP ${formatCurrency(item.totalBatchCost)}. `;
     if (item.paymentMethod === 'Hybrid') {
-      details += `(Paid Cash: NRP ${(item.cashPaidForBatch).toFixed(2)}, Paid Digital: NRP ${(item.digitalPaidForBatch).toFixed(2)}, Due: NRP ${(item.dueAmount).toFixed(2)})`;
+      details += `(Paid Cash: NRP ${formatCurrency(item.cashPaidForBatch)}, Paid Digital: NRP ${formatCurrency(item.digitalPaidForBatch)}, Due: NRP ${formatCurrency(item.dueAmount)})`;
     } else if (item.paymentMethod === 'Due') {
-      details += `(Outstanding Due: NRP ${(item.dueAmount).toFixed(2)})`;
+      details += `(Outstanding Due: NRP ${formatCurrency(item.dueAmount)})`;
     } else {
       details += `(Batch Fully Paid via ${item.paymentMethod})`;
     }
@@ -169,8 +170,8 @@ export default function AccountsPage() {
             </CardTitle>
             <CardDescription>
               View outstanding amounts.
-              {selectedPayableType === 'supplier' && ` Total Supplier Due: NRP ${totalSupplierDue.toFixed(2)}.`}
-              {selectedPayableType === 'expense' && ` Total Outstanding Expense Due: NRP ${totalExpenseDue.toFixed(2)}.`}
+              {selectedPayableType === 'supplier' && ` Total Supplier Due: NRP ${formatCurrency(totalSupplierDue)}.`}
+              {selectedPayableType === 'expense' && ` Total Outstanding Expense Due: NRP ${formatCurrency(totalExpenseDue)}.`}
               {selectedPayableType === '' && ' Select a type to see due details.'}
             </CardDescription>
           </div>
@@ -202,7 +203,7 @@ export default function AccountsPage() {
                     <TableRow key={item.batchId}
                       ><TableCell className="font-medium">{item.productName}</TableCell
                       ><TableCell>{item.supplierName || "N/A"}</TableCell
-                      ><TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell
+                      ><TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell
                       ><TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell
                       ><TableCell>{item.acquisitionDate}</TableCell
                     ></TableRow>
@@ -232,21 +233,21 @@ export default function AccountsPage() {
                     <TableRow key={item.id}
                       ><TableCell className="font-medium">{item.description}</TableCell
                       ><TableCell>{item.category}</TableCell
-                      ><TableCell className="text-right">NRP {item.totalAmount.toFixed(2)}</TableCell
+                      ><TableCell className="text-right">NRP {formatCurrency(item.totalAmount)}</TableCell
                       ><TableCell>
                         {item.paymentMethod === "Hybrid" ? (
                           <span className="text-xs">
                             Hybrid (
-                            {item.cashPaid !== undefined && item.cashPaid > 0 && `Cash: NRP ${item.cashPaid.toFixed(2)}, `}
-                            {item.digitalPaid !== undefined && item.digitalPaid > 0 && `Digital: NRP ${item.digitalPaid.toFixed(2)}, `}
-                            Due: NRP {item.dueAmount.toFixed(2)}
+                            {item.cashPaid !== undefined && item.cashPaid > 0 && `Cash: NRP ${formatCurrency(item.cashPaid)}, `}
+                            {item.digitalPaid !== undefined && item.digitalPaid > 0 && `Digital: NRP ${formatCurrency(item.digitalPaid)}, `}
+                            Due: NRP {formatCurrency(item.dueAmount)}
                             )
                           </span>
                         ) : (
                           "Fully Due"
                         )}
                       </TableCell
-                      ><TableCell className="text-right font-semibold text-destructive">NRP {item.dueAmount.toFixed(2)}</TableCell
+                      ><TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell
                       ><TableCell>{item.date}</TableCell
                     ></TableRow>
                   ))}

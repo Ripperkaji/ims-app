@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
@@ -164,18 +164,18 @@ export default function ExpensesPage() {
     let paymentLogString = `Paid via ${paymentDetails.method}.`;
     if (paymentDetails.method === 'Hybrid') {
       const parts = [];
-      if (paymentDetails.cashPaidForLog > 0) parts.push(`Cash: NRP ${paymentDetails.cashPaidForLog.toFixed(2)}`);
-      if (paymentDetails.digitalPaidForLog > 0) parts.push(`Digital: NRP ${paymentDetails.digitalPaidForLog.toFixed(2)}`);
-      if (paymentDetails.dueAmountForLog > 0) parts.push(`Due: NRP ${paymentDetails.dueAmountForLog.toFixed(2)}`);
+      if (paymentDetails.cashPaidForLog > 0) parts.push(`Cash: NRP ${formatCurrency(paymentDetails.cashPaidForLog)}`);
+      if (paymentDetails.digitalPaidForLog > 0) parts.push(`Digital: NRP ${formatCurrency(paymentDetails.digitalPaidForLog)}`);
+      if (paymentDetails.dueAmountForLog > 0) parts.push(`Due: NRP ${formatCurrency(paymentDetails.dueAmountForLog)}`);
       paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
     } else if (paymentDetails.method === 'Due') {
-        paymentLogString = `Marked as Due (NRP ${newExpense.amount.toFixed(2)}).`;
+        paymentLogString = `Marked as Due (NRP ${formatCurrency(newExpense.amount)}).`;
     }
 
-    const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${newExpense.amount.toFixed(2)} recorded by ${user.name}. ${paymentLogString}`;
+    const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${formatCurrency(newExpense.amount)} recorded by ${user.name}. ${paymentLogString}`;
     addLog("Expense Recorded", logDetails);
 
-    toast({ title: "Expense Recorded!", description: `${newExpense.category} expense of NRP ${newExpense.amount.toFixed(2)} recorded.`});
+    toast({ title: "Expense Recorded!", description: `${newExpense.category} expense of NRP ${formatCurrency(newExpense.amount)} recorded.`});
   };
 
   const openEditExpenseDialog = (expense: Expense) => {
@@ -200,7 +200,7 @@ export default function ExpensesPage() {
       let changesSummary = `Expense ID ${updatedExpense.id.substring(0,8)}... edited by ${user.name}.`;
       if (originalExpense.description !== updatedExpense.description) changesSummary += ` Desc: '${originalExpense.description}' -> '${updatedExpense.description}'.`;
       if (originalExpense.category !== updatedExpense.category) changesSummary += ` Cat: '${originalExpense.category}' -> '${updatedExpense.category}'.`;
-      if (originalExpense.amount !== updatedExpense.amount) changesSummary += ` Amt: NRP ${originalExpense.amount.toFixed(2)} -> NRP ${updatedExpense.amount.toFixed(2)}.`;
+      if (originalExpense.amount !== updatedExpense.amount) changesSummary += ` Amt: NRP ${formatCurrency(originalExpense.amount)} -> NRP ${formatCurrency(updatedExpense.amount)}.`;
       if (new Date(originalExpense.date).toDateString() !== new Date(updatedExpense.date).toDateString()) changesSummary += ` Date: ${format(new Date(originalExpense.date), 'MMM dd, yyyy')} -> ${format(new Date(updatedExpense.date), 'MMM dd, yyyy')}.`;
       
       addLog("Expense Edited", changesSummary);
@@ -222,7 +222,7 @@ export default function ExpensesPage() {
       }
       const deletedExpense = mockExpenses.splice(expenseIndex, 1)[0];
       setRefreshTrigger(prev => prev + 1);
-      addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${deletedExpense.amount.toFixed(2)}) deleted by ${user?.name || 'System'}.`);
+      addLog("Expense Deleted", `Expense '${deletedExpense.description}' (Amount: NRP ${formatCurrency(deletedExpense.amount)}) deleted by ${user?.name || 'System'}.`);
       toast({ title: "Expense Deleted", description: `Expense ${expenseId.substring(0,8)}... has been deleted.` });
     } else {
       toast({ title: "Error", description: "Expense not found for deletion.", variant: "destructive" });
@@ -340,7 +340,7 @@ export default function ExpensesPage() {
                   <TableCell>{format(parseISO(expense.date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell className="font-medium">{expense.category}</TableCell>
                   <TableCell className="truncate max-w-xs">{expense.description}</TableCell>
-                  <TableCell>NRP {expense.amount.toFixed(2)}</TableCell>
+                  <TableCell>NRP {formatCurrency(expense.amount)}</TableCell>
                   <TableCell>{expense.recordedBy}</TableCell>
                   <TableCell className="text-right space-x-2">
                     <Button 

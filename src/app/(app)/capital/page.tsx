@@ -13,6 +13,7 @@ import { Wallet, DollarSign, Archive, Landmark } from "lucide-react";
 import { mockProducts, mockSales, mockCapital, updateCashInHand } from "@/lib/data";
 import { calculateCurrentStock } from '@/lib/productUtils';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 export default function CapitalManagementPage() {
   const { user } = useAuthStore();
@@ -58,7 +59,7 @@ export default function CapitalManagementPage() {
     setLastUpdated(updatedTimestamp);
     setNewCashAmount(''); // Clear input
 
-    toast({ title: "Success", description: `Cash in hand has been updated to NRP ${amount.toFixed(2)}.` });
+    toast({ title: "Success", description: `Cash in hand has been updated to NRP ${formatCurrency(amount)}.` });
   };
 
   if (!user || user.role !== 'admin') {
@@ -81,15 +82,15 @@ export default function CapitalManagementPage() {
         <CardContent className="grid gap-4 md:grid-cols-3">
             <div className="p-4 border rounded-lg">
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3>
-                <p className="text-2xl font-bold">NRP {currentCashInHand.toFixed(2)}</p>
+                <p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p>
             </div>
              <div className="p-4 border rounded-lg">
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3>
-                <p className="text-2xl font-bold">NRP {currentInventoryValue.toFixed(2)}</p>
+                <p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p>
             </div>
              <div className="p-4 border rounded-lg bg-muted/50">
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3>
-                <p className="text-2xl font-bold text-primary">NRP {totalCapital.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCapital)}</p>
             </div>
         </CardContent>
       </Card>

@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface AnalyticsCardProps {
   title: string;
@@ -27,7 +27,7 @@ export default function AnalyticsCard({
 
   if (typeof value === 'number') {
     if (isCurrency) {
-      displayValue = `NRP ${value.toFixed(2)}`;
+      displayValue = `NRP ${formatCurrency(value)}`;
     } else {
       displayValue = value.toString();
     }

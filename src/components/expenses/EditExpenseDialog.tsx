@@ -21,6 +21,7 @@ import { CalendarDays, FilePenLine, ReceiptText, Edit } from 'lucide-react';
 import { format, parseISO } from "date-fns";
 import type { Expense } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { formatCurrency } from '@/lib/utils';
 
 interface EditExpenseDialogProps {
   expense: Expense | null;

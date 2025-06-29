@@ -20,7 +20,7 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format, parseISO } from 'date-fns';
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { calculateCurrentStock } from "@/lib/productUtils";
 import { addLogEntry as globalAddLog } from "@/lib/data";
 
@@ -131,7 +131,7 @@ export default function ProductsPage() {
       setRefreshTrigger(prev => prev + 1);
 
       const displayName = `${updatedDetails.name}${updatedDetails.modelName ? ` (${updatedDetails.modelName})` : ''}${updatedDetails.flavorName ? ` - ${updatedDetails.flavorName}` : ''}`;
-      addLog("Product Details Updated", `Details for product '${displayName}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user.name}. Cat: ${updatedDetails.category}, Cost: ${updatedDetails.costPrice.toFixed(2)}, MRP: ${updatedDetails.sellingPrice.toFixed(2)}.`);
+      addLog("Product Details Updated", `Details for product '${displayName}' (ID: ${updatedDetails.id.substring(0,8)}...) updated by ${user.name}. Cat: ${updatedDetails.category}, Cost: ${formatCurrency(updatedDetails.costPrice)}, MRP: ${formatCurrency(updatedDetails.sellingPrice)}.`);
       toast({
         title: "Product Updated",
         description: `Details for ${displayName} have been successfully updated.`,
@@ -257,12 +257,12 @@ export default function ProductsPage() {
     setRefreshTrigger(prev => prev + 1);
 
     const fullProductName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}`;
-    let logDetails = `Batch product add for '${fullProductName}' by ${user.name}. Variants: ${productsAddedDetails.join('; ')}. Cost/Unit: ${data.costPrice.toFixed(2)}, MRP/Unit: ${data.sellingPrice.toFixed(2)}.`;
+    let logDetails = `Batch product add for '${fullProductName}' by ${user.name}. Variants: ${productsAddedDetails.join('; ')}. Cost/Unit: ${formatCurrency(data.costPrice)}, MRP/Unit: ${formatCurrency(data.sellingPrice)}.`;
     if (data.supplierName) logDetails += ` Supplier: ${data.supplierName}.`;
     if (data.acquisitionPaymentDetails.totalAcquisitionCost > 0) {
-      logDetails += ` Total Batch Cost: NRP ${data.acquisitionPaymentDetails.totalAcquisitionCost.toFixed(2)} via ${data.acquisitionPaymentDetails.method}.`;
+      logDetails += ` Total Batch Cost: NRP ${formatCurrency(data.acquisitionPaymentDetails.totalAcquisitionCost)} via ${data.acquisitionPaymentDetails.method}.`;
       if (data.acquisitionPaymentDetails.method === 'Hybrid') {
-        logDetails += ` (Cash: ${data.acquisitionPaymentDetails.cashPaid.toFixed(2)}, Digital: ${data.acquisitionPaymentDetails.digitalPaid.toFixed(2)}, Due: ${data.acquisitionPaymentDetails.dueAmount.toFixed(2)})`;
+        logDetails += ` (Cash: ${formatCurrency(data.acquisitionPaymentDetails.cashPaid)}, Digital: ${formatCurrency(data.acquisitionPaymentDetails.digitalPaid)}, Due: ${formatCurrency(data.acquisitionPaymentDetails.dueAmount)})`;
       }
     }
     
@@ -308,7 +308,7 @@ export default function ProductsPage() {
       newBatch.condition = "Restock (Same Supplier/Price)";
       newBatch.costPricePerUnit = productToUpdate.currentCostPrice; 
       newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice; 
-      logDetails += `Using existing cost: NRP ${productToUpdate.currentCostPrice.toFixed(2)}. `;
+      logDetails += `Using existing cost: NRP ${formatCurrency(productToUpdate.currentCostPrice)}. `;
       logAction = newBatch.condition;
     } else if (resolutionData.condition === 'condition2') { 
       newBatch.condition = "Restock (Same Supplier, New Price)";
@@ -316,7 +316,7 @@ export default function ProductsPage() {
       productToUpdate.currentSellingPrice = sellingPriceFromDialog!;
       newBatch.costPricePerUnit = costPriceFromDialog!; 
       newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog!;
-      logDetails += `Prices updated - New Current Cost: NRP ${costPriceFromDialog!.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog!.toFixed(2)}. Batch Cost: NRP ${costPriceFromDialog!.toFixed(2)}. `;
+      logDetails += `Prices updated - New Current Cost: NRP ${formatCurrency(costPriceFromDialog!)}, New Current MRP: NRP ${formatCurrency(sellingPriceFromDialog!)}. Batch Cost: NRP ${formatCurrency(costPriceFromDialog!)}. `;
       logAction = newBatch.condition;
     } else if (resolutionData.condition === 'condition3') { 
       newBatch.condition = "Restock (New Supplier)";
@@ -327,12 +327,12 @@ export default function ProductsPage() {
           newBatch.costPricePerUnit = costPriceFromDialog;
           newBatch.sellingPricePerUnitAtAcquisition = sellingPriceFromDialog;
           mainPricesUpdated = true;
-          logDetails += `Prices updated - New Current Cost: NRP ${costPriceFromDialog.toFixed(2)}, New Current MRP: NRP ${sellingPriceFromDialog.toFixed(2)}. `;
+          logDetails += `Prices updated - New Current Cost: NRP ${formatCurrency(costPriceFromDialog)}, New Current MRP: NRP ${formatCurrency(sellingPriceFromDialog)}. `;
       } else {
           newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
           newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice;
       }
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch Cost: NRP ${newBatch.costPricePerUnit.toFixed(2)}. `;
+      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch Cost: NRP ${formatCurrency(newBatch.costPricePerUnit)}. `;
       if (!mainPricesUpdated) {
           logDetails += `Main product prices remain unchanged. `;
       }
@@ -340,11 +340,11 @@ export default function ProductsPage() {
     }
     
     if (newBatch.totalBatchCost > 0 && newBatch.quantityAdded > 0) {
-        logDetails += `Batch Total Cost: NRP ${newBatch.totalBatchCost.toFixed(2)} via ${newBatch.paymentMethod}.`;
+        logDetails += `Batch Total Cost: NRP ${formatCurrency(newBatch.totalBatchCost)} via ${newBatch.paymentMethod}.`;
         if (newBatch.paymentMethod === 'Hybrid') {
-            logDetails += ` (Cash: ${newBatch.cashPaid.toFixed(2)}, Digital: ${newBatch.digitalPaid.toFixed(2)}, Due: ${newBatch.dueToSupplier.toFixed(2)})`;
+            logDetails += ` (Cash: ${formatCurrency(newBatch.cashPaid)}, Digital: ${formatCurrency(newBatch.digitalPaid)}, Due: ${formatCurrency(newBatch.dueToSupplier)})`;
         } else if (newBatch.paymentMethod === 'Due') {
-            logDetails += ` (Due: ${newBatch.dueToSupplier.toFixed(2)})`;
+            logDetails += ` (Due: ${formatCurrency(newBatch.dueToSupplier)})`;
         }
     }
     
@@ -443,8 +443,8 @@ export default function ProductsPage() {
                                             <span className="font-medium truncate">
                                             {variant.flavorName || "Base Variant"}
                                             </span>
-                                            <span className="text-xs">MRP: {variant.currentSellingPrice.toFixed(2)}</span>
-                                            <span className="text-xs">Cost: {variant.currentCostPrice.toFixed(2)}</span>
+                                            <span className="text-xs">MRP: {formatCurrency(variant.currentSellingPrice)}</span>
+                                            <span className="text-xs">Cost: {formatCurrency(variant.currentCostPrice)}</span>
                                             <span className="text-xs font-semibold">
                                                 Stock: {variant.currentDisplayStock}
                                             </span>
@@ -472,8 +472,8 @@ export default function ProductsPage() {
                                                 </TableHeader>
                                                 <TableBody>
                                                 {variant.acquisitionHistory.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
-                                                    <TableRow key={batch.batchId}><TableCell className="px-1.5 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell><TableCell className="px-1.5 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell><TableCell className="px-1.5 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell><TableCell className="px-1.5 py-1 text-center">{batch.quantityAdded}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || variant.currentSellingPrice).toFixed(2)}</TableCell><TableCell className="px-1.5 py-1">
-                                                    <TooltipProvider><Tooltip><TooltipTrigger asChild><Badge variant={batch.dueToSupplier > 0 ? "destructive" : "default"} className={cn(batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600", "text-xs cursor-default px-1.5 py-0.5")}>{batch.dueToSupplier > 0 ? "Due" : "Paid"}{(batch.dueToSupplier) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}</Badge></TooltipTrigger><TooltipContent side="top" className="text-xs max-w-xs z-50"><p>Method: {batch.paymentMethod}</p><p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>{batch.paymentMethod === 'Hybrid' && (<><p>Cash: NRP {batch.cashPaid.toFixed(2)}</p><p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p></>)}{batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}</TooltipContent></Tooltip></TooltipProvider>
+                                                    <TableRow key={batch.batchId}><TableCell className="px-1.5 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell><TableCell className="px-1.5 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell><TableCell className="px-1.5 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell><TableCell className="px-1.5 py-1 text-center">{batch.quantityAdded}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {formatCurrency(batch.costPricePerUnit)}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {formatCurrency(batch.sellingPricePerUnitAtAcquisition || variant.currentSellingPrice)}</TableCell><TableCell className="px-1.5 py-1">
+                                                    <TooltipProvider><Tooltip><TooltipTrigger asChild><Badge variant={batch.dueToSupplier > 0 ? "destructive" : "default"} className={cn(batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600", "text-xs cursor-default px-1.5 py-0.5")}>{batch.dueToSupplier > 0 ? "Due" : "Paid"}{(batch.dueToSupplier) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}</Badge></TooltipTrigger><TooltipContent side="top" className="text-xs max-w-xs z-50"><p>Method: {batch.paymentMethod}</p><p>Batch Total: NRP {formatCurrency(batch.totalBatchCost)}</p>{batch.paymentMethod === 'Hybrid' && (<><p>Cash: NRP {formatCurrency(batch.cashPaid)}</p><p>Digital: NRP {formatCurrency(batch.digitalPaid)}</p></>)}{batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {formatCurrency(batch.dueToSupplier)}</p>}</TooltipContent></Tooltip></TooltipProvider>
                                                     </TableCell></TableRow>
                                                 ))}
                                                 </TableBody>
@@ -497,7 +497,7 @@ export default function ProductsPage() {
                                         {groupData.variants.sort((a,b) => (a.flavorName || '').localeCompare(b.flavorName || '')).map((variant) => (
                                             <TableRow key={variant.id}>
                                                 <TableCell className="pl-4 font-medium">{variant.flavorName || 'Base Variant'}</TableCell>
-                                                <TableCell>NRP {variant.currentSellingPrice.toFixed(2)}</TableCell>
+                                                <TableCell>NRP {formatCurrency(variant.currentSellingPrice)}</TableCell>
                                                 <TableCell className="text-center">
                                                     {variant.currentDisplayStock}
                                                     {(variant.currentDisplayStock) > 0 && variant.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}

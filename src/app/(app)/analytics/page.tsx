@@ -21,7 +21,7 @@ import {
   ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { subMonths, format, startOfMonth, endOfMonth, isWithinInterval, getMonth, getYear, getDaysInMonth, isSameDay } from "date-fns"; // Removed getDate
 
 interface DailyComparisonRow {
@@ -342,10 +342,10 @@ export default function AnalyticsPage() {
                     {monthToDateSalesTableData.map((row, index) => (
                       <TableRow key={index}>
                         <TableCell className="px-3 py-1.5">{row.currentMonthDateDisplay}</TableCell>
-                        <TableCell className="text-right px-3 py-1.5 font-medium">NRP {row.currentMonthSales.toFixed(2)}</TableCell>
+                        <TableCell className="text-right px-3 py-1.5 font-medium">NRP {formatCurrency(row.currentMonthSales)}</TableCell>
                         <TableCell className="px-3 py-1.5">{row.previousMonthDateDisplay || '-'}</TableCell>
                         <TableCell className="text-right px-3 py-1.5 font-medium">
-                          {row.previousMonthDateDisplay ? `NRP ${row.previousMonthSales.toFixed(2)}` : '-'}
+                          {row.previousMonthDateDisplay ? `NRP ${formatCurrency(row.previousMonthSales)}` : '-'}
                         </TableCell>
                       </TableRow>
                     ))}

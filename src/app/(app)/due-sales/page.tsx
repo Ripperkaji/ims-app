@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { calculateCurrentStock } from "@/lib/productUtils"; 
 import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
+import { formatCurrency } from "@/lib/utils";
 
 type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
@@ -80,7 +81,7 @@ export default function DueSalesPage() {
       mockSales[saleIndex].amountDue = 0;
       mockSales[saleIndex].status = 'Paid'; 
       
-      addLog("Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${paidAmount.toFixed(2)}.`);
+      addLog("Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`);
       
       setCurrentDueSales(prevSales => prevSales.filter(s => s.id !== saleToMarkAsPaid.id));
       
@@ -169,7 +170,7 @@ export default function DueSalesPage() {
     
     const logAction = "Sale Adjusted";
     const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
-    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${finalUpdatedSale.totalAmount.toFixed(2)}. ${commentForLog}`);
+    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${formatCurrency(finalUpdatedSale.totalAmount)}. ${commentForLog}`);
     
     setCurrentDueSales(mockSales.filter(sale => sale.amountDue > 0)
         .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -219,8 +220,8 @@ export default function DueSalesPage() {
                       </a>
                     ) : <span className="text-xs">N/A</span>}
                   </TableCell>
-                  <TableCell>NRP {sale.totalAmount.toFixed(2)}</TableCell>
-                  <TableCell className="font-semibold text-destructive">NRP {sale.amountDue.toFixed(2)}</TableCell>
+                  <TableCell>NRP {formatCurrency(sale.totalAmount)}</TableCell>
+                  <TableCell className="font-semibold text-destructive">NRP {formatCurrency(sale.amountDue)}</TableCell>
                   <TableCell>
                     {sale.isFlagged ? (
                       <TooltipProvider>
@@ -267,7 +268,7 @@ export default function DueSalesPage() {
               <AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
               <AlertDialogDescription>
                 You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for 
-                customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {saleToMarkAsPaid.amountDue.toFixed(2)}) as fully paid. 
+                customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. 
                 This action assumes the full due amount has been received.
                 <br/><br/>
                 To confirm, please type "<strong>YES</strong>" in the box below.

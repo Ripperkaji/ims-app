@@ -15,6 +15,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { formatCurrency } from '@/lib/utils';
 
 interface SalesEntryFormProps {
   onSaleAdded?: (newSale: Sale) => void;
@@ -93,17 +94,17 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       if (hybridCashPaid !== '' && hybridDigitalPaid !== '' && hybridAmountLeftDue === '') {
         const remainingForDue = totalAmount - cash - digital;
         if (parseFloat(hybridAmountLeftDue || "0") !== remainingForDue) {
-            setHybridAmountLeftDue(remainingForDue >= 0 ? remainingForDue.toFixed(2) : '0.00');
+            setHybridAmountLeftDue(remainingForDue >= 0 ? formatCurrency(remainingForDue) : '0.00');
         }
       } else if (hybridCashPaid !== '' && hybridAmountLeftDue !== '' && hybridDigitalPaid === '') {
         const remainingForDigital = totalAmount - cash - due;
          if (parseFloat(hybridDigitalPaid || "0") !== remainingForDigital) {
-            setHybridDigitalPaid(remainingForDigital >= 0 ? remainingForDigital.toFixed(2) : '0.00');
+            setHybridDigitalPaid(remainingForDigital >= 0 ? formatCurrency(remainingForDigital) : '0.00');
          }
       } else if (hybridDigitalPaid !== '' && hybridAmountLeftDue !== '' && hybridCashPaid === '') {
         const calculatedCash = totalAmount - digital - due;
         if (parseFloat(hybridCashPaid || "0") !== calculatedCash) {
-            setHybridCashPaid(calculatedCash >= 0 ? calculatedCash.toFixed(2) : '0.00');
+            setHybridCashPaid(calculatedCash >= 0 ? formatCurrency(calculatedCash) : '0.00');
         }
       }
     }
@@ -111,7 +112,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     const currentDigitalForValidation = parseFloat(hybridDigitalPaid) || 0;
     const currentDueForValidation = parseFloat(hybridAmountLeftDue) || 0;
     if (Math.abs(currentCashForValidation + currentDigitalForValidation + currentDueForValidation - totalAmount) > 0.001 && (currentCashForValidation + currentDigitalForValidation + currentDueForValidation > 0 || totalAmount > 0)) {
-        setValidationError(`Hybrid payments (NRP ${(currentCashForValidation + currentDigitalForValidation + currentDueForValidation).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`);
+        setValidationError(`Hybrid payments (NRP ${formatCurrency(currentCashForValidation + currentDigitalForValidation + currentDueForValidation)}) must sum up to Total Amount (NRP ${formatCurrency(totalAmount)}).`);
     } else {
         setValidationError(null);
     }
@@ -234,7 +235,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       finalDigitalPaid = parseFloat(hybridDigitalPaid) || 0;
       finalAmountDue = parseFloat(hybridAmountLeftDue) || 0;
       if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) { toast({ title: "Invalid Payment", description: "Payment amounts cannot be negative.", variant: "destructive" }); return; }
-      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`, variant: "destructive" }); setValidationError(`Hybrid payments (NRP ${(finalCashPaid + finalDigitalPaid + finalAmountDue).toFixed(2)}) must sum up to Total Amount (NRP ${totalAmount.toFixed(2)}).`); return; }
+      if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - totalAmount) > 0.001) { toast({ title: "Payment Mismatch", description: `Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum up to Total Amount (NRP ${formatCurrency(totalAmount)}).`, variant: "destructive" }); setValidationError(`Hybrid payments (NRP ${formatCurrency(finalCashPaid + finalDigitalPaid + finalAmountDue)}) must sum up to Total Amount (NRP ${formatCurrency(totalAmount)}).`); return; }
     } else {
       switch (formPaymentMethod) {
         case 'Cash': finalCashPaid = totalAmount; break;
@@ -248,11 +249,11 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     mockSales.unshift(newSale);
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
-    if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${newSale.cashPaid.toFixed(2)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${newSale.digitalPaid.toFixed(2)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${newSale.amountDue.toFixed(2)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
+    if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${formatCurrency(newSale.cashPaid)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${formatCurrency(newSale.digitalPaid)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${formatCurrency(newSale.amountDue)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
     else { paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`; }
-    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
     addLog("Sale Created", logDetails);
-    toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${totalAmount.toFixed(2)} has been recorded.` });
+    toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${formatCurrency(totalAmount)} has been recorded.` });
     if (onSaleAdded) { onSaleAdded(newSale); }
     setSaleOrigin(null); setCustomerName(''); setCustomerContact(''); setSelectedItems([]); setFormPaymentMethod('Cash'); setHybridCashPaid(''); setHybridDigitalPaid(''); setHybridAmountLeftDue(''); setValidationError(null);
   };
@@ -324,7 +325,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       </Select>
                     </div>
                     <div className="w-20 space-y-1"> <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label> <Input id={`quantity-${index}`} type="number" min="0" value={item.quantity} onChange={(e) => handleItemQuantityChange(index, e.target.value)} className="text-center h-9 text-xs" disabled={!item.productId} /> </div>
-                    <div className="text-right w-24 space-y-1"> <Label className="text-xs">Subtotal</Label> <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {item.totalPrice.toFixed(2)}</p> </div>
+                    <div className="text-right w-24 space-y-1"> <Label className="text-xs">Subtotal</Label> <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {formatCurrency(item.totalPrice)}</p> </div>
                     <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0 self-center h-8 w-8"> <Trash2 className="h-3.5 w-3.5" /> </Button>
                   </div>
                 );
@@ -334,7 +335,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start pt-2">
               <div> <Label htmlFor="paymentMethod" className="text-base">Payment Method</Label> <Select value={formPaymentMethod} onValueChange={(value) => setFormPaymentMethod(value as PaymentMethodSelection)}> <SelectTrigger id="paymentMethod" className="mt-1"> <SelectValue placeholder="Select payment method" /> </SelectTrigger> <SelectContent> <SelectItem value="Cash">Cash</SelectItem> <SelectItem value="Digital">Digital Payment</SelectItem> <SelectItem value="Hybrid">Hybrid Payment</SelectItem> <SelectItem value="Due">Full Amount Due</SelectItem> </SelectContent> </Select> </div>
-              <div className="text-right"> <p className="text-xs text-muted-foreground">Total Sale Amount</p> <p className="text-2xl font-bold font-headline">NRP {totalAmount.toFixed(2)}</p> </div>
+              <div className="text-right"> <p className="text-xs text-muted-foreground">Total Sale Amount</p> <p className="text-2xl font-bold font-headline">NRP {formatCurrency(totalAmount)}</p> </div>
             </div>
 
             {isHybridPayment && (
