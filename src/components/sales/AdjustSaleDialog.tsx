@@ -74,7 +74,8 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
 
 
   const dialogTotalAmount = useMemo(() => {
-    return editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const total = editedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    return Math.round(total * 100) / 100;
   }, [editedItems]);
 
   useEffect(() => {
@@ -232,7 +233,7 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
       }
     }
     
-    item.totalPrice = item.quantity * item.unitPrice;
+    item.totalPrice = Math.round(item.quantity * item.unitPrice * 100) / 100;
     newItems[index] = item;
     setEditedItems(newItems);
   };
@@ -551,5 +552,3 @@ export default function AdjustSaleDialog({ sale, isOpen, onClose, onSaleAdjusted
     </Dialog>
   );
 }
-
-    

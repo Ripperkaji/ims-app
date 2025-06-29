@@ -65,7 +65,7 @@ export default function HandleExistingProductDialog({
 
   const totalAcquisitionCost = useMemo(() => {
     if (quantityToRestock <= 0) return 0;
-    return currentCostPriceForCalculation * quantityToRestock;
+    return Math.round((currentCostPriceForCalculation * quantityToRestock) * 100) / 100;
   }, [currentCostPriceForCalculation, quantityToRestock]);
 
 
@@ -162,8 +162,8 @@ export default function HandleExistingProductDialog({
 
 
     if (selectedCondition === 'condition2' || selectedCondition === 'condition3') {
-      numNewCostPrice = parseFloat(Number(newCostPrice).toFixed(2));
-      numNewSellingPrice = parseFloat(Number(newSellingPrice).toFixed(2));
+      numNewCostPrice = Math.round(Number(newCostPrice) * 100) / 100;
+      numNewSellingPrice = Math.round(Number(newSellingPrice) * 100) / 100;
       if (isNaN(numNewCostPrice) || numNewCostPrice <= 0) {
         toast({ title: "Invalid New Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return;
       }

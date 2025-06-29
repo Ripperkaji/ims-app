@@ -58,7 +58,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const totalAmount = useMemo(() => {
-    return selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    const total = selectedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+    return Math.round(total * 100) / 100;
   }, [selectedItems]);
 
   useEffect(() => {
@@ -189,7 +190,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         toast({ title: "Out of Stock", description: `${item.productName} is out of stock. Quantity set to 0.`, variant: "destructive" });
         item.quantity = 0;
       }
-      item.totalPrice = item.quantity * item.unitPrice;
+      item.totalPrice = Math.round(item.quantity * item.unitPrice * 100) / 100;
       newItems[index] = item;
       setSelectedItems(newItems);
     }
@@ -211,7 +212,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
         item.quantity = quantity;
       }
     }
-    item.totalPrice = item.quantity * item.unitPrice;
+    item.totalPrice = Math.round(item.quantity * item.unitPrice * 100) / 100;
     newItems[index] = item;
     setSelectedItems(newItems);
   };

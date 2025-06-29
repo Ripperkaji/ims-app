@@ -86,7 +86,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     if (isNaN(numCostPrice) || numCostPrice <= 0 || totalAcquiredStockForCosting <= 0) {
       return 0;
     }
-    return numCostPrice * totalAcquiredStockForCosting;
+    return Math.round((numCostPrice * totalAcquiredStockForCosting) * 100) / 100;
   }, [costPrice, totalAcquiredStockForCosting]);
 
   useEffect(() => {
@@ -169,15 +169,14 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
   };
 
   const handleConfirm = () => {
-    const numSellingPrice = parseFloat(Number(sellingPrice).toFixed(2));
-    const numCostPrice = parseFloat(Number(costPrice).toFixed(2));
+    const numSellingPrice = Math.round(Number(sellingPrice) * 100) / 100;
+    const numCostPrice = Math.round(Number(costPrice) * 100) / 100;
 
     if (!name.trim()) { toast({ title: "Invalid Name", description: "Company name cannot be empty.", variant: "destructive" }); return; }
     if (!category) { toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" }); return; }
     if (isNaN(numSellingPrice) || numSellingPrice <= 0) { toast({ title: "Invalid Selling Price", description: "Please enter a valid positive selling price.", variant: "destructive" }); return; }
     if (isNaN(numCostPrice) || numCostPrice <= 0) { toast({ title: "Invalid Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return; }
     if (numCostPrice > numSellingPrice) { toast({ title: "Logical Error", description: "Cost price cannot be greater than selling price.", variant: "destructive" }); return; }
-    if (flavors.some(f => (parseInt(f.totalAcquiredStock, 10) || 0) < 0)) { toast({ title: "Invalid Stock", description: "Stock quantity cannot be negative.", variant: "destructive" }); return; }
     
     if (totalAcquiredStockForCosting <= 0) {
       toast({ title: "No Stock Added", description: "Please add a positive stock quantity to at least one variant.", variant: "destructive" });
