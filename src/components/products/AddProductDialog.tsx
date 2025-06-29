@@ -166,7 +166,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     const numSellingPrice = parseFloat(Number(sellingPrice).toFixed(2));
     const numCostPrice = parseFloat(Number(costPrice).toFixed(2));
 
-    if (!name.trim()) { toast({ title: "Invalid Name", description: "Product name cannot be empty.", variant: "destructive" }); return; }
+    if (!name.trim()) { toast({ title: "Invalid Name", description: "Company name cannot be empty.", variant: "destructive" }); return; }
     if (!category) { toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" }); return; }
     if (isNaN(numSellingPrice) || numSellingPrice <= 0) { toast({ title: "Invalid Selling Price", description: "Please enter a valid positive selling price.", variant: "destructive" }); return; }
     if (isNaN(numCostPrice) || numCostPrice <= 0) { toast({ title: "Invalid Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return; }
@@ -255,7 +255,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
         <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
           
           <div className="space-y-1.5">
-            <Label>Product Name</Label>
+            <Label>Company Name</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., Pod Juice, Smok" />
           </div>
 
@@ -354,3 +354,5 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     </Dialog>
   );
 }
+
+    
