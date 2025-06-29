@@ -10,7 +10,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData } from '@/types'; // Removed Sale
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
@@ -22,7 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { format, parseISO } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { calculateCurrentStock } from "@/lib/productUtils";
-import { addLogEntry as globalAddLog } from "@/lib/data"; // Use the updated addLogEntry
+import { addLogEntry as globalAddLog } from "@/lib/data";
 
 
 export default function ProductsPage() {
@@ -54,9 +54,39 @@ export default function ProductsPage() {
     globalAddLog(user.name, action, details);
   };
 
-  const displayedProducts = useMemo(() => {
-    return productsWithCalculatedStock
+  const productsByGroup = useMemo(() => {
+    const filteredProducts = productsWithCalculatedStock
       .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
+
+    const groups: { [groupKey: string]: { variants: Product[], totalStock: number, category: ProductType } } = {};
+    
+    filteredProducts.forEach(product => {
+      const groupKey = `${product.name}___${product.modelName || 'no-model'}`;
+      if (!groups[groupKey]) {
+        groups[groupKey] = { variants: [], totalStock: 0, category: product.category };
+      }
+      groups[groupKey].variants.push(product);
+      groups[groupKey].totalStock += product.currentDisplayStock;
+    });
+
+    return Object.entries(groups).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+  }, [productsWithCalculatedStock, selectedCategoryFilter]);
+  
+  const staffProductsByGroup = useMemo(() => {
+    const filteredProducts = productsWithCalculatedStock
+      .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
+
+    const groups: { [groupKey: string]: { variants: Product[] } } = {};
+
+    filteredProducts.forEach(product => {
+        const groupKey = `${product.name}___${product.modelName || 'no-model'}`;
+        if (!groups[groupKey]) {
+            groups[groupKey] = { variants: [] };
+        }
+        groups[groupKey].variants.push(product);
+    });
+    
+    return Object.entries(groups).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
   }, [productsWithCalculatedStock, selectedCategoryFilter]);
 
   const handleOpenEditProductDialog = (productId: string) => {
@@ -154,7 +184,6 @@ export default function ProductsPage() {
       return;
     }
 
-    // Step 1: Check for conflicts first (all or nothing approach)
     for (const flavorInfo of data.flavors) {
       const existingProduct = mockProducts.find(p =>
         p.name.toLowerCase() === data.name.toLowerCase() &&
@@ -170,11 +199,10 @@ export default function ProductsPage() {
           variant: "destructive",
           duration: 7000,
         });
-        return; // Abort the entire operation
+        return;
       }
     }
 
-    // Step 2: If no conflicts, add all products
     const productsAddedDetails: string[] = [];
     for (const flavorInfo of data.flavors) {
       const newProductId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -189,11 +217,7 @@ export default function ProductsPage() {
         costPricePerUnit: data.costPrice,
         sellingPricePerUnitAtAcquisition: data.sellingPrice,
         paymentMethod: data.acquisitionPaymentDetails.method,
-        // The payment details are for the whole batch, so we need to pro-rate them per product.
-        // For simplicity, let's log the full payment on the first item and zero on others if needed,
-        // but for now, the log will summarize the total.
         totalBatchCost: data.costPrice * totalAcquiredStock,
-        // Pro-rate payment for this specific item in the batch
         cashPaid: (data.acquisitionPaymentDetails.cashPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
         digitalPaid: (data.acquisitionPaymentDetails.digitalPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
         dueToSupplier: (data.acquisitionPaymentDetails.dueAmount / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
@@ -370,172 +394,94 @@ export default function ProductsPage() {
             <CardHeader>
                 <CardTitle>Product List &amp; Acquisition History</CardTitle>
                 <CardDescription>
-                    Overview of products. Expand <ChevronsUpDown className="inline-block h-3 w-3 text-muted-foreground mx-0.5"/> to see acquisition history and edit options.
+                    Overview of products grouped by name and model. Expand groups to see variants and acquisition history.
                     {selectedCategoryFilter && ` (Showing: ${selectedCategoryFilter})`}
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0 sm:p-2">
-            {displayedProducts.length > 0 ? (
+              {productsByGroup.length > 0 ? (
                 <Accordion type="multiple" className="w-full">
-                {displayedProducts.map((product) => {
-                    const displayName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+                  {productsByGroup.map(([groupKey, groupData]) => {
+                    const [name, modelName] = groupKey.split('___');
+                    const groupDisplayName = `${name}${modelName !== 'no-model' ? ` (${modelName})` : ''}`;
+
                     return (
-                    <AccordionItem value={product.id} key={product.id} className="border-b">
-                    <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-[auto_2fr_1.5fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <InfoIcon className="h-3.5 w-3.5 text-muted-foreground mr-1.5 inline-block cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent side="top" className="text-xs max-w-xs z-50">
-                                    <p className="font-semibold">Last Acquisition Details:</p>
-                                    <p>Condition: {formatAcquisitionConditionForDisplay(product.acquisitionHistory.at(-1)?.condition)}</p>
-                                    <p>Supplier: {product.acquisitionHistory.at(-1)?.supplierName || 'N/A'}</p>
-                                    <p>Batch Qty: {product.acquisitionHistory.at(-1)?.quantityAdded}</p>
-                                    <p>Batch Cost: NRP {(product.acquisitionHistory.at(-1)?.costPricePerUnit || 0).toFixed(2)}</p>
-                                    <p>Batch MRP: NRP {(product.acquisitionHistory.at(-1)?.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                        <span className="font-medium truncate col-span-full sm:col-span-1" title={displayName}>
-                            {displayName}
-                        </span>
-                        <span className="text-xs text-muted-foreground ">{product.category}</span>
-                        <span className="text-xs">MRP: {product.currentSellingPrice.toFixed(2)}</span>
-                        <span className="text-xs">Cost: {product.currentCostPrice.toFixed(2)}</span>
-                        <span className="text-xs font-semibold">
-                            Stock: {product.currentDisplayStock}
-                            {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                            {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
-                        </span>
-                        {user.role === 'admin' && (
-                            <div 
-                                className="justify-self-end sm:justify-self-auto hidden sm:block"
-                                onClick={(e) => e.stopPropagation()} 
-                            > 
-                                <div
-                                role="button"
-                                tabIndex={0}
-                                className={cn(
-                                    buttonVariants({ variant: "outline", size: "icon" }),
-                                    "h-7 w-7"
-                                )}
-                                onClick={(e) => {
-                                    e.stopPropagation(); 
-                                    handleOpenEditProductDialog(product.id);
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleOpenEditProductDialog(product.id);
-                                    }
-                                }}
-                                title="Edit Product Details"
-                                >
-                                    <Edit className="h-3.5 w-3.5" />
-                                </div>
-                            </div>
-                        )}
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-1.5 pt-2 pb-3 bg-muted/20 rounded-b-md">
-                        <div className="flex justify-between items-center mb-1.5 px-2">
-                            <h4 className="text-xs font-semibold text-muted-foreground">Acquisition History ({product.acquisitionHistory.length} batches):</h4>
-                            {user.role === 'admin' && (
-                                <div
-                                    role="button"
-                                    tabIndex={0}
-                                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "h-7 sm:hidden")}
-                                    onClick={() => {
-                                        handleOpenEditProductDialog(product.id);
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                        e.preventDefault();
-                                        handleOpenEditProductDialog(product.id);
-                                        }
-                                    }}
-                                    title="Edit Product Details"
-                                >
-                                    <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Main
-                                </div>
-                            )}
-                        </div>
-                        {product.acquisitionHistory.length > 0 ? (
-                        <div className="overflow-x-auto">
-                            <Table className="text-xs min-w-[600px]">
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead className="h-7 px-2 py-1">Date</TableHead>
-                                    <TableHead className="h-7 px-2 py-1">Condition</TableHead>
-                                    <TableHead className="h-7 px-2 py-1">Supplier</TableHead>
-                                    <TableHead className="h-7 px-2 py-1 text-center">Qty</TableHead>
-                                    <TableHead className="h-7 px-2 py-1 text-right">Cost/U</TableHead>
-                                    <TableHead className="h-7 px-2 py-1 text-right">Batch MRP</TableHead>
-                                    <TableHead className="h-7 px-2 py-1">Payment</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {product.acquisitionHistory.slice().sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
-                                    <TableRow key={batch.batchId}>
-                                    <TableCell className="px-2 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell>
-                                    <TableCell className="px-2 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell>
-                                    <TableCell className="px-2 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell>
-                                    <TableCell className="px-2 py-1 text-center">{batch.quantityAdded}</TableCell>
-                                    <TableCell className="px-2 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell>
-                                    <TableCell className="px-2 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || product.currentSellingPrice).toFixed(2)}</TableCell>
-                                    <TableCell className="px-2 py-1">
-                                        <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                            <Badge 
-                                                variant={batch.dueToSupplier > 0 ? "destructive" : "default"}
-                                                className={cn(
-                                                    batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600",
-                                                    "text-xs cursor-default px-1.5 py-0.5"
-                                                )}
+                      <AccordionItem value={groupKey} key={groupKey} className="border-b">
+                        <AccordionTrigger className="hover:bg-muted/30 data-[state=open]:bg-muted/50 px-2 py-2.5 text-sm rounded-t-md">
+                          <div className="flex-1 grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr] gap-x-3 gap-y-1 items-center text-left">
+                            <span className="font-semibold text-base truncate">{groupDisplayName}</span>
+                            <span className="text-xs text-muted-foreground">{groupData.category}</span>
+                            <span className="text-sm font-semibold">
+                              Total Stock: {groupData.totalStock}
+                              {(groupData.totalStock) > 0 && groupData.totalStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                              {(groupData.totalStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-1.5 pt-2 pb-3 bg-muted/20 rounded-b-md">
+                           <Accordion type="multiple" className="w-full pl-4">
+                             {groupData.variants.sort((a,b) => (a.flavorName || a.id).localeCompare(b.flavorName || b.id)).map((variant) => (
+                                <AccordionItem value={variant.id} key={variant.id} className="border-b last:border-b-0">
+                                  <AccordionTrigger className="hover:bg-muted/40 data-[state=open]:bg-muted/60 px-2 py-2 text-xs rounded-md">
+                                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr_auto] gap-x-3 gap-y-1 items-center text-left">
+                                        <span className="font-medium truncate">
+                                          {variant.flavorName || "Base Variant"}
+                                        </span>
+                                        <span className="text-xs">MRP: {variant.currentSellingPrice.toFixed(2)}</span>
+                                        <span className="text-xs">Cost: {variant.currentCostPrice.toFixed(2)}</span>
+                                        <span className="text-xs font-semibold">
+                                            Stock: {variant.currentDisplayStock}
+                                        </span>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                           <div
+                                                role="button"
+                                                tabIndex={0}
+                                                className={cn(buttonVariants({ variant: "outline", size: "icon" }), "h-7 w-7")}
+                                                onClick={(e) => { e.stopPropagation(); handleOpenEditProductDialog(variant.id); }}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleOpenEditProductDialog(variant.id); }}}
+                                                title="Edit Product Details"
                                             >
-                                                {batch.dueToSupplier > 0 ? "Due" : "Paid"}
-                                                {(batch.dueToSupplier) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}
-                                            </Badge>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="top" className="text-xs max-w-xs z-50">
-                                            <p>Method: {batch.paymentMethod}</p>
-                                            <p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>
-                                            {batch.paymentMethod === 'Hybrid' && (
-                                                <>
-                                                <p>Cash: NRP {batch.cashPaid.toFixed(2)}</p>
-                                                <p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p>
-                                                </>
-                                            )}
-                                            {batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}
-                                            </TooltipContent>
-                                        </Tooltip>
-                                        </TooltipProvider>
-                                    </TableCell>
-                                    </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                        ) : (
-                        <p className="text-xs text-muted-foreground px-2 py-4 text-center">No acquisition history recorded for this product.</p>
-                        )}
-                    </AccordionContent>
-                    </AccordionItem>
-                )})}
+                                                <Edit className="h-3.5 w-3.5" />
+                                            </div>
+                                        </div>
+                                     </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="pl-4 pr-1 py-2">
+                                     <h4 className="text-xs font-semibold text-muted-foreground mb-1">Acquisition History:</h4>
+                                     {variant.acquisitionHistory.length > 0 ? (
+                                        <div className="overflow-x-auto">
+                                          <Table className="text-xs min-w-[550px]">
+                                            <TableHeader>
+                                              <TableRow><TableHead className="h-6 px-1.5 py-1">Date</TableHead><TableHead className="h-6 px-1.5 py-1">Condition</TableHead><TableHead className="h-6 px-1.5 py-1">Supplier</TableHead><TableHead className="h-6 px-1.5 py-1 text-center">Qty</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Cost/U</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Batch MRP</TableHead><TableHead className="h-6 px-1.5 py-1">Payment</TableHead></TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {variant.acquisitionHistory.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
+                                                <TableRow key={batch.batchId}><TableCell className="px-1.5 py-1">{format(parseISO(batch.date), 'MMM dd, yy')}</TableCell><TableCell className="px-1.5 py-1">{formatAcquisitionConditionForDisplay(batch.condition)}</TableCell><TableCell className="px-1.5 py-1 truncate max-w-[100px]">{batch.supplierName || 'N/A'}</TableCell><TableCell className="px-1.5 py-1 text-center">{batch.quantityAdded}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {batch.costPricePerUnit.toFixed(2)}</TableCell><TableCell className="px-1.5 py-1 text-right">NRP {(batch.sellingPricePerUnitAtAcquisition || variant.currentSellingPrice).toFixed(2)}</TableCell><TableCell className="px-1.5 py-1">
+                                                  <TooltipProvider><Tooltip><TooltipTrigger asChild><Badge variant={batch.dueToSupplier > 0 ? "destructive" : "default"} className={cn(batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600", "text-xs cursor-default px-1.5 py-0.5")}>{batch.dueToSupplier > 0 ? "Due" : "Paid"}{(batch.dueToSupplier) > 0 && <AlertCircle className="ml-1 h-2.5 w-2.5"/>}</Badge></TooltipTrigger><TooltipContent side="top" className="text-xs max-w-xs z-50"><p>Method: {batch.paymentMethod}</p><p>Batch Total: NRP {batch.totalBatchCost.toFixed(2)}</p>{batch.paymentMethod === 'Hybrid' && (<><p>Cash: NRP {batch.cashPaid.toFixed(2)}</p><p>Digital: NRP {batch.digitalPaid.toFixed(2)}</p></>)}{batch.dueToSupplier > 0 && <p className="font-semibold">Outstanding: NRP {batch.dueToSupplier.toFixed(2)}</p>}</TooltipContent></Tooltip></TooltipProvider>
+                                                </TableCell></TableRow>
+                                              ))}
+                                            </TableBody>
+                                          </Table>
+                                        </div>
+                                      ) : (<p className="text-xs text-muted-foreground px-2 py-4 text-center">No acquisition history.</p>)}
+                                  </AccordionContent>
+                                </AccordionItem>
+                             ))}
+                           </Accordion>
+                        </AccordionContent>
+                      </AccordionItem>
+                    )
+                  })}
                 </Accordion>
-            ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
-                </div>
-            )}
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    {selectedCategoryFilter ? "No products found matching this category." : "No products found."}
+                  </div>
+                )}
             </CardContent>
             </>
         ) : ( 
-            <>
+          <>
             <CardHeader>
                 <CardTitle>Product List</CardTitle>
                 <CardDescription>
@@ -544,32 +490,39 @@ export default function ProductsPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="p-0 sm:p-2">
-                {displayedProducts.length > 0 ? (
+                {staffProductsByGroup.length > 0 ? (
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        <TableHead>Product Name</TableHead>
+                        <TableHead>Product</TableHead>
                         <TableHead>Category</TableHead>
-                        <TableHead>MRP</TableHead>
                         <TableHead className="text-center">Stock</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                    {displayedProducts.map((product) => {
-                        const displayName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+                     {staffProductsByGroup.map(([groupKey, groupData]) => {
+                        const [name, modelName] = groupKey.split('___');
+                        const groupDisplayName = `${name}${modelName !== 'no-model' ? ` (${modelName})` : ''}`;
+
                         return (
-                            <TableRow key={product.id}>
-                            <TableCell className="font-medium">{displayName}</TableCell>
-                            <TableCell>{product.category}</TableCell>
-                            <TableCell>NRP {product.currentSellingPrice.toFixed(2)}</TableCell>
-                            <TableCell className="text-center">
-                                {product.currentDisplayStock}
-                                {(product.currentDisplayStock) > 0 && product.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                                {(product.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
-                            </TableCell>
+                          <React.Fragment key={groupKey}>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                               <TableCell colSpan={3} className="font-semibold py-2 px-3">{groupDisplayName}</TableCell>
                             </TableRow>
+                            {groupData.variants.sort((a,b) => (a.flavorName || '').localeCompare(b.flavorName || '')).map((variant) => (
+                                <TableRow key={variant.id}>
+                                  <TableCell className="pl-8 font-medium">{variant.flavorName || 'Base Variant'} — <span className="text-muted-foreground text-xs">MRP: NRP {variant.currentSellingPrice.toFixed(2)}</span></TableCell>
+                                  <TableCell>{variant.category}</TableCell>
+                                  <TableCell className="text-center">
+                                      {variant.currentDisplayStock}
+                                      {(variant.currentDisplayStock) > 0 && variant.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                                      {(variant.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                                  </TableCell>
+                                </TableRow>
+                            ))}
+                          </React.Fragment>
                         )
-                    })}
+                     })}
                     </TableBody>
                 </Table>
                 ) : (
@@ -612,3 +565,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+
