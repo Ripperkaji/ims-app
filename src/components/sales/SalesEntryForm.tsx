@@ -189,12 +189,12 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
     if (product) {
       item.productId = product.id;
-      item.productName = product.name;
+      item.productName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
       item.unitPrice = product.currentSellingPrice;
       item.quantity = 1;
       const currentStock = calculateCurrentStockForSaleForm(product, mockSales);
       if (currentStock < 1) {
-        toast({ title: "Out of Stock", description: `${product.name} is out of stock. Quantity set to 0.`, variant: "destructive" });
+        toast({ title: "Out of Stock", description: `${item.productName} is out of stock. Quantity set to 0.`, variant: "destructive" });
         item.quantity = 0;
       }
       item.totalPrice = item.quantity * item.unitPrice;
@@ -480,6 +480,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                         {item.selectedCategory && allGlobalProducts
                           .filter(p => p.category === item.selectedCategory)
                           .map(p => {
+                            const fullProductName = `${p.name}${p.modelName ? ` (${p.modelName})` : ''}${p.flavorName ? ` - ${p.flavorName}` : ''}`;
                             const currentStock = calculateCurrentStockForSaleForm(p, mockSales);
                             const isCurrentItemSelected = item.productId && p.id === item.productId;
                             const isAlreadySelectedInOtherRows = selectedItems.some(
@@ -489,14 +490,16 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
 
                             return (
                               <SelectItem key={p.id} value={p.id} disabled={isDisabled} className="text-xs">
-                                {p.name} (Stock: {currentStock}, Price: NRP {p.currentSellingPrice.toFixed(2)})
+                                {fullProductName} (Stock: {currentStock}, Price: NRP {p.currentSellingPrice.toFixed(2)})
                               </SelectItem>
                             );
                           })
                           .sort((a,b) => {
                             // Ensure product name is available for sorting if item is fully formed
-                            const nameA = allGlobalProducts.find(p => p.id === a.props.value)?.name || '';
-                            const nameB = allGlobalProducts.find(p => p.id === b.props.value)?.name || '';
+                            const productA = allGlobalProducts.find(p => p.id === a.props.value);
+                            const productB = allGlobalProducts.find(p => p.id === b.props.value);
+                            const nameA = productA ? `${productA.name} ${productA.modelName || ''} ${productA.flavorName || ''}` : '';
+                            const nameB = productB ? `${productB.name} ${productB.modelName || ''} ${productB.flavorName || ''}` : '';
                             return nameA.localeCompare(nameB);
                           })
                         }
