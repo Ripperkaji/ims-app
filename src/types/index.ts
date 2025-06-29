@@ -100,6 +100,7 @@ export interface AttemptedProductData {
   sellingPrice: number;
   costPrice: number;
   totalAcquiredStock: number;
+  supplierName?: string;
 }
 
 interface BaseResolution {

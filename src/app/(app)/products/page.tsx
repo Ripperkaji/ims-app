@@ -184,22 +184,50 @@ export default function ProductsPage() {
       return;
     }
 
-    for (const flavorInfo of data.flavors) {
+    if (data.flavors.length === 1) {
+      const flavorInfo = data.flavors[0];
       const existingProduct = mockProducts.find(p =>
-        p.name.toLowerCase() === data.name.toLowerCase() &&
-        p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
-        p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
+          p.name.toLowerCase() === data.name.toLowerCase() &&
+          p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
+          p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
       );
 
       if (existingProduct) {
-        const conflictDisplayName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}${flavorInfo.flavorName ? ` - ${flavorInfo.flavorName}` : ''}`;
-        toast({
-          title: "Product Exists",
-          description: `A product variant named '${conflictDisplayName}' already exists. Please remove it or change the name. No products were added.`,
-          variant: "destructive",
-          duration: 7000,
-        });
-        return;
+          setProductConflictData({
+              existingProduct,
+              attemptedData: {
+                  name: data.name,
+                  modelName: data.modelName,
+                  flavorName: flavorInfo.flavorName,
+                  category: data.category,
+                  sellingPrice: data.sellingPrice,
+                  costPrice: data.costPrice,
+                  totalAcquiredStock: flavorInfo.totalAcquiredStock,
+                  supplierName: data.supplierName,
+              }
+          });
+          setIsHandleExistingProductDialogOpen(true);
+          setIsAddProductDialogOpen(false); 
+          return;
+      }
+    } else {
+      for (const flavorInfo of data.flavors) {
+        const existingProduct = mockProducts.find(p =>
+          p.name.toLowerCase() === data.name.toLowerCase() &&
+          p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
+          p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
+        );
+
+        if (existingProduct) {
+          const conflictDisplayName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}${flavorInfo.flavorName ? ` - ${flavorInfo.flavorName}` : ''}`;
+          toast({
+            title: "Batch Add Error: Product Exists",
+            description: `The variant '${conflictDisplayName}' already exists. When adding multiple variants, all must be new. Please remove it from the batch.`,
+            variant: "destructive",
+            duration: 9000,
+          });
+          return;
+        }
       }
     }
 
@@ -207,6 +235,8 @@ export default function ProductsPage() {
     for (const flavorInfo of data.flavors) {
       const newProductId = `prod-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const totalAcquiredStock = flavorInfo.totalAcquiredStock;
+      const batchTotalCostForVariant = data.costPrice * totalAcquiredStock;
+      const proportionOfTotalCost = data.acquisitionPaymentDetails.totalAcquisitionCost > 0 ? batchTotalCostForVariant / data.acquisitionPaymentDetails.totalAcquisitionCost : 0;
 
       const firstBatch: AcquisitionBatch = {
         batchId: `batch-${newProductId}-${Date.now()}`,
@@ -217,10 +247,10 @@ export default function ProductsPage() {
         costPricePerUnit: data.costPrice,
         sellingPricePerUnitAtAcquisition: data.sellingPrice,
         paymentMethod: data.acquisitionPaymentDetails.method,
-        totalBatchCost: data.costPrice * totalAcquiredStock,
-        cashPaid: (data.acquisitionPaymentDetails.cashPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
-        digitalPaid: (data.acquisitionPaymentDetails.digitalPaid / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
-        dueToSupplier: (data.acquisitionPaymentDetails.dueAmount / data.acquisitionPaymentDetails.totalAcquisitionCost) * (data.costPrice * totalAcquiredStock) || 0,
+        totalBatchCost: batchTotalCostForVariant,
+        cashPaid: proportionOfTotalCost * data.acquisitionPaymentDetails.cashPaid,
+        digitalPaid: proportionOfTotalCost * data.acquisitionPaymentDetails.digitalPaid,
+        dueToSupplier: proportionOfTotalCost * data.acquisitionPaymentDetails.dueAmount,
       };
 
       const newProduct: Product = {
@@ -565,4 +595,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-

@@ -74,7 +74,7 @@ export default function HandleExistingProductDialog({
       setSelectedCondition(null);
       setNewCostPrice(existingProduct.currentCostPrice.toString()); 
       setNewSellingPrice(existingProduct.currentSellingPrice.toString()); 
-      setNewSupplierName('');
+      setNewSupplierName(attemptedProductData.supplierName || '');
       setAcquisitionPaymentMethod('Cash');
       setIsAcquisitionHybridPayment(false);
       setAcquisitionCashPaid('');
@@ -82,7 +82,7 @@ export default function HandleExistingProductDialog({
       setAcquisitionAmountDueToSupplier('');
       setAcquisitionPaymentValidationError(null);
     }
-  }, [isOpen, existingProduct]);
+  }, [isOpen, existingProduct, attemptedProductData]);
   
   useEffect(() => {
     if (acquisitionPaymentMethod === 'Hybrid') {
