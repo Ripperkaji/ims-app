@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe } from 'lucide-react';
@@ -381,6 +381,62 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     setValidationError(null);
   };
 
+  const ProductsByGroup = ({ item, itemIndex }: { item: LocalSaleItemInForm, itemIndex: number }) => {
+    const groupedProducts = useMemo(() => {
+        if (!item.selectedCategory) return [];
+        const filtered = allGlobalProducts
+            .filter(p => p.category === item.selectedCategory)
+            .sort((a,b) => a.name.localeCompare(b.name));
+        
+        const grouped = filtered.reduce((acc, product) => {
+            const companyName = product.name;
+            if (!acc[companyName]) {
+                acc[companyName] = [];
+            }
+            acc[companyName].push(product);
+            return acc;
+        }, {} as Record<string, Product[]>);
+
+        return Object.entries(grouped);
+    }, [item.selectedCategory]);
+
+    return (
+        <Select
+            value={item.productId}
+            onValueChange={(value) => handleItemProductChange(itemIndex, value)}
+            disabled={!item.selectedCategory}
+        >
+            <SelectTrigger id={`product-${itemIndex}`} disabled={!item.selectedCategory} className="h-9 text-xs">
+                <SelectValue placeholder="Select product/variant" />
+            </SelectTrigger>
+            <SelectContent>
+                {groupedProducts.length > 0 ? groupedProducts.map(([companyName, products]) => (
+                    <SelectGroup key={companyName}>
+                        <SelectLabel className="text-xs font-semibold">{companyName}</SelectLabel>
+                        {products.map(p => {
+                            const variantName = [p.modelName, p.flavorName].filter(Boolean).join(' - ') || 'Base Variant';
+                            const currentStock = calculateCurrentStockForSaleForm(p, mockSales);
+                            const isCurrentItemSelected = item.productId && p.id === item.productId;
+                            const isAlreadySelectedInOtherRows = selectedItems.some(
+                                (otherItem, otherIndex) => otherIndex !== itemIndex && otherItem.productId === p.id
+                            );
+                            const isDisabled = (currentStock === 0 && !isCurrentItemSelected) || (!isCurrentItemSelected && isAlreadySelectedInOtherRows);
+
+                            return (
+                                <SelectItem key={p.id} value={p.id} disabled={isDisabled} className="text-xs">
+                                    {variantName} (Stock: {currentStock}, Price: NRP {p.currentSellingPrice.toFixed(2)})
+                                </SelectItem>
+                            );
+                        })}
+                    </SelectGroup>
+                )) : (
+                    <SelectItem value="no-products" disabled>No products in this category</SelectItem>
+                )}
+            </SelectContent>
+        </Select>
+    );
+  };
+
 
   return (
     <Card className="w-full max-w-3xl mx-auto shadow-xl">
@@ -467,44 +523,8 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                   </div>
 
                   <div className="space-y-1">
-                    <Label htmlFor={`product-${index}`} className="text-xs">Product</Label>
-                    <Select
-                      value={item.productId}
-                      onValueChange={(value) => handleItemProductChange(index, value)}
-                      disabled={!item.selectedCategory}
-                    >
-                      <SelectTrigger id={`product-${index}`} disabled={!item.selectedCategory} className="h-9 text-xs">
-                        <SelectValue placeholder="Select product" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {item.selectedCategory && allGlobalProducts
-                          .filter(p => p.category === item.selectedCategory)
-                          .map(p => {
-                            const fullProductName = `${p.name}${p.modelName ? ` (${p.modelName})` : ''}${p.flavorName ? ` - ${p.flavorName}` : ''}`;
-                            const currentStock = calculateCurrentStockForSaleForm(p, mockSales);
-                            const isCurrentItemSelected = item.productId && p.id === item.productId;
-                            const isAlreadySelectedInOtherRows = selectedItems.some(
-                              (otherItem, otherIndex) => otherIndex !== index && otherItem.productId === p.id
-                            );
-                            const isDisabled = (currentStock === 0 && !isCurrentItemSelected) || (!isCurrentItemSelected && isAlreadySelectedInOtherRows);
-
-                            return (
-                              <SelectItem key={p.id} value={p.id} disabled={isDisabled} className="text-xs">
-                                {fullProductName} (Stock: {currentStock}, Price: NRP {p.currentSellingPrice.toFixed(2)})
-                              </SelectItem>
-                            );
-                          })
-                          .sort((a,b) => {
-                            // Ensure product name is available for sorting if item is fully formed
-                            const productA = allGlobalProducts.find(p => p.id === a.props.value);
-                            const productB = allGlobalProducts.find(p => p.id === b.props.value);
-                            const nameA = productA ? `${productA.name} ${productA.modelName || ''} ${productA.flavorName || ''}` : '';
-                            const nameB = productB ? `${productB.name} ${productB.modelName || ''} ${productB.flavorName || ''}` : '';
-                            return nameA.localeCompare(nameB);
-                          })
-                        }
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor={`product-${index}`} className="text-xs">Product / Variant</Label>
+                    <ProductsByGroup item={item} itemIndex={index} />
                   </div>
 
                   <div className="w-20 space-y-1">
