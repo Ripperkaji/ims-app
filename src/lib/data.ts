@@ -36,10 +36,10 @@ export const mockProducts: Product[] = [
     name: 'VAPEJUICE',
     flavorName: 'Mango Tango',
     category: 'E-liquid Nic Salt',
-    currentSellingPrice: 15.99,
+    currentSellingPrice: 16.00,
     currentCostPrice: 9.50,
     acquisitionHistory: [
-      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 9.50, 15.99, 'Cash', 70 * 9.50, 0, 0, 'Bulk Vapes Ltd.')
+      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 9.50, 16.00, 'Cash', 70 * 9.50, 0, 0, 'Bulk Vapes Ltd.')
     ],
     damagedQuantity: 2,
     testerQuantity: 1,
@@ -49,10 +49,10 @@ export const mockProducts: Product[] = [
     name: 'SMOK',
     modelName: 'X-Priv',
     category: 'POD/MOD Devices',
-    currentSellingPrice: 49.99,
+    currentSellingPrice: 50.00,
     currentCostPrice: 30.00,
     acquisitionHistory: [
-      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 30.00, 49.99, 'Digital', 0, 35 * 30.00, 0, 'Modders Inc.')
+      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 30.00, 50.00, 'Digital', 0, 35 * 30.00, 0, 'Modders Inc.')
     ],
     damagedQuantity: 1,
     testerQuantity: 1,
@@ -62,10 +62,10 @@ export const mockProducts: Product[] = [
     name: 'GEEKVAPE',
     modelName: 'Z Series',
     category: 'Coils',
-    currentSellingPrice: 9.99,
+    currentSellingPrice: 10.00,
     currentCostPrice: 5.00,
     acquisitionHistory: [
-      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 5.00, 9.99, 'Cash', 120 * 5.00, 0, 0)
+      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 5.00, 10.00, 'Cash', 120 * 5.00, 0, 0)
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -89,10 +89,10 @@ export const mockProducts: Product[] = [
     name: 'VAPEPENKIT',
     modelName: 'Starter',
     category: 'POD/MOD Devices',
-    currentSellingPrice: 29.99,
+    currentSellingPrice: 30.00,
     currentCostPrice: 18.00,
     acquisitionHistory: [
-      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 18.00, 29.99, 'Due', 0, 0, 40 * 18.00, 'Vape Supplies Co.')
+      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 18.00, 30.00, 'Due', 0, 0, 40 * 18.00, 'Vape Supplies Co.')
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -157,12 +157,12 @@ const initialMockSales: Sale[] = [
     customerName: 'John Doe',
     customerContact: '98XXXXXXXX',
     items: [
-      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 15.99, totalPrice: 31.98 },
-      { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 9.99, totalPrice: 9.99 },
+      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 16.00, totalPrice: 32.00 },
+      { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 10.00, totalPrice: 10.00 },
     ],
-    totalAmount: 41.97,
+    totalAmount: 42.00,
     cashPaid: 0,
-    digitalPaid: 41.97,
+    digitalPaid: 42.00,
     amountDue: 0,
     formPaymentMethod: 'Digital',
     date: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
@@ -215,7 +215,7 @@ const initialMockLogEntries: LogEntry[] = [
     timestamp: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5*60*1000)),
     user: 'staff_user',
     action: 'Sale Created',
-    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 41.97. Payment: Digital. Status: Paid. Origin: store.'
+    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 42.00. Payment: Digital. Status: Paid. Origin: store.'
   },
   ...initialDamageLogEntries
 ];
@@ -328,7 +328,7 @@ export function addLogEntry(actorName: string, action: string, details: string):
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return newLog;
 }
 
