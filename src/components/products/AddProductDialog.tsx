@@ -71,6 +71,12 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
 
   const { toast } = useToast();
 
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const sanitizedValue = value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    setName(sanitizedValue);
+  };
+
   const totalAcquiredStockForCosting = useMemo(() => {
     return flavors.reduce((sum, f) => sum + (parseInt(f.totalAcquiredStock, 10) || 0), 0);
   }, [flavors]);
@@ -178,9 +184,10 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
       return;
     }
     
-    if (flavors.length > 1 && flavors.some(f => !f.flavorName?.trim())) { 
-        toast({ title: "Flavor Name Required", description: "When adding multiple variants in a batch, each must have a unique flavor name.", variant: "destructive"}); 
-        return; 
+    const hasMultipleVariants = flavors.length > 1;
+    if (hasMultipleVariants && flavors.some(f => !f.flavorName?.trim())) {
+      toast({ title: "Flavor Name Required", description: "When adding multiple variants, each must have a unique flavor name.", variant: "destructive"});
+      return;
     }
     
     if (totalAcquisitionCost <= 0) {
@@ -262,7 +269,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
           
           <div className="space-y-1.5">
             <Label>Company Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., Pod Juice, Smok" />
+            <Input value={name} onChange={handleNameChange} placeholder="E.g., PODJUICE, SMOK" />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -275,7 +282,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
             </div>
             <div className="space-y-1.5">
               <Label>Model Name (Optional)</Label>
-              <Input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="E.g., RPM 5, BC5000" />
+              <Input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="E.g., RPM5, BC5000" />
             </div>
           </div>
           
@@ -284,7 +291,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
             {flavors.map((flavor, index) => (
               <div key={flavor.id} className="grid grid-cols-[1fr_auto_auto] gap-2 items-end p-2 border rounded-md">
                 <div className="space-y-1">
-                  <Label htmlFor={`flavorName-${index}`} className="text-xs">Flavor Name (Optional)</Label>
+                  <Label htmlFor={`flavorName-${index}`} className="text-xs">Flavor Name (Optional for single variant)</Label>
                   <Input id={`flavorName-${index}`} value={flavor.flavorName} onChange={(e) => handleFlavorChange(index, 'flavorName', e.target.value)} placeholder="E.g., Mango Tango" className="h-9"/>
                 </div>
                 <div className="space-y-1 w-28">
