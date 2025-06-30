@@ -16,6 +16,21 @@ export const ALL_PRODUCT_TYPES = [
 export type ProductType = typeof ALL_PRODUCT_TYPES[number];
 export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
+export const EXPENSE_CATEGORIES = [
+  "Rent and Utilities",
+  "Utilities",
+  "Office Supplies and Equipment",
+  "Professional Services",
+  "Marketing and Advertising",
+  "Maintenance and Repairs",
+  "Other Operating Expenses",
+  "Salaries and Benefits",
+  "Government Fees",
+] as const;
+
+export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+
+
 export interface AcquisitionBatch {
   batchId: string;
   date: string;
@@ -79,7 +94,7 @@ export interface Expense {
   id: string;
   date: string;
   description: string;
-  category: string;
+  category: ExpenseCategory | string; // Allow string for system categories
   amount: number;
   recordedBy: string;
 }

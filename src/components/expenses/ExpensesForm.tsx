@@ -14,7 +14,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-import type { Expense } from '@/types';
+import type { Expense, ExpenseCategory } from '@/types';
+import { EXPENSE_CATEGORIES } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 
@@ -37,7 +38,7 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
   const { toast } = useToast();
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState<ExpenseCategory | ''>('');
   const [totalExpenseAmount, setTotalExpenseAmount] = useState('');
 
   const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>('Cash');
@@ -224,10 +225,16 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
           
           <div>
             <Label htmlFor="expenseCategory" className="text-base">Category / Heading</Label>
-            <Input
-              id="expenseCategory" value={category} onChange={(e) => setCategory(e.target.value)}
-              placeholder="E.g., Rent, Utilities, Lunch Cost" className="mt-1 h-9" required
-            />
+            <Select value={category} onValueChange={(value) => setCategory(value as ExpenseCategory)}>
+              <SelectTrigger id="expenseCategory" className="mt-1 h-9">
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPENSE_CATEGORIES.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

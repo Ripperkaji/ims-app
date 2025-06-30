@@ -37,10 +37,10 @@ export const mockProducts: Product[] = [
     name: 'VAPEJUICE',
     flavorName: 'Mango Tango',
     category: 'E-liquid Nic Salt',
-    currentSellingPrice: 17,
-    currentCostPrice: 10,
+    currentSellingPrice: 1700,
+    currentCostPrice: 1000,
     acquisitionHistory: [
-      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 10, 17, 'Cash', 70 * 10, 0, 0, 'BULKVAPESLTD')
+      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 1000, 1700, 'Cash', 70 * 1000, 0, 0, 'BULKVAPESLTD')
     ],
     damagedQuantity: 2,
     testerQuantity: 1,
@@ -50,10 +50,10 @@ export const mockProducts: Product[] = [
     name: 'SMOK',
     modelName: 'X-Priv',
     category: 'POD/MOD Devices',
-    currentSellingPrice: 50,
-    currentCostPrice: 30,
+    currentSellingPrice: 5000,
+    currentCostPrice: 3000,
     acquisitionHistory: [
-      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 30, 50, 'Digital', 0, 35 * 30, 0, 'MODDERSINC')
+      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 3000, 5000, 'Digital', 0, 35 * 3000, 0, 'MODDERSINC')
     ],
     damagedQuantity: 1,
     testerQuantity: 1,
@@ -63,10 +63,10 @@ export const mockProducts: Product[] = [
     name: 'GEEKVAPE',
     modelName: 'Z Series',
     category: 'Coils',
-    currentSellingPrice: 10,
-    currentCostPrice: 5,
+    currentSellingPrice: 1000,
+    currentCostPrice: 500,
     acquisitionHistory: [
-      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 5, 10, 'Cash', 120 * 5, 0, 0)
+      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 500, 1000, 'Cash', 120 * 500, 0, 0)
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -77,10 +77,10 @@ export const mockProducts: Product[] = [
     modelName: 'BC5000',
     flavorName: 'Blueberry Ice',
     category: 'Disposables',
-    currentSellingPrice: 8,
-    currentCostPrice: 4,
+    currentSellingPrice: 800,
+    currentCostPrice: 400,
     acquisitionHistory: [
-      createInitialBatch('prod4', formatISO(new Date(Date.now() - 50 * 24 * 60 * 60 * 1000)), 100, 4, 8, 'Hybrid', 50 * 4, 30 * 4, 20 * 4, 'DISPOKING')
+      createInitialBatch('prod4', formatISO(new Date(Date.now() - 50 * 24 * 60 * 60 * 1000)), 100, 400, 800, 'Hybrid', 50 * 400, 30 * 400, 20 * 400, 'DISPOKING')
     ],
     damagedQuantity: 5,
     testerQuantity: 1,
@@ -90,10 +90,10 @@ export const mockProducts: Product[] = [
     name: 'VAPEPENKIT',
     modelName: 'Starter',
     category: 'POD/MOD Devices',
-    currentSellingPrice: 30,
-    currentCostPrice: 18,
+    currentSellingPrice: 3000,
+    currentCostPrice: 1800,
     acquisitionHistory: [
-      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 18, 30, 'Due', 0, 0, 40 * 18, 'VAPESUPPLIESCO')
+      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 1800, 3000, 'Due', 0, 0, 40 * 1800, 'VAPESUPPLIESCO')
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -104,10 +104,10 @@ export const mockProducts: Product[] = [
     modelName: 'OS5000',
     flavorName: 'Watermelon Chill',
     category: 'Disposables',
-    currentSellingPrice: 8,
-    currentCostPrice: 4,
+    currentSellingPrice: 800,
+    currentCostPrice: 400,
     acquisitionHistory: [
-      createInitialBatch('disp1', formatISO(new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)), 150, 4, 8, 'Cash', 150 * 4, 0, 0)
+      createInitialBatch('disp1', formatISO(new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)), 150, 400, 800, 'Cash', 150 * 400, 0, 0)
     ],
     damagedQuantity: 3,
     testerQuantity: 0,
@@ -117,10 +117,10 @@ export const mockProducts: Product[] = [
     name: 'PODJUICE',
     flavorName: 'Strawberry Kiwi',
     category: 'E-liquid Nic Salt',
-    currentSellingPrice: 17,
-    currentCostPrice: 10,
+    currentSellingPrice: 1700,
+    currentCostPrice: 1000,
     acquisitionHistory: [
-      createInitialBatch('nicsalt1', formatISO(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)), 80, 10, 17, 'Digital', 0, 80 * 10, 0)
+      createInitialBatch('nicsalt1', formatISO(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)), 80, 1000, 1700, 'Digital', 0, 80 * 1000, 0)
     ],
     damagedQuantity: 1,
     testerQuantity: 0,
@@ -130,10 +130,10 @@ export const mockProducts: Product[] = [
     name: 'COTTONBACON',
     modelName: 'Bits V2',
     category: 'Cotton',
-    currentSellingPrice: 7,
-    currentCostPrice: 3,
+    currentSellingPrice: 700,
+    currentCostPrice: 300,
     acquisitionHistory: [
-      createInitialBatch('cotton2', formatISO(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)), 180, 3, 7, 'Hybrid', 100 * 3, 50 * 3, 30 * 3, 'WICKWIRECO')
+      createInitialBatch('cotton2', formatISO(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)), 180, 300, 700, 'Hybrid', 100 * 300, 50 * 300, 30 * 300, 'WICKWIRECO')
     ],
     damagedQuantity: 3,
     testerQuantity: 0,
@@ -158,12 +158,12 @@ const initialMockSales: Sale[] = [
     customerName: 'John Doe',
     customerContact: '98XXXXXXXX',
     items: [
-      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 17, totalPrice: 34 },
-      { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 10, totalPrice: 10 },
+      { productId: 'prod1', productName: getFullProductName(mockProducts.find(p => p.id === 'prod1')!), quantity: 2, unitPrice: 1700, totalPrice: 3400 },
+      { productId: 'prod3', productName: getFullProductName(mockProducts.find(p => p.id === 'prod3')!), quantity: 1, unitPrice: 1000, totalPrice: 1000 },
     ],
-    totalAmount: 44,
+    totalAmount: 4400,
     cashPaid: 0,
-    digitalPaid: 44,
+    digitalPaid: 4400,
     amountDue: 0,
     formPaymentMethod: 'Digital',
     date: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)),
@@ -178,12 +178,12 @@ const initialMockSales: Sale[] = [
     customerName: 'Jane Smith',
     customerContact: '97YYYYYYYY',
     items: [
-      { productId: 'prod4', productName: getFullProductName(mockProducts.find(p => p.id === 'prod4')!), quantity: 5, unitPrice: 8, totalPrice: 40 },
+      { productId: 'prod4', productName: getFullProductName(mockProducts.find(p => p.id === 'prod4')!), quantity: 5, unitPrice: 800, totalPrice: 4000 },
     ],
-    totalAmount: 40,
+    totalAmount: 4000,
     cashPaid: 0,
     digitalPaid: 0,
-    amountDue: 40,
+    amountDue: 4000,
     formPaymentMethod: 'Due',
     date: formatISO(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)),
     status: 'Due',
@@ -209,14 +209,14 @@ const initialMockLogEntries: LogEntry[] = [
     timestamp: formatISO(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000 - 10*60*1000)),
     user: 'NPS',
     action: 'Sale Created',
-    details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 46. Payment: Hybrid (Cash: 20, Digital: 16, Due: 10). Status: Due. Origin: store.'
+    details: 'Sale ID sale4-hybrid for Hybrid Harry (96ZZZZZZZZ), Total: NRP 4600. Payment: Hybrid (Cash: 2000, Digital: 1600, Due: 1000). Status: Due. Origin: store.'
   },
   {
     id: 'log1',
     timestamp: formatISO(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 5*60*1000)),
     user: 'staff_user',
     action: 'Sale Created',
-    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 44. Payment: Digital. Status: Paid. Origin: store.'
+    details: 'Sale ID sale1 for John Doe (98XXXXXXXX), Total: NRP 4400. Payment: Digital. Status: Paid. Origin: store.'
   },
   ...initialDamageLogEntries
 ];
@@ -312,9 +312,9 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export const mockExpenses: Expense[] = [
-  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 1200, recordedBy: 'NPS' },
-  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 150, recordedBy: 'NPS' },
-  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing', description: 'Social Media Ads', amount: 200, recordedBy: 'SKG' },
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent and Utilities', description: 'Monthly Store Rent', amount: 120000, recordedBy: 'NPS' },
+  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 15000, recordedBy: 'NPS' },
+  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing and Advertising', description: 'Social Media Ads', amount: 20000, recordedBy: 'SKG' },
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 

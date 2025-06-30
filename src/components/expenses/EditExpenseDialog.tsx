@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarDays, FilePenLine, ReceiptText, Edit } from 'lucide-react';
 import { format, parseISO } from "date-fns";
-import type { Expense } from '@/types';
+import type { Expense, ExpenseCategory } from '@/types';
+import { EXPENSE_CATEGORIES } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 
@@ -80,6 +82,8 @@ export default function EditExpenseDialog({ expense, isOpen, onClose, onConfirmE
   };
 
   if (!isOpen || !expense) return null;
+  
+  const isSystemCategory = ["Product Damage", "Tester Allocation"].includes(expense.category);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
@@ -113,16 +117,29 @@ export default function EditExpenseDialog({ expense, isOpen, onClose, onConfirmE
           
           <div className="space-y-1.5">
             <Label htmlFor="editExpenseCategory">Category</Label>
-            <Input
-              id="editExpenseCategory"
-              value={editCategory}
-              onChange={(e) => setEditCategory(e.target.value)}
-              placeholder="E.g., Rent, Utilities"
-              className="h-9"
-              required
-              disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
-            />
-             {["Product Damage", "Tester Allocation"].includes(expense.category) && (
+            {isSystemCategory ? (
+                <Input
+                    id="editExpenseCategory"
+                    value={editCategory}
+                    className="h-9 bg-muted/50"
+                    disabled
+                />
+            ) : (
+                <Select 
+                    value={editCategory} 
+                    onValueChange={(value) => setEditCategory(value)}
+                >
+                    <SelectTrigger id="editExpenseCategory" className="h-9">
+                        <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {EXPENSE_CATEGORIES.map(cat => (
+                            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            )}
+            {isSystemCategory && (
                 <p className="text-xs text-muted-foreground">System-generated categories cannot be changed.</p>
             )}
           </div>
