@@ -45,8 +45,7 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
       }
       finalUsername = selectedAdminUsername;
       expectedPassword = fixedAdminPasswords[selectedAdminUsername];
-    } else { 
-      // This is the fix: ensure we use the username from the input field for staff.
+    } else {
       finalUsername = internalUsername;
     }
 
