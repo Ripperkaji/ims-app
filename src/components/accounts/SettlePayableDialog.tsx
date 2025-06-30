@@ -33,11 +33,20 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
   const [hybridDigitalAmount, setHybridDigitalAmount] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
   
-  const dueAmount = item?.dueAmount || 0;
+  const dueAmount = useMemo(() => {
+    if (!item) return 0;
+    if (payableType === 'supplier' && 'dueAmount' in item) {
+      return item.dueAmount;
+    }
+    if (payableType === 'expense' && 'amountDue' in item) {
+      return item.amountDue;
+    }
+    return 0;
+  }, [item, payableType]);
 
   useEffect(() => {
     if (isOpen && item) {
-      setPaymentAmount(formatCurrency(item.dueAmount));
+      setPaymentAmount(formatCurrency(dueAmount));
       setPaymentMethod('Cash');
       setHybridCashAmount('');
       setHybridDigitalAmount('');
@@ -45,7 +54,7 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
     } else {
       setPaymentAmount('');
     }
-  }, [isOpen, item]);
+  }, [isOpen, item, dueAmount]);
   
   const totalHybridPayment = useMemo(() => {
     const cash = parseFloat(hybridCashAmount) || 0;
