@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -245,7 +244,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     }
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
     const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({ productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice, }));
-    const newSale: Sale = { id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: new Date().toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, };
+    const newSale: Sale = { id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: new Date().toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
     mockSales.unshift(newSale);
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
@@ -259,7 +258,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-4xl mx-auto shadow-xl">
+    <Card className="w-full shadow-xl">
       <CardHeader className="p-4">
         <CardTitle className="text-xl font-headline flex items-center gap-2"><ShoppingCart /> New Sale Entry</CardTitle>
         <CardDescription className="text-sm">Enter customer details and products for the new sale.</CardDescription>
