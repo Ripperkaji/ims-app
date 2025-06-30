@@ -312,7 +312,7 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export const mockExpenses: Expense[] = [
-  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent and Utilities', description: 'Monthly Store Rent', amount: 120000, recordedBy: 'NPS' },
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 120000, recordedBy: 'NPS' },
   { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 15000, recordedBy: 'NPS' },
   { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing and Advertising', description: 'Social Media Ads', amount: 20000, recordedBy: 'SKG' },
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());

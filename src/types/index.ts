@@ -17,7 +17,7 @@ export type ProductType = typeof ALL_PRODUCT_TYPES[number];
 export type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export const EXPENSE_CATEGORIES = [
-  "Rent and Utilities",
+  "Rent",
   "Utilities",
   "Office Supplies and Equipment",
   "Professional Services",
