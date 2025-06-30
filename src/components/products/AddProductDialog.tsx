@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport } fro
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PackagePlus, Landmark, Info, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { ProductType } from '@/types';
+import type { ProductType, NewProductData } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 
@@ -33,27 +33,12 @@ interface FlavorStock {
 interface AddProductDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirmAddMultipleProducts: (data: {
-    name: string;
-    modelName?: string;
-    category: ProductType;
-    sellingPrice: number;
-    costPrice: number;
-    supplierName?: string;
-    flavors: { flavorName?: string; totalAcquiredStock: number }[];
-    acquisitionPaymentDetails: {
-      method: AcquisitionPaymentMethod;
-      cashPaid: number;
-      digitalPaid: number;
-      dueAmount: number;
-      totalAcquisitionCost: number;
-    };
-  }) => void;
+  onContinueToSummary: (data: NewProductData) => void;
 }
 
 const DialogCardTitle = DialogCardTitleImport;
 
-export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultipleProducts }: AddProductDialogProps) {
+export default function AddProductDialog({ isOpen, onClose, onContinueToSummary }: AddProductDialogProps) {
   const [name, setName] = useState<string>('');
   const [modelName, setModelName] = useState<string>('');
   const [category, setCategory] = useState<ProductType | ''>('');
@@ -219,7 +204,7 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
     }
     if (acquisitionPaymentValidationError && isAcquisitionHybridPayment && totalAcquisitionCost > 0) { toast({ title: "Payment Error", description: acquisitionPaymentValidationError, variant: "destructive" }); return; }
 
-    onConfirmAddMultipleProducts({
+    onContinueToSummary({
       name: name.trim(),
       modelName: modelName.trim() || undefined,
       category,
@@ -238,8 +223,6 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
         totalAcquisitionCost: totalAcquisitionCost
       }
     });
-    resetForm();
-    onClose();
   };
 
   const resetForm = () => {
@@ -360,11 +343,13 @@ export default function AddProductDialog({ isOpen, onClose, onConfirmAddMultiple
         </div>
         <DialogFooter>
           <DialogClose asChild><Button type="button" variant="outline" onClick={handleCloseDialog}>Cancel</Button></DialogClose>
-          <Button type="button" onClick={handleConfirm} disabled={(isAcquisitionHybridPayment && !!acquisitionPaymentValidationError)} className={((isAcquisitionHybridPayment && !!acquisitionPaymentValidationError)) ? "bg-primary/50" : ""}>
-            <Landmark className="mr-2 h-4 w-4" /> Add Products
+          <Button type="button" onClick={handleConfirm} disabled={(isAcquisitionHybridPayment && !!acquisitionPaymentValidationError)}>
+            Continue
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+    

@@ -10,11 +10,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Edit, PlusCircle, Filter, InfoIcon, PackageSearch, AlertCircle, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData } from '@/types';
+import type { Product, LogEntry, ProductType, AcquisitionPaymentMethod, AcquisitionBatch, ResolutionData, AttemptedProductData, NewProductData } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import AddProductDialog from "@/components/products/AddProductDialog";
 import EditProductDialog from "@/components/products/EditProductDialog";
 import HandleExistingProductDialog from "@/components/products/HandleExistingProductDialog";
+import AddProductSummaryDialog from "@/components/products/AddProductSummaryDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -39,6 +40,10 @@ export default function ProductsPage() {
   const [productConflictData, setProductConflictData] = useState<{ existingProduct: Product; attemptedData: AttemptedProductData } | null>(null);
   const [isHandleExistingProductDialogOpen, setIsHandleExistingProductDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // New states for summary dialog workflow
+  const [pendingProductData, setPendingProductData] = useState<NewProductData | null>(null);
+  const [isAddProductSummaryDialogOpen, setIsAddProductSummaryDialogOpen] = useState(false);
 
   useEffect(() => {
     const updatedProducts = mockProducts.map(p => ({
@@ -100,10 +105,6 @@ export default function ProductsPage() {
       const newModelName = updatedDetails.modelName?.trim();
       const newFlavorName = updatedDetails.flavorName?.trim();
       
-      const isChangingIdentifier = newName.toLowerCase() !== originalProduct.name.toLowerCase() ||
-                                  newModelName?.toLowerCase() !== originalProduct.modelName?.toLowerCase() ||
-                                  newFlavorName?.toLowerCase() !== originalProduct.flavorName?.toLowerCase();
-      
       if (isChangingIdentifier) {
         const existingProductWithNewIdentifiers = mockProducts.find(p => 
             p.id !== updatedDetails.id &&
@@ -147,22 +148,7 @@ export default function ProductsPage() {
     setIsAddProductDialogOpen(true);
   };
 
-  const handleConfirmAddMultipleProducts = (data: {
-    name: string;
-    modelName?: string;
-    category: ProductType;
-    sellingPrice: number;
-    costPrice: number;
-    supplierName?: string;
-    flavors: { flavorName?: string; totalAcquiredStock: number }[];
-    acquisitionPaymentDetails: {
-      method: AcquisitionPaymentMethod;
-      cashPaid: number;
-      digitalPaid: number;
-      dueAmount: number;
-      totalAcquisitionCost: number;
-    };
-  }) => {
+  const handleConfirmAddMultipleProducts = (data: NewProductData) => {
     if (!user) {
       toast({ title: "Error", description: "User not available.", variant: "destructive" });
       return;
@@ -357,6 +343,22 @@ export default function ProductsPage() {
     setProductConflictData(null);
   };
 
+  const handleContinueToSummary = (data: NewProductData) => {
+    setPendingProductData(data);
+    setIsAddProductDialogOpen(false);
+    setIsAddProductSummaryDialogOpen(true);
+  };
+
+  const handleFinalProductConfirmation = () => {
+    if (pendingProductData) {
+      handleConfirmAddMultipleProducts(pendingProductData);
+    } else {
+      toast({ title: "Error", description: "No product data to confirm.", variant: "destructive" });
+    }
+    setIsAddProductSummaryDialogOpen(false);
+    setPendingProductData(null);
+  };
+
   const formatAcquisitionConditionForDisplay = (conditionKey?: string) => {
     if (!conditionKey) return 'N/A';
     const conditionMap: { [key: string]: string } = {
@@ -525,7 +527,7 @@ export default function ProductsPage() {
         <AddProductDialog
           isOpen={isAddProductDialogOpen}
           onClose={() => setIsAddProductDialogOpen(false)}
-          onConfirmAddMultipleProducts={handleConfirmAddMultipleProducts}
+          onContinueToSummary={handleContinueToSummary}
         />
       )}
       {productToEdit && isEditProductDialogOpen && (
@@ -548,6 +550,20 @@ export default function ProductsPage() {
             onResolve={handleProductConflictResolution}
         />
       )}
+      {isAddProductSummaryDialogOpen && (
+        <AddProductSummaryDialog
+            isOpen={isAddProductSummaryDialogOpen}
+            onClose={() => {
+                setIsAddProductSummaryDialogOpen(false);
+                setPendingProductData(null);
+                setIsAddProductDialogOpen(true); // Reopen add dialog for convenience
+            }}
+            onConfirm={handleFinalProductConfirmation}
+            productData={pendingProductData}
+        />
+      )}
     </div>
   );
 }
+
+    

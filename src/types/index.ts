@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'staff';
@@ -118,6 +119,24 @@ export interface AttemptedProductData {
   supplierName?: string;
 }
 
+export interface NewProductData {
+  name: string;
+  modelName?: string;
+  category: ProductType;
+  sellingPrice: number;
+  costPrice: number;
+  supplierName?: string;
+  flavors: { flavorName?: string; totalAcquiredStock: number }[];
+  acquisitionPaymentDetails: {
+    method: AcquisitionPaymentMethod;
+    cashPaid: number;
+    digitalPaid: number;
+    dueAmount: number;
+    totalAcquisitionCost: number;
+  };
+}
+
+
 interface BaseResolution {
   existingProductId: string;
   quantityAdded: number;
@@ -166,3 +185,5 @@ export interface ManagedUser {
   defaultPassword?: string; // Added for staff's initial password
   createdAt: string;
 }
+
+    
