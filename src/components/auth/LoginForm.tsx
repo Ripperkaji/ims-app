@@ -46,6 +46,7 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
       finalUsername = selectedAdminUsername;
       expectedPassword = fixedAdminPasswords[selectedAdminUsername];
     } else { 
+      // This is the fix: ensure we use the username from the input field for staff.
       finalUsername = internalUsername;
     }
 
@@ -63,10 +64,8 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
       return;
     }
     
-    // For staff, AuthContext's login function would handle its own simple validation
-    // For this mock, if it's a staff role and not an admin, we proceed.
-    // The actual validation of staff username/password would happen in a real backend.
-    // For now, we allow any staff username if the role is 'staff'.
+    // For this mock, we allow any staff username/password combination.
+    // In a real application, validation would happen against a backend service.
     
     actions.login(role, finalUsername, router.push); 
     toast({ title: "Login Successful", description: `Welcome back, ${finalUsername}!`,});
