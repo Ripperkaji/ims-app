@@ -435,24 +435,30 @@ export default function ProductsPage() {
           </div>
            <div>
             <Label htmlFor="userFilter">Added By User</Label>
-            <Select value={selectedUserFilter} onValueChange={setSelectedUserFilter}>
+            <Select
+              value={selectedUserFilter}
+              onValueChange={(value) => setSelectedUserFilter(value === 'ALL_USERS_FILTER_VALUE' ? '' : value)}
+            >
               <SelectTrigger id="userFilter" className="mt-1">
                 <SelectValue placeholder="All Users" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Users</SelectItem>
+                <SelectItem value="ALL_USERS_FILTER_VALUE">All Users</SelectItem>
                 {availableUsers.map(user => <SelectItem key={user} value={user}>{user}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label htmlFor="supplierFilter">Supplier</Label>
-            <Select value={selectedSupplierFilter} onValueChange={setSelectedSupplierFilter}>
+            <Select
+              value={selectedSupplierFilter}
+              onValueChange={(value) => setSelectedSupplierFilter(value === 'ALL_SUPPLIERS_FILTER_VALUE' ? '' : value)}
+            >
               <SelectTrigger id="supplierFilter" className="mt-1">
                 <SelectValue placeholder="All Suppliers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Suppliers</SelectItem>
+                <SelectItem value="ALL_SUPPLIERS_FILTER_VALUE">All Suppliers</SelectItem>
                 {availableSuppliers.map(supplier => <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -635,4 +641,3 @@ export default function ProductsPage() {
   );
 }
 
-    
