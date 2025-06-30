@@ -95,9 +95,19 @@ export default function AccountsPage() {
     setIsSettleDialogOpen(true);
   };
   
-  const handleConfirmSettle = (itemId: string, batchId: string | undefined, paymentDetails: { paymentAmount: number, method: 'Cash' | 'Digital' }) => {
+  const handleConfirmSettle = (itemId: string, batchId: string | undefined, paymentDetails: { cashPaid: number, digitalPaid: number }) => {
     if (!user) return;
     
+    const totalPayment = paymentDetails.cashPaid + paymentDetails.digitalPaid;
+    let paymentMethodLog = '';
+    if (paymentDetails.cashPaid > 0 && paymentDetails.digitalPaid > 0) {
+      paymentMethodLog = `Hybrid (Cash: ${formatCurrency(paymentDetails.cashPaid)}, Digital: ${formatCurrency(paymentDetails.digitalPaid)})`;
+    } else if (paymentDetails.cashPaid > 0) {
+      paymentMethodLog = 'Cash';
+    } else {
+      paymentMethodLog = 'Digital';
+    }
+
     if (settlePayableType === 'supplier') {
       const productIndex = mockProducts.findIndex(p => p.id === itemId);
       if (productIndex === -1) { toast({ title: "Error", description: "Product not found.", variant: "destructive"}); return; }
@@ -106,14 +116,11 @@ export default function AccountsPage() {
       if (batchIndex === -1) { toast({ title: "Error", description: "Acquisition batch not found.", variant: "destructive"}); return; }
       
       const batch = product.acquisitionHistory[batchIndex];
-      batch.dueToSupplier -= paymentDetails.paymentAmount;
-      if (paymentDetails.method === 'Cash') {
-        batch.cashPaid += paymentDetails.paymentAmount;
-      } else {
-        batch.digitalPaid += paymentDetails.paymentAmount;
-      }
+      batch.dueToSupplier -= totalPayment;
+      batch.cashPaid += paymentDetails.cashPaid;
+      batch.digitalPaid += paymentDetails.digitalPaid;
 
-      addLogEntry(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(paymentDetails.paymentAmount)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentDetails.method}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
+      addLogEntry(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
       toast({title: "Success", description: "Supplier due updated."});
 
     } else if (settlePayableType === 'expense') {
@@ -121,14 +128,15 @@ export default function AccountsPage() {
         if (expenseIndex === -1) { toast({ title: "Error", description: "Expense not found.", variant: "destructive"}); return; }
         
         const expense = mockExpenses[expenseIndex];
-        expense.amountDue -= paymentDetails.paymentAmount;
-        if (paymentDetails.method === 'Cash') {
-            expense.cashPaid += paymentDetails.paymentAmount;
-        } else {
-            expense.digitalPaid += paymentDetails.paymentAmount;
-        }
+        if (expense.amountDue === undefined) expense.amountDue = 0;
+        if (expense.cashPaid === undefined) expense.cashPaid = 0;
+        if (expense.digitalPaid === undefined) expense.digitalPaid = 0;
 
-        addLogEntry(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(paymentDetails.paymentAmount)} for expense '${expense.description}' via ${paymentDetails.method}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
+        expense.amountDue -= totalPayment;
+        expense.cashPaid += paymentDetails.cashPaid;
+        expense.digitalPaid += paymentDetails.digitalPaid;
+
+        addLogEntry(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
         toast({title: "Success", description: "Expense due updated."});
     }
 
