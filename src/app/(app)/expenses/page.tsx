@@ -34,6 +34,9 @@ import { cn, formatCurrency } from "@/lib/utils";
 
 type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
+const ALL_CATEGORIES_FILTER_VALUE = "ALL_CATEGORIES_FILTER_VALUE";
+const ALL_USERS_FILTER_VALUE = "ALL_USERS_FILTER_VALUE";
+
 
 export default function ExpensesPage() {
   const { user } = useAuthStore();
@@ -48,8 +51,8 @@ export default function ExpensesPage() {
 
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
   const [filterMonthYear, setFilterMonthYear] = useState<string>(ALL_MONTHS_FILTER_VALUE);
-  const [filterCategory, setFilterCategory] = useState<string>('');
-  const [filterRecordedBy, setFilterRecordedBy] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>(ALL_CATEGORIES_FILTER_VALUE);
+  const [filterRecordedBy, setFilterRecordedBy] = useState<string>(ALL_USERS_FILTER_VALUE);
   const [isFilterActive, setIsFilterActive] = useState<boolean>(false);
   const [isCalendarPopoverOpen, setIsCalendarPopoverOpen] = useState<boolean>(false);
 
@@ -59,6 +62,16 @@ export default function ExpensesPage() {
       months.add(format(parseISO(expense.date), 'yyyy-MM'));
     });
     return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [allExpenses]);
+
+  const availableCategories = useMemo(() => {
+    const categories = new Set(allExpenses.map(expense => expense.category));
+    return Array.from(categories).sort();
+  }, [allExpenses]);
+
+  const availableUsers = useMemo(() => {
+    const users = new Set(allExpenses.map(expense => expense.recordedBy));
+    return Array.from(users).sort();
   }, [allExpenses]);
 
   useEffect(() => {
@@ -111,20 +124,20 @@ export default function ExpensesPage() {
     }
 
 
-    if (filterCategory.trim()) {
+    if (filterCategory && filterCategory !== ALL_CATEGORIES_FILTER_VALUE) {
         tempFilteredExpenses = tempFilteredExpenses.filter(expense =>
-            expense.category.toLowerCase().includes(filterCategory.toLowerCase().trim())
+            expense.category === filterCategory
         );
     }
 
-    if (filterRecordedBy.trim()) {
+    if (filterRecordedBy && filterRecordedBy !== ALL_USERS_FILTER_VALUE) {
         tempFilteredExpenses = tempFilteredExpenses.filter(expense =>
-            expense.recordedBy.toLowerCase().includes(filterRecordedBy.toLowerCase().trim())
+            expense.recordedBy === filterRecordedBy
         );
     }
     
     setDisplayedExpenses(tempFilteredExpenses);
-    const activeFilters = !!filterDate || (!!filterMonthYear && filterMonthYear !== ALL_MONTHS_FILTER_VALUE) || !!filterCategory.trim() || !!filterRecordedBy.trim();
+    const activeFilters = !!filterDate || (!!filterMonthYear && filterMonthYear !== ALL_MONTHS_FILTER_VALUE) || (!!filterCategory && filterCategory !== ALL_CATEGORIES_FILTER_VALUE) || (!!filterRecordedBy && filterRecordedBy !== ALL_USERS_FILTER_VALUE);
     setIsFilterActive(activeFilters);
     if (activeFilters) {
         toast({ title: "Filters Applied", description: `${tempFilteredExpenses.length} expenses found.`});
@@ -134,8 +147,8 @@ export default function ExpensesPage() {
   const clearFiltersHandler = () => {
     setFilterDate(undefined);
     setFilterMonthYear(ALL_MONTHS_FILTER_VALUE);
-    setFilterCategory('');
-    setFilterRecordedBy('');
+    setFilterCategory(ALL_CATEGORIES_FILTER_VALUE);
+    setFilterRecordedBy(ALL_USERS_FILTER_VALUE);
     setDisplayedExpenses(allExpenses);
     setIsFilterActive(false);
     toast({ title: "Filters Cleared", description: "Showing all expenses."});
@@ -297,24 +310,32 @@ export default function ExpensesPage() {
                     </Select>
                 </div>
                 <div>
-                    <Label htmlFor="filterCategory" className="text-xs">Category</Label>
-                    <Input 
-                        id="filterCategory" 
-                        value={filterCategory} 
-                        onChange={(e) => setFilterCategory(e.target.value)}
-                        placeholder="Search category..."
-                        className="mt-0.5 h-9 text-xs"
-                    />
+                  <Label htmlFor="filterCategory" className="text-xs">Category</Label>
+                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                    <SelectTrigger id="filterCategory" className="mt-0.5 h-9 text-xs">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_CATEGORIES_FILTER_VALUE} className="text-xs">All Categories</SelectItem>
+                      {availableCategories.map(cat => (
+                        <SelectItem key={cat} value={cat} className="text-xs">{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
-                    <Label htmlFor="filterRecordedBy" className="text-xs">Recorded By</Label>
-                    <Input 
-                        id="filterRecordedBy" 
-                        value={filterRecordedBy} 
-                        onChange={(e) => setFilterRecordedBy(e.target.value)}
-                        placeholder="Search user..."
-                        className="mt-0.5 h-9 text-xs"
-                    />
+                  <Label htmlFor="filterRecordedBy" className="text-xs">Recorded By</Label>
+                  <Select value={filterRecordedBy} onValueChange={setFilterRecordedBy}>
+                    <SelectTrigger id="filterRecordedBy" className="mt-0.5 h-9 text-xs">
+                      <SelectValue placeholder="Select User" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_USERS_FILTER_VALUE} className="text-xs">All Users</SelectItem>
+                      {availableUsers.map(user => (
+                        <SelectItem key={user} value={user} className="text-xs">{user}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
             </div>
             <div className="mt-3 flex justify-end gap-2">
