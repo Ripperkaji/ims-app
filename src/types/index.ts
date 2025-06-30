@@ -30,6 +30,7 @@ export const EXPENSE_CATEGORIES = [
 ] as const;
 
 export type ExpenseCategory = typeof EXPENSE_CATEGORIES[number];
+export type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 
 export interface AcquisitionBatch {
@@ -99,6 +100,10 @@ export interface Expense {
   category: ExpenseCategory | string; // Allow string for system categories
   amount: number;
   recordedBy: string;
+  paymentMethod: ExpensePaymentMethod;
+  cashPaid: number;
+  digitalPaid: number;
+  amountDue: number;
 }
 
 export interface LogEntry {
@@ -187,4 +192,20 @@ export interface ManagedUser {
   createdAt: string;
 }
 
+// Accounts Payable Types
+export interface SupplierDueItem {
+  productId: string;
+  productName: string;
+  batchId: string;
+  acquisitionDate: string;
+  dueAmount: number;
+  supplierName?: string;
+  paymentMethod: AcquisitionPaymentMethod;
+  totalBatchCost: number;
+  cashPaidForBatch: number;
+  digitalPaidForBatch: number;
+}
+
+// This is essentially a subset of the main Expense type now
+export interface ExpenseDueItem extends Expense {}
     

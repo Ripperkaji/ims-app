@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import ExpensesForm from "@/components/expenses/ExpensesForm";
@@ -32,7 +33,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn, formatCurrency } from "@/lib/utils";
 
-type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 const ALL_MONTHS_FILTER_VALUE = "ALL_MONTHS_FILTER_VALUE";
 const ALL_CATEGORIES_FILTER_VALUE = "ALL_CATEGORIES_FILTER_VALUE";
 const ALL_USERS_FILTER_VALUE = "ALL_USERS_FILTER_VALUE";
@@ -104,7 +104,7 @@ export default function ExpensesPage() {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
   const applyFiltersHandler = (sourceData = allExpenses) => {
@@ -155,33 +155,24 @@ export default function ExpensesPage() {
   };
 
 
-  const handleExpenseAdded = (
-    expenseCoreData: Omit<Expense, 'id'>,
-    paymentDetails: {
-      method: ExpensePaymentMethod;
-      cashPaidForLog: number;
-      digitalPaidForLog: number;
-      dueAmountForLog: number;
-    }
-  ) => {
+  const handleExpenseAdded = (expenseData: Omit<Expense, 'id'>) => {
     if (!user) return;
     const newExpense: Expense = {
       id: `exp-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
-      ...expenseCoreData,
-      recordedBy: user.name,
+      ...expenseData,
     };
     
     mockExpenses.unshift(newExpense);
     setRefreshTrigger(prev => prev + 1);
 
-    let paymentLogString = `Paid via ${paymentDetails.method}.`;
-    if (paymentDetails.method === 'Hybrid') {
+    let paymentLogString = `Paid via ${newExpense.paymentMethod}.`;
+    if (newExpense.paymentMethod === 'Hybrid') {
       const parts = [];
-      if (paymentDetails.cashPaidForLog > 0) parts.push(`Cash: NRP ${formatCurrency(paymentDetails.cashPaidForLog)}`);
-      if (paymentDetails.digitalPaidForLog > 0) parts.push(`Digital: NRP ${formatCurrency(paymentDetails.digitalPaidForLog)}`);
-      if (paymentDetails.dueAmountForLog > 0) parts.push(`Due: NRP ${formatCurrency(paymentDetails.dueAmountForLog)}`);
+      if (newExpense.cashPaid > 0) parts.push(`Cash: NRP ${formatCurrency(newExpense.cashPaid)}`);
+      if (newExpense.digitalPaid > 0) parts.push(`Digital: NRP ${formatCurrency(newExpense.digitalPaid)}`);
+      if (newExpense.amountDue > 0) parts.push(`Due: NRP ${formatCurrency(newExpense.amountDue)}`);
       paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
-    } else if (paymentDetails.method === 'Due') {
+    } else if (newExpense.paymentMethod === 'Due') {
         paymentLogString = `Marked as Due (NRP ${formatCurrency(newExpense.amount)}).`;
     }
 

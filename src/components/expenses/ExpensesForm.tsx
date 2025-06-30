@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -14,23 +15,14 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { format } from "date-fns";
-import type { Expense, ExpenseCategory } from '@/types';
+import type { Expense, ExpenseCategory, ExpensePaymentMethod } from '@/types';
 import { EXPENSE_CATEGORIES } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { formatCurrency } from '@/lib/utils';
 
-type ExpensePaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 interface ExpensesFormProps {
-  onExpenseAdded: (
-    expenseCoreData: Omit<Expense, 'id'>,
-    paymentDetails: {
-      method: ExpensePaymentMethod;
-      cashPaidForLog: number;
-      digitalPaidForLog: number;
-      dueAmountForLog: number;
-    }
-  ) => void;
+  onExpenseAdded: (expenseData: Omit<Expense, 'id'>) => void;
 }
 
 export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
@@ -129,14 +121,14 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
 
     let finalCashPaid = 0;
     let finalDigitalPaid = 0;
-    let finalDueAmount = 0;
+    let finalAmountDue = 0;
 
     if (isHybridPayment) {
       finalCashPaid = parseFloat(expenseCashPaid) || 0;
       finalDigitalPaid = parseFloat(expenseDigitalPaid) || 0;
-      finalDueAmount = parseFloat(expenseAmountDue) || 0;
+      finalAmountDue = parseFloat(expenseAmountDue) || 0;
 
-      if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalDueAmount < 0) {
+      if (finalCashPaid < 0 || finalDigitalPaid < 0 || finalAmountDue < 0) {
         toast({ title: "Invalid Payment", description: "Expense payment amounts cannot be negative.", variant: "destructive" }); return;
       }
       if (Math.abs(finalCashPaid + finalDigitalPaid + finalAmountDue - numericAmount) > 0.001 && numericAmount > 0) {
@@ -148,7 +140,7 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
       switch (paymentMethod) {
         case 'Cash': finalCashPaid = numericAmount; break;
         case 'Digital': finalDigitalPaid = numericAmount; break;
-        case 'Due': finalDueAmount = numericAmount; break;
+        case 'Due': finalAmountDue = numericAmount; break;
       }
     }
      if (paymentValidationError && isHybridPayment) {
@@ -156,22 +148,19 @@ export default function ExpensesForm({ onExpenseAdded }: ExpensesFormProps) {
         return;
     }
 
-    const expenseCoreData: Omit<Expense, 'id'> = {
+    const expenseData: Omit<Expense, 'id'> = {
       date: date.toISOString(),
       description,
       category,
       amount: numericAmount,
       recordedBy: user?.name || 'Admin',
-    };
-
-    const paymentDetailsForLog = {
-      method: paymentMethod,
-      cashPaidForLog: finalCashPaid,
-      digitalPaidForLog: finalDigitalPaid,
-      dueAmountForLog: finalDueAmount,
+      paymentMethod: paymentMethod,
+      cashPaid: finalCashPaid,
+      digitalPaid: finalDigitalPaid,
+      amountDue: finalAmountDue,
     };
     
-    onExpenseAdded(expenseCoreData, paymentDetailsForLog);
+    onExpenseAdded(expenseData);
 
     setDate(new Date());
     setDescription('');

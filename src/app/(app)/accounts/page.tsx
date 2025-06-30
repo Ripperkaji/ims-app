@@ -5,47 +5,31 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark } from "lucide-react";
+import { Banknote, Landmark, Edit } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockLogEntries, mockProducts } from "@/lib/data";
-import type { AcquisitionPaymentMethod } from "@/types";
+import { Button } from '@/components/ui/button';
+import { mockLogEntries, mockProducts, mockExpenses } from "@/lib/data";
+import type { SupplierDueItem, ExpenseDueItem, AcquisitionPaymentMethod, Expense } from "@/types";
 import { format } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
+import SettlePayableDialog from '@/components/accounts/SettlePayableDialog';
+import { addLogEntry } from '@/lib/data';
 
 type PayableType = 'supplier' | 'expense' | '';
-
-interface SupplierDueItem {
-  productId: string;
-  productName: string;
-  batchId: string;
-  acquisitionDate: string;
-  dueAmount: number;
-  supplierName?: string;
-  paymentMethod: AcquisitionPaymentMethod;
-  totalBatchCost: number;
-  cashPaidForBatch: number;
-  digitalPaidForBatch: number;
-}
-
-interface ExpenseDueItem {
-  id: string;
-  description: string;
-  category: string;
-  totalAmount: number;
-  cashPaid?: number;
-  digitalPaid?: number;
-  dueAmount: number;
-  paymentMethod: string;
-  date: string;
-}
+type PayableItem = SupplierDueItem | ExpenseDueItem;
 
 export default function AccountsPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedPayableType, setSelectedPayableType] = useState<PayableType>('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const [itemToSettle, setItemToSettle] = useState<PayableItem | null>(null);
+  const [settlePayableType, setSettlePayableType] = useState<PayableType>('');
+  const [isSettleDialogOpen, setIsSettleDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -64,7 +48,7 @@ export default function AccountsPage() {
       if (batch.dueToSupplier > 0) {
         supplierDueItems.push({
           productId: product.id,
-          productName: product.name,
+          productName: `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`,
           batchId: batch.batchId,
           acquisitionDate: format(new Date(batch.date), 'MMM dd, yyyy HH:mm'),
           dueAmount: batch.dueToSupplier,
@@ -79,57 +63,9 @@ export default function AccountsPage() {
   });
   supplierDueItems.sort((a, b) => new Date(b.acquisitionDate).getTime() - new Date(a.acquisitionDate).getTime());
 
-
-  const expenseDueExpenseRecordedLogs = mockLogEntries.filter(log => log.action === "Expense Recorded");
-  const calculatedExpenseDueItems: ExpenseDueItem[] = [];
-  expenseDueExpenseRecordedLogs.forEach(log => {
-    const mainDetailMatch = log.details.match(/Expense for '([^']*)' \(Category: ([^)]+)\), Amount: NRP ([\d.]+)/i);
-    if (!mainDetailMatch) return;
-
-    const description = mainDetailMatch[1];
-    const category = mainDetailMatch[2];
-    const totalAmount = parseFloat(mainDetailMatch[3]);
-
-    let outstandingDue = 0;
-    let cashPaid: number | undefined = undefined;
-    let digitalPaid: number | undefined = undefined;
-    let paymentMethod = "";
-
-    const hybridEntryMatch = log.details.match(/via Hybrid\s*\(([^)]+)\)/i);
-    const directDueMatch = log.details.match(/Marked as Due \(NRP ([\d.]+)\)\./i);
-
-    if (hybridEntryMatch && hybridEntryMatch[1]) {
-        const detailsStr = hybridEntryMatch[1];
-        const cashMatch = detailsStr.match(/Cash:\s*NRP\s*([\d.]+)/i);
-        const digitalMatch = detailsStr.match(/Digital:\s*NRP\s*([\d.]+)/i);
-        const duePartMatch = detailsStr.match(/Due:\s*NRP\s*([\d.]+)/i);
-
-        if (duePartMatch && duePartMatch[1]) {
-            outstandingDue = parseFloat(duePartMatch[1]);
-            paymentMethod = "Hybrid";
-            if (cashMatch && cashMatch[1]) cashPaid = parseFloat(cashMatch[1]);
-            if (digitalMatch && digitalMatch[1]) digitalPaid = parseFloat(digitalMatch[1]);
-        }
-    } else if (directDueMatch && directDueMatch[1]) {
-        outstandingDue = parseFloat(directDueMatch[1]);
-        paymentMethod = "Due";
-    }
-
-    if (outstandingDue > 0) {
-      calculatedExpenseDueItems.push({
-        id: log.id,
-        description,
-        category,
-        totalAmount,
-        cashPaid,
-        digitalPaid,
-        dueAmount: outstandingDue,
-        paymentMethod,
-        date: format(new Date(log.timestamp), 'MMM dd, yyyy HH:mm')
-      });
-    }
-  });
-  const expenseDueItems = calculatedExpenseDueItems.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const expenseDueItems: ExpenseDueItem[] = mockExpenses
+    .filter(e => e.amountDue && e.amountDue > 0)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
   if (!user || user.role !== 'admin') {
@@ -152,9 +88,59 @@ export default function AccountsPage() {
     }
     return details;
   };
+  
+  const handleOpenSettleDialog = (item: PayableItem, type: PayableType) => {
+    setItemToSettle(item);
+    setSettlePayableType(type);
+    setIsSettleDialogOpen(true);
+  };
+  
+  const handleConfirmSettle = (itemId: string, batchId: string | undefined, paymentDetails: { paymentAmount: number, method: 'Cash' | 'Digital' }) => {
+    if (!user) return;
+    
+    if (settlePayableType === 'supplier') {
+      const productIndex = mockProducts.findIndex(p => p.id === itemId);
+      if (productIndex === -1) { toast({ title: "Error", description: "Product not found.", variant: "destructive"}); return; }
+      const product = mockProducts[productIndex];
+      const batchIndex = product.acquisitionHistory.findIndex(b => b.batchId === batchId);
+      if (batchIndex === -1) { toast({ title: "Error", description: "Acquisition batch not found.", variant: "destructive"}); return; }
+      
+      const batch = product.acquisitionHistory[batchIndex];
+      batch.dueToSupplier -= paymentDetails.paymentAmount;
+      if (paymentDetails.method === 'Cash') {
+        batch.cashPaid += paymentDetails.paymentAmount;
+      } else {
+        batch.digitalPaid += paymentDetails.paymentAmount;
+      }
+
+      addLogEntry(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(paymentDetails.paymentAmount)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentDetails.method}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
+      toast({title: "Success", description: "Supplier due updated."});
+
+    } else if (settlePayableType === 'expense') {
+        const expenseIndex = mockExpenses.findIndex(e => e.id === itemId);
+        if (expenseIndex === -1) { toast({ title: "Error", description: "Expense not found.", variant: "destructive"}); return; }
+        
+        const expense = mockExpenses[expenseIndex];
+        expense.amountDue -= paymentDetails.paymentAmount;
+        if (paymentDetails.method === 'Cash') {
+            expense.cashPaid += paymentDetails.paymentAmount;
+        } else {
+            expense.digitalPaid += paymentDetails.paymentAmount;
+        }
+
+        addLogEntry(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(paymentDetails.paymentAmount)} for expense '${expense.description}' via ${paymentDetails.method}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
+        toast({title: "Success", description: "Expense due updated."});
+    }
+
+    setRefreshTrigger(prev => prev + 1);
+    setIsSettleDialogOpen(false);
+    setItemToSettle(null);
+    setSettlePayableType('');
+  };
 
 
   return (
+    <>
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -196,17 +182,23 @@ export default function AccountsPage() {
                     <TableHead className="text-right">Due Amount</TableHead>
                     <TableHead>Batch Pmt. Details</TableHead>
                     <TableHead>Acq. Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {supplierDueItems.map((item) => (
-                    <TableRow key={item.batchId}
-                      ><TableCell className="font-medium">{item.productName}</TableCell
-                      ><TableCell>{item.supplierName || "N/A"}</TableCell
-                      ><TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell
-                      ><TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell
-                      ><TableCell>{item.acquisitionDate}</TableCell
-                    ></TableRow>
+                    <TableRow key={item.batchId}>
+                      <TableCell className="font-medium">{item.productName}</TableCell>
+                      <TableCell>{item.supplierName || "N/A"}</TableCell>
+                      <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
+                      <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
+                      <TableCell>{item.acquisitionDate}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}>
+                           <Edit className="mr-2 h-3 w-3" /> Settle
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -226,30 +218,36 @@ export default function AccountsPage() {
                     <TableHead>Payment Breakdown</TableHead>
                     <TableHead className="text-right">Outstanding Due</TableHead>
                     <TableHead>Recorded Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {expenseDueItems.map((item) => (
-                    <TableRow key={item.id}
-                      ><TableCell className="font-medium">{item.description}</TableCell
-                      ><TableCell>{item.category}</TableCell
-                      ><TableCell className="text-right">NRP {formatCurrency(item.totalAmount)}</TableCell
-                      ><TableCell>
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium">{item.description}</TableCell>
+                      <TableCell>{item.category}</TableCell>
+                      <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
+                      <TableCell>
                         {item.paymentMethod === "Hybrid" ? (
                           <span className="text-xs">
                             Hybrid (
                             {item.cashPaid !== undefined && item.cashPaid > 0 && `Cash: NRP ${formatCurrency(item.cashPaid)}, `}
                             {item.digitalPaid !== undefined && item.digitalPaid > 0 && `Digital: NRP ${formatCurrency(item.digitalPaid)}, `}
-                            Due: NRP {formatCurrency(item.dueAmount)}
+                            Due: NRP {formatCurrency(item.amountDue)}
                             )
                           </span>
                         ) : (
                           "Fully Due"
                         )}
-                      </TableCell
-                      ><TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell
-                      ><TableCell>{item.date}</TableCell
-                    ></TableRow>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue)}</TableCell>
+                      <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                       <TableCell className="text-right">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}>
+                           <Edit className="mr-2 h-3 w-3" /> Settle
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
                 </TableBody>
               </Table>
@@ -263,5 +261,13 @@ export default function AccountsPage() {
         </CardContent>
       </Card>
     </div>
+    <SettlePayableDialog
+        isOpen={isSettleDialogOpen}
+        onClose={() => setIsSettleDialogOpen(false)}
+        item={itemToSettle}
+        payableType={settlePayableType}
+        onConfirm={handleConfirmSettle}
+    />
+    </>
   );
 }

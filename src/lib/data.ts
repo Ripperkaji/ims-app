@@ -1,5 +1,6 @@
 
-import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType, ManagedUser, UserRole } from '@/types';
+
+import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ProductType, ManagedUser, UserRole, ExpensePaymentMethod } from '@/types';
 import { formatISO } from 'date-fns';
 import { calculateCurrentStock as calculateStockShared } from './productUtils'; // For internal use if needed
 
@@ -345,9 +346,9 @@ for (let i = 0; i < NUM_SALES_TO_GENERATE; i++) {
 export const mockSales: Sale[] = [...initialMockSales, ...generatedSales].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 export const mockExpenses: Expense[] = [
-  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 120000, recordedBy: 'NPS' },
-  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 15000, recordedBy: 'NPS' },
-  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing and Advertising', description: 'Social Media Ads', amount: 20000, recordedBy: 'SKG' },
+  { id: 'exp-rent-initial', date: formatISO(new Date(Date.now() - 28 * 24 * 60 * 60 * 1000)), category: 'Rent', description: 'Monthly Store Rent', amount: 120000, recordedBy: 'NPS', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 120000, amountDue: 0 },
+  { id: 'exp-utils-initial', date: formatISO(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)), category: 'Utilities', description: 'Electricity Bill', amount: 15000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 15000, digitalPaid: 0, amountDue: 0 },
+  { id: 'exp-marketing-initial', date: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)), category: 'Marketing and Advertising', description: 'Social Media Ads', amount: 20000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 10000, digitalPaid: 5000, amountDue: 5000 },
 ].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 
@@ -370,7 +371,12 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>, actorName: st
   const newExpense: Expense = { 
       id: `exp-sys-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, 
       ...expenseData,
-      recordedBy: actorName // Ensure recordedBy is set
+      recordedBy: actorName, // Ensure recordedBy is set
+      // Assume system expenses are fully paid by their nature unless specified
+      paymentMethod: 'Digital',
+      cashPaid: 0,
+      digitalPaid: expenseData.amount,
+      amountDue: 0,
   };
   mockExpenses.push(newExpense);
   mockExpenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
