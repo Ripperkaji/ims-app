@@ -199,9 +199,40 @@ const initialDamageLogEntries: LogEntry[] = [
     id: 'log-dmg-prod1-init',
     timestamp: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)),
     user: 'System', action: 'Product Damage & Stock Update (Exchange)',
-    details: `Product Damage & Stock Update (Exchange): Item '${getFullProductName(mockProducts.find(p => p.id === 'prod1')!)}' (Qty: 2) from Sale ID MOCK_DMG_S1... marked damaged & exchanged by System. Prev Stock: 52, New Stock: 50, Prev Dmg: 0, New Dmg: 2.`
+    details: `Product Damage & Stock Update (Exchange): Item 'VAPEJUICE (Mango Tango)' (Qty: 2) marked as damaged.`
+  },
+  {
+    id: 'log-dmg-prod2-init',
+    timestamp: formatISO(new Date(Date.now() - 11 * 24 * 60 * 60 * 1000)),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: `Product Damage & Stock Update (Exchange): Item 'SMOK (X-Priv)' (Qty: 1) marked as damaged.`
+  },
+    {
+    id: 'log-dmg-prod4-init',
+    timestamp: formatISO(new Date(Date.now() - 12 * 24 * 60 * 60 * 1000)),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: `Product Damage & Stock Update (Exchange): Item 'ELFBAR (BC5000) - Blueberry Ice' (Qty: 5) marked as damaged.`
+  },
+  {
+    id: 'log-dmg-disp1-init',
+    timestamp: formatISO(new Date(Date.now() - 13 * 24 * 60 * 60 * 1000)),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: `Product Damage & Stock Update (Exchange): Item 'LOSTMARY (OS5000) - Watermelon Chill' (Qty: 3) marked as damaged.`
+  },
+    {
+    id: 'log-dmg-nicsalt1-init',
+    timestamp: formatISO(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: `Product Damage & Stock Update (Exchange): Item 'PODJUICE - Strawberry Kiwi' (Qty: 1) marked as damaged.`
+  },
+    {
+    id: 'log-dmg-cotton2-init',
+    timestamp: formatISO(new Date(Date.now() - 15 * 24 * 60 * 60 * 1000)),
+    user: 'System', action: 'Product Damage & Stock Update (Exchange)',
+    details: `Product Damage & Stock Update (Exchange): Item 'COTTONBACON (Bits V2)' (Qty: 3) marked as damaged.`
   },
 ];
+
 
 const initialMockLogEntries: LogEntry[] = [
    {
