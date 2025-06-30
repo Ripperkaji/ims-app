@@ -1,7 +1,10 @@
 
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { Landmark, Package, Tag, Layers, DollarSign, Users, Hash } from 'lucide-react';
 import type { NewProductData } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface AddProductSummaryDialogProps {
   isOpen: boolean;
@@ -25,13 +29,28 @@ interface AddProductSummaryDialogProps {
 }
 
 export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, productData }: AddProductSummaryDialogProps) {
-  if (!isOpen || !productData) return null;
+  const [confirmationText, setConfirmationText] = useState('');
 
+  const handleConfirmClick = () => {
+    if (isConfirmationValid) {
+      onConfirm();
+    }
+  };
+
+  const handleDialogClose = () => {
+    setConfirmationText(''); // Reset on close
+    onClose();
+  };
+  
+  if (!isOpen || !productData) return null;
+  
   const { name, modelName, category, sellingPrice, costPrice, supplierName, flavors, acquisitionPaymentDetails } = productData;
   const { method, cashPaid, digitalPaid, dueAmount, totalAcquisitionCost } = acquisitionPaymentDetails;
 
+  const isConfirmationValid = confirmationText.trim().toUpperCase() === 'YES';
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); }}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -140,15 +159,30 @@ export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, pr
           </Card>
         </div>
 
-        <DialogFooter className="pt-4 border-t">
-          <Button type="button" variant="outline" onClick={onClose}>Back</Button>
-          <Button type="button" onClick={onConfirm}>
-            <Landmark className="mr-2 h-4 w-4" /> Confirm & Add Product
-          </Button>
+        <DialogFooter className="pt-4 border-t flex-col sm:flex-col sm:space-x-0 gap-4">
+          <div className="space-y-1.5 w-full">
+            <Label htmlFor="confirm-phrase">To confirm, please type "<strong>YES</strong>" in the box below.</Label>
+            <Input
+              id="confirm-phrase"
+              value={confirmationText}
+              onChange={(e) => setConfirmationText(e.target.value)}
+              placeholder='Type YES here'
+              autoFocus
+            />
+          </div>
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 w-full">
+            <Button type="button" variant="outline" onClick={handleDialogClose}>Back</Button>
+            <Button
+              type="button"
+              onClick={handleConfirmClick}
+              disabled={!isConfirmationValid}
+              className={cn(!isConfirmationValid && "bg-primary/50 cursor-not-allowed")}
+            >
+              <Landmark className="mr-2 h-4 w-4" /> Confirm & Add Product
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-    
