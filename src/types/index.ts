@@ -45,6 +45,7 @@ export interface AcquisitionBatch {
   cashPaid: number;
   digitalPaid: number;
   dueToSupplier: number;
+  addedBy: string;
 }
 
 export interface Product {

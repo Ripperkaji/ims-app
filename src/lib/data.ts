@@ -14,6 +14,7 @@ const createInitialBatch = (
   cash: number,
   digital: number,
   due: number,
+  addedBy: string,
   supplier?: string,
   condition: string = "Initial Stock"
 ): AcquisitionBatch => ({
@@ -29,6 +30,7 @@ const createInitialBatch = (
   cashPaid: cash,
   digitalPaid: digital,
   dueToSupplier: due,
+  addedBy,
 });
 
 export const mockProducts: Product[] = [
@@ -40,7 +42,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 1700,
     currentCostPrice: 1000,
     acquisitionHistory: [
-      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 1000, 1700, 'Cash', 70 * 1000, 0, 0, 'BULKVAPESLTD')
+      createInitialBatch('prod1', formatISO(new Date(Date.now() - 60 * 24 * 60 * 60 * 1000)), 70, 1000, 1700, 'Cash', 70 * 1000, 0, 0, 'NPS', 'BULKVAPESLTD')
     ],
     damagedQuantity: 2,
     testerQuantity: 1,
@@ -53,7 +55,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 5000,
     currentCostPrice: 3000,
     acquisitionHistory: [
-      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 3000, 5000, 'Digital', 0, 35 * 3000, 0, 'MODDERSINC')
+      createInitialBatch('prod2', formatISO(new Date(Date.now() - 58 * 24 * 60 * 60 * 1000)), 35, 3000, 5000, 'Digital', 0, 35 * 3000, 0, 'NPS', 'MODDERSINC')
     ],
     damagedQuantity: 1,
     testerQuantity: 1,
@@ -66,7 +68,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 1000,
     currentCostPrice: 500,
     acquisitionHistory: [
-      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 500, 1000, 'Cash', 120 * 500, 0, 0)
+      createInitialBatch('prod3', formatISO(new Date(Date.now() - 55 * 24 * 60 * 60 * 1000)), 120, 500, 1000, 'Cash', 120 * 500, 0, 0, 'SKG')
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -80,7 +82,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 800,
     currentCostPrice: 400,
     acquisitionHistory: [
-      createInitialBatch('prod4', formatISO(new Date(Date.now() - 50 * 24 * 60 * 60 * 1000)), 100, 400, 800, 'Hybrid', 50 * 400, 30 * 400, 20 * 400, 'DISPOKING')
+      createInitialBatch('prod4', formatISO(new Date(Date.now() - 50 * 24 * 60 * 60 * 1000)), 100, 400, 800, 'Hybrid', 50 * 400, 30 * 400, 20 * 400, 'NPS', 'DISPOKING')
     ],
     damagedQuantity: 5,
     testerQuantity: 1,
@@ -93,7 +95,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 3000,
     currentCostPrice: 1800,
     acquisitionHistory: [
-      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 1800, 3000, 'Due', 0, 0, 40 * 1800, 'VAPESUPPLIESCO')
+      createInitialBatch('prod5', formatISO(new Date(Date.now() - 45 * 24 * 60 * 60 * 1000)), 40, 1800, 3000, 'Due', 0, 0, 40 * 1800, 'SKG', 'VAPESUPPLIESCO')
     ],
     damagedQuantity: 0,
     testerQuantity: 0,
@@ -107,7 +109,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 800,
     currentCostPrice: 400,
     acquisitionHistory: [
-      createInitialBatch('disp1', formatISO(new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)), 150, 400, 800, 'Cash', 150 * 400, 0, 0)
+      createInitialBatch('disp1', formatISO(new Date(Date.now() - 40 * 24 * 60 * 60 * 1000)), 150, 400, 800, 'Cash', 150 * 400, 0, 0, 'SKG')
     ],
     damagedQuantity: 3,
     testerQuantity: 0,
@@ -120,7 +122,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 1700,
     currentCostPrice: 1000,
     acquisitionHistory: [
-      createInitialBatch('nicsalt1', formatISO(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)), 80, 1000, 1700, 'Digital', 0, 80 * 1000, 0)
+      createInitialBatch('nicsalt1', formatISO(new Date(Date.now() - 35 * 24 * 60 * 60 * 1000)), 80, 1000, 1700, 'Digital', 0, 80 * 1000, 0, 'NPS')
     ],
     damagedQuantity: 1,
     testerQuantity: 0,
@@ -133,7 +135,7 @@ export const mockProducts: Product[] = [
     currentSellingPrice: 700,
     currentCostPrice: 300,
     acquisitionHistory: [
-      createInitialBatch('cotton2', formatISO(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)), 180, 300, 700, 'Hybrid', 100 * 300, 50 * 300, 30 * 300, 'WICKWIRECO')
+      createInitialBatch('cotton2', formatISO(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)), 180, 300, 700, 'Hybrid', 100 * 300, 50 * 300, 30 * 300, 'SKG', 'WICKWIRECO')
     ],
     damagedQuantity: 3,
     testerQuantity: 0,
@@ -199,7 +201,7 @@ const initialDamageLogEntries: LogEntry[] = [
     id: 'log-dmg-prod1-init',
     timestamp: formatISO(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)),
     user: 'System', action: 'Product Damage & Stock Update (Exchange)',
-    details: `Product Damage & Stock Update (Exchange): Item 'VAPEJUICE (Mango Tango)' (Qty: 2) marked as damaged.`
+    details: `Product Damage & Stock Update (Exchange): Item 'VAPEJUICE - Mango Tango' (Qty: 2) marked as damaged.`
   },
   {
     id: 'log-dmg-prod2-init',

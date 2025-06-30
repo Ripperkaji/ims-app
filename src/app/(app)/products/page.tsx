@@ -35,13 +35,16 @@ export default function ProductsPage() {
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<Product | null>(null);
   const [isEditProductDialogOpen, setIsEditProductDialogOpen] = useState(false);
+  
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<ProductType | ''>('');
+  const [selectedUserFilter, setSelectedUserFilter] = useState<string>('');
+  const [selectedSupplierFilter, setSelectedSupplierFilter] = useState<string>('');
+  const [showOnlyDueFilter, setShowOnlyDueFilter] = useState<string>('all');
 
   const [productConflictData, setProductConflictData] = useState<{ existingProduct: Product; attemptedData: AttemptedProductData } | null>(null);
   const [isHandleExistingProductDialogOpen, setIsHandleExistingProductDialogOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // New states for summary dialog workflow
   const [pendingProductData, setPendingProductData] = useState<NewProductData | null>(null);
   const [isAddProductSummaryDialogOpen, setIsAddProductSummaryDialogOpen] = useState(false);
 
@@ -58,10 +61,29 @@ export default function ProductsPage() {
     if (!user) return;
     globalAddLog(user.name, action, details);
   };
+  
+  const availableUsers = useMemo(() => {
+    const users = new Set<string>();
+    productsWithCalculatedStock.forEach(p => p.acquisitionHistory.forEach(h => h.addedBy && users.add(h.addedBy)));
+    return Array.from(users).sort();
+  }, [productsWithCalculatedStock]);
+
+  const availableSuppliers = useMemo(() => {
+      const suppliers = new Set<string>();
+      productsWithCalculatedStock.forEach(p => p.acquisitionHistory.forEach(h => h.supplierName && suppliers.add(h.supplierName)));
+      return Array.from(suppliers).sort();
+  }, [productsWithCalculatedStock]);
+
 
   const productsByGroup = useMemo(() => {
     const filteredProducts = productsWithCalculatedStock
-      .filter(product => selectedCategoryFilter === '' || product.category === selectedCategoryFilter);
+      .filter(product => {
+        if (selectedCategoryFilter && product.category !== selectedCategoryFilter) return false;
+        if (selectedUserFilter && !product.acquisitionHistory.some(h => h.addedBy === selectedUserFilter)) return false;
+        if (selectedSupplierFilter && !product.acquisitionHistory.some(h => h.supplierName === selectedSupplierFilter)) return false;
+        if (showOnlyDueFilter === 'yes' && !product.acquisitionHistory.some(h => h.dueToSupplier > 0)) return false;
+        return true;
+      });
 
     const groups: { [groupKey: string]: { variants: Product[], totalStock: number, category: ProductType } } = {};
     
@@ -75,7 +97,7 @@ export default function ProductsPage() {
     });
 
     return Object.entries(groups).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
-  }, [productsWithCalculatedStock, selectedCategoryFilter]);
+  }, [productsWithCalculatedStock, selectedCategoryFilter, selectedUserFilter, selectedSupplierFilter, showOnlyDueFilter]);
   
 
   const handleOpenEditProductDialog = (productId: string) => {
@@ -104,6 +126,7 @@ export default function ProductsPage() {
       const newName = updatedDetails.name.trim();
       const newModelName = updatedDetails.modelName?.trim();
       const newFlavorName = updatedDetails.flavorName?.trim();
+      const isChangingIdentifier = newName !== originalProduct.name || newModelName !== (originalProduct.modelName || '') || newFlavorName !== (originalProduct.flavorName || '');
       
       if (isChangingIdentifier) {
         const existingProductWithNewIdentifiers = mockProducts.find(p => 
@@ -221,6 +244,7 @@ export default function ProductsPage() {
         cashPaid: proportionOfTotalCost * data.acquisitionPaymentDetails.cashPaid,
         digitalPaid: proportionOfTotalCost * data.acquisitionPaymentDetails.digitalPaid,
         dueToSupplier: proportionOfTotalCost * data.acquisitionPaymentDetails.dueAmount,
+        addedBy: user.name,
       };
 
       const newProduct: Product = {
@@ -286,6 +310,7 @@ export default function ProductsPage() {
       cashPaid: resolutionData.paymentDetails.cashPaid,
       digitalPaid: resolutionData.paymentDetails.digitalPaid,
       dueToSupplier: resolutionData.paymentDetails.dueAmount,
+      addedBy: user.name,
     };
 
     logDetails += `Qty Added: ${resolutionData.quantityAdded}. `;
@@ -384,25 +409,69 @@ export default function ProductsPage() {
         )}
       </div>
       
-      <div className="my-4 flex items-center gap-4">
-        <Label htmlFor="categoryFilter" className="text-base font-medium flex items-center">
-            <Filter className="mr-2 h-4 w-4 text-primary"/> Filter by Category:
-        </Label>
-        <Select
-            value={selectedCategoryFilter}
-            onValueChange={(value) => setSelectedCategoryFilter(value === 'ALL_CATEGORIES_FILTER_VALUE' ? '' : value as ProductType)}
-        >
-            <SelectTrigger id="categoryFilter" className="w-auto min-w-[200px] sm:min-w-[280px]">
-            <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-            <SelectItem value="ALL_CATEGORIES_FILTER_VALUE">All Categories</SelectItem>
-            {ALL_PRODUCT_TYPES.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-            ))}
-            </SelectContent>
-        </Select>
-      </div>
+      <Card className="shadow-md">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary"/> Filter Products
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <Label htmlFor="categoryFilter">Category</Label>
+            <Select
+              value={selectedCategoryFilter}
+              onValueChange={(value) => setSelectedCategoryFilter(value === 'ALL_CATEGORIES_FILTER_VALUE' ? '' : value as ProductType)}
+            >
+              <SelectTrigger id="categoryFilter" className="mt-1">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL_CATEGORIES_FILTER_VALUE">All Categories</SelectItem>
+                {ALL_PRODUCT_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+           <div>
+            <Label htmlFor="userFilter">Added By User</Label>
+            <Select value={selectedUserFilter} onValueChange={setSelectedUserFilter}>
+              <SelectTrigger id="userFilter" className="mt-1">
+                <SelectValue placeholder="All Users" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Users</SelectItem>
+                {availableUsers.map(user => <SelectItem key={user} value={user}>{user}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="supplierFilter">Supplier</Label>
+            <Select value={selectedSupplierFilter} onValueChange={setSelectedSupplierFilter}>
+              <SelectTrigger id="supplierFilter" className="mt-1">
+                <SelectValue placeholder="All Suppliers" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Suppliers</SelectItem>
+                {availableSuppliers.map(supplier => <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="supplierDueFilter">Has Supplier Due</Label>
+            <Select value={showOnlyDueFilter} onValueChange={(value) => setShowOnlyDueFilter(value)}>
+              <SelectTrigger id="supplierDueFilter" className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Show All</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-lg">
             <CardHeader>
