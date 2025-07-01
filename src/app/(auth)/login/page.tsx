@@ -13,7 +13,7 @@ export default function LoginSelectionPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground">
             <Zap size={32} />
           </div>
-          <CardTitle className="text-3xl font-headline">Welcome to VapeTrack</CardTitle>
+          <CardTitle className="text-3xl font-headline">Welcome to SH IMS</CardTitle>
           <CardDescription className="text-lg">Please select your role to login.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -30,7 +30,7 @@ export default function LoginSelectionPage() {
         </CardContent>
       </Card>
       <p className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} VapeTrack. All rights reserved.
+        &copy; {new Date().getFullYear()} SH IMS. All rights reserved.
       </p>
     </div>
   );

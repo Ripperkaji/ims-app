@@ -5,8 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 import ClientAuthInitializer from '@/components/auth/ClientAuthInitializer';
 
 export const metadata: Metadata = {
-  title: 'VapeTrack',
-  description: 'Track your vape sales and expenses efficiently.',
+  title: 'SH IMS',
+  description: 'Sales and inventory management system.',
 };
 
 export default function RootLayout({

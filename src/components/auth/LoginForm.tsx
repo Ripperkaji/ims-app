@@ -86,7 +86,7 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
             {role === 'admin' ? 'Admin Login' : 'Staff Login'}
           </CardTitle>
           <CardDescription className="text-lg">
-            Access your VapeTrack {role} panel.
+            Access your SH IMS {role} panel.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -169,7 +169,7 @@ export default function LoginForm({ role, adminUsernames }: LoginFormProps) {
         </form>
       </Card>
        <p className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} VapeTrack. Your trusted sales partner.
+        &copy; {new Date().getFullYear()} SH IMS. Your trusted sales partner.
       </p>
     </div>
   );

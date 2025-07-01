@@ -70,7 +70,7 @@ export default function AppSidebar() {
         <div className="flex h-16 items-center border-b px-6 bg-sidebar-accent text-sidebar-accent-foreground">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline text-lg">
             <Zap className="h-7 w-7 text-primary" />
-            <span>VapeTrack</span>
+            <span>SH IMS</span>
           </Link>
         </div>
         <ScrollArea className="flex-1">
