@@ -1,14 +1,18 @@
 
 "use client";
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useAuthStore } from "@/stores/authStore";
-import { mockSales } from "@/lib/data";
-import type { Sale } from '@/types';
+import { mockSales, mockProducts } from "@/lib/data";
+import type { Sale, ProductType } from '@/types';
+import { ALL_PRODUCT_TYPES } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, Phone, ShoppingCart, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Phone, ShoppingCart, DollarSign, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from 'date-fns';
@@ -31,6 +35,10 @@ export default function CustomersPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [filterContact, setFilterContact] = useState('');
+  const [filterProduct, setFilterProduct] = useState('');
+  const [filterCategory, setFilterCategory] = useState<ProductType | ''>('');
+
   useEffect(() => {
     if (user && user.role !== 'admin') {
       toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
@@ -42,7 +50,6 @@ export default function CustomersPage() {
     const customerMap = new Map<string, Customer>();
 
     mockSales.forEach(sale => {
-      // Normalize name and contact to create a consistent key
       const key = `${sale.customerName.trim().toLowerCase()}-${(sale.customerContact || '').trim()}`;
       
       if (!customerMap.has(key)) {
@@ -63,7 +70,6 @@ export default function CustomersPage() {
       customer.totalPurchases += 1;
       customer.totalSpent += sale.totalAmount;
       
-      // Update firstSeen and lastSeen dates
       if (new Date(sale.date) < new Date(customer.firstSeen)) {
         customer.firstSeen = sale.date;
       }
@@ -72,13 +78,40 @@ export default function CustomersPage() {
       }
     });
 
-    // Sort purchase history for each customer
-    customerMap.forEach(customer => {
+    let filteredCustomers = Array.from(customerMap.values());
+
+    if (filterContact) {
+      filteredCustomers = filteredCustomers.filter(c => c.contact?.includes(filterContact.trim()));
+    }
+
+    if (filterProduct) {
+      const lowerCaseFilterProduct = filterProduct.toLowerCase();
+      filteredCustomers = filteredCustomers.filter(c =>
+        c.purchaseHistory.some(sale =>
+          sale.items.some(item =>
+            item.productName.toLowerCase().includes(lowerCaseFilterProduct)
+          )
+        )
+      );
+    }
+
+    if (filterCategory) {
+      filteredCustomers = filteredCustomers.filter(c =>
+        c.purchaseHistory.some(sale =>
+          sale.items.some(item => {
+            const product = mockProducts.find(p => p.id === item.productId);
+            return product?.category === filterCategory;
+          })
+        )
+      );
+    }
+
+    filteredCustomers.forEach(customer => {
       customer.purchaseHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
 
-    return Array.from(customerMap.values()).sort((a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
-  }, []);
+    return filteredCustomers.sort((a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime());
+  }, [filterContact, filterProduct, filterCategory]);
 
   if (!user || user.role !== 'admin') {
     return null;
@@ -92,11 +125,58 @@ export default function CustomersPage() {
         </h1>
       </div>
 
+      <Card className="shadow-md mb-6">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Filter className="h-5 w-5 text-primary"/> Filter Customers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="contactFilter">Contact Number</Label>
+            <Input
+              id="contactFilter"
+              placeholder="Search by contact..."
+              value={filterContact}
+              onChange={(e) => setFilterContact(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="productFilter">Product Name/Variant</Label>
+            <Input
+              id="productFilter"
+              placeholder="Search by product name..."
+              value={filterProduct}
+              onChange={(e) => setFilterProduct(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="categoryFilter">Product Category</Label>
+            <Select
+              value={filterCategory}
+              onValueChange={(value) => setFilterCategory(value === 'ALL_CATEGORIES' ? '' : value as ProductType)}
+            >
+              <SelectTrigger id="categoryFilter" className="mt-1">
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL_CATEGORIES">All Categories</SelectItem>
+                {ALL_PRODUCT_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle>Customer List</CardTitle>
           <CardDescription>
-            A list of all unique customers based on sales records. Click on a customer to view their purchase history.
+            {`Showing ${customers.length} customer(s). Click on a customer to view their purchase history.`}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -159,7 +239,7 @@ export default function CustomersPage() {
             </Accordion>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              No customer data found. Records will appear here after sales are made.
+              No customer data found matching the current filters.
             </div>
           )}
         </CardContent>
