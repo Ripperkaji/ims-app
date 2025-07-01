@@ -5,10 +5,10 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Settings2, ChevronsLeftRight } from 'lucide-react'; // Removed unused icons
+import { LogOut, Settings2, ChevronsLeftRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
-import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical, AlertOctagon, BarChart3, UserCog, Banknote, Wallet } from 'lucide-react';
+import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, AlertTriangle, FileText, FlaskConical, AlertOctagon, BarChart3, UserCog, Wallet } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -28,8 +28,7 @@ const navItems: NavItem[] = [
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
   { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
-  { href: '/capital', label: 'Capital', icon: Wallet, roles: ['admin'] },
-  { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
+  { href: '/accounts', label: 'Accounts', icon: Wallet, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
 ];

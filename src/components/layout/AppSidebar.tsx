@@ -13,7 +13,6 @@ import {
   Package,
   CreditCard,
   UserCog,
-  Banknote,
   FileText,
   AlertTriangle,
   Zap,
@@ -43,8 +42,7 @@ const navItems: NavItem[] = [
   { href: '/testers', label: 'Testers', icon: FlaskConical, roles: ['admin'] },
   { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
   { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
-  { href: '/capital', label: 'Capital', icon: Wallet, roles: ['admin'] },
-  { href: '/accounts', label: 'Accounts', icon: Banknote, roles: ['admin'] },
+  { href: '/accounts', label: 'Accounts', icon: Wallet, roles: ['admin'] },
   { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
 ];
