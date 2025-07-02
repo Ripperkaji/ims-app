@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import ClientAuthInitializer from '@/components/auth/ClientAuthInitializer';
 
 export const metadata: Metadata = {
-  title: 'SH IMS',
+  title: 'StackHook IMS',
   description: 'Sales and inventory management system.',
 };
 
