@@ -32,7 +32,7 @@ const ProductInfoDisplay = ({ productId }: { productId: string | null }) => {
     return (
         <div className="text-sm space-y-1 h-10">
             <p>Current Sellable Stock: <span className="font-semibold">{currentStock}</span></p>
-            <p>Current Testers: <span className="font-semibold">{productDetails.testerQuantity || 0}</span></p>
+            <p>Current Sample/Tester/Demo Units: <span className="font-semibold">{productDetails.testerQuantity || 0}</span></p>
         </div>
     );
 };
@@ -70,7 +70,7 @@ const ProductSelect = ({
         {filteredProducts.length > 0 ? (
           filteredProducts.map(p => ( 
             <SelectItem key={p.id} value={p.id} disabled={p.stock <= 0 && (p.testerQuantity || 0) <= 0 && p.id !== selectedValue}>
-              {p.name} (Stock: {p.stock}, Testers: {p.testerQuantity || 0})
+              {p.name} (Stock: {p.stock}, Samples: {p.testerQuantity || 0})
             </SelectItem>
           ))
         ) : (
@@ -166,12 +166,12 @@ export default function TestersPage() {
     const newDesiredTesterQty = parseInt(newTesterQuantityInput.trim(), 10);
 
     if (isNaN(newDesiredTesterQty) || newDesiredTesterQty < 0) {
-      toast({ title: "Invalid Input", description: "Tester quantity must be a non-negative number.", variant: "destructive" });
+      toast({ title: "Invalid Input", description: "Sample/Tester quantity must be a non-negative number.", variant: "destructive" });
       return;
     }
 
     if (newDesiredTesterQty === oldTesterQty) {
-      toast({ title: "No Change", description: `Tester quantity for ${currentProductGlobal.name} is already ${oldTesterQty}.`, variant: "default" });
+      toast({ title: "No Change", description: `Sample quantity for ${currentProductGlobal.name} is already ${oldTesterQty}.`, variant: "default" });
       return;
     }
 
@@ -182,7 +182,7 @@ export default function TestersPage() {
       if (oldStock < deltaTesters) {
         toast({
           title: "Insufficient Stock",
-          description: `Not enough sellable stock to convert to ${deltaTesters} new tester(s) for ${currentProductGlobal.name}. Available: ${oldStock}. Max new total testers: ${oldTesterQty + oldStock}.`,
+          description: `Not enough sellable stock to convert to ${deltaTesters} new sample(s) for ${currentProductGlobal.name}. Available: ${oldStock}. Max new total samples: ${oldTesterQty + oldStock}.`,
           variant: "destructive",
           duration: 7000
         });
@@ -192,8 +192,8 @@ export default function TestersPage() {
       
       const testerExpense: Omit<Expense, 'id'> = {
         date: new Date().toISOString(),
-        description: `Tester Allocation: ${deltaTesters}x ${currentProductGlobal.name}`,
-        category: "Tester Allocation",
+        description: `Sample/Demo Allocation: ${deltaTesters}x ${currentProductGlobal.name}`,
+        category: "Sample/Demo Allocation",
         amount: deltaTesters * currentProductGlobal.currentCostPrice,
         recordedBy: user.name,
       };
@@ -203,22 +203,22 @@ export default function TestersPage() {
       newStockAfterUpdate = calculateCurrentStock(mockProducts[productGlobalIndex], mockSales);
 
       toast({
-        title: "Tester Quantity Updated & Expense Logged",
-        description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Sellable stock is now ${newStockAfterUpdate}. Expense of NRP ${(deltaTesters * currentProductGlobal.currentCostPrice).toFixed(2)} logged.`,
+        title: "Sample Quantity Updated & Expense Logged",
+        description: `Sample units for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Sellable stock is now ${newStockAfterUpdate}. Expense of NRP ${(deltaTesters * currentProductGlobal.currentCostPrice).toFixed(2)} logged.`,
       });
 
     } else { 
       mockProducts[productGlobalIndex].testerQuantity = newDesiredTesterQty;
       newStockAfterUpdate = calculateCurrentStock(mockProducts[productGlobalIndex], mockSales);
       toast({
-        title: "Tester Quantity Updated",
-        description: `Testers for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Sellable stock is now ${newStockAfterUpdate}.`,
+        title: "Sample Quantity Updated",
+        description: `Sample units for ${currentProductGlobal.name} set to ${newDesiredTesterQty}. Sellable stock is now ${newStockAfterUpdate}.`,
       });
     }
     
     addLog(
-      "Tester Quantity Updated",
-      `Tester quantity for '${currentProductGlobal.name}' (ID: ${selectedProductId.substring(0,8)}...) changed from ${oldTesterQty} to ${newDesiredTesterQty} by ${user.name}. Sellable stock adjusted from ${oldStock} to ${newStockAfterUpdate}.`
+      "Sample/Demo Quantity Updated",
+      `Sample/Demo quantity for '${currentProductGlobal.name}' (ID: ${selectedProductId.substring(0,8)}...) changed from ${oldTesterQty} to ${newDesiredTesterQty} by ${user.name}. Sellable stock adjusted from ${oldStock} to ${newStockAfterUpdate}.`
     );
     
     setRefreshTrigger(prev => prev + 1); 
@@ -237,15 +237,15 @@ export default function TestersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-          <FlaskConical className="h-7 w-7 text-primary" /> Tester Product Management
+          <FlaskConical className="h-7 w-7 text-primary" /> Sample / Tester / Demo Management
         </h1>
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Assign/Update Tester Units</CardTitle>
+          <CardTitle>Assign/Update Sample Units</CardTitle>
           <CardDescription>
-            Select a product and set its total tester quantity. This will adjust sellable stock.
+            Select a product and set its total sample/tester/demo quantity. This will adjust sellable stock.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -277,13 +277,13 @@ export default function TestersPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
-              <Label htmlFor="newTesterQuantity">New Total Tester Quantity</Label>
+              <Label htmlFor="newTesterQuantity">New Total Sample/Tester/Demo Quantity</Label>
               <Input
                 id="newTesterQuantity"
                 type="number"
                 value={newTesterQuantityInput}
                 onChange={(e) => setNewTesterQuantityInput(e.target.value)}
-                placeholder="Enter total testers"
+                placeholder="Enter total sample units"
                 min="0"
                 disabled={!selectedProductForTester}
               />
@@ -296,7 +296,7 @@ export default function TestersPage() {
              <Alert variant="destructive">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Invalid Input</AlertTitle>
-                <AlertDescription>Tester quantity cannot be negative.</AlertDescription>
+                <AlertDescription>Sample/Tester quantity cannot be negative.</AlertDescription>
             </Alert>
            )}
 
@@ -307,16 +307,16 @@ export default function TestersPage() {
             disabled={!selectedProductForTester || newTesterQuantityInput.trim() === '' || parseInt(newTesterQuantityInput) < 0 }
             className={(!selectedProductForTester || newTesterQuantityInput.trim() === '' || parseInt(newTesterQuantityInput) < 0) ? "bg-primary/50" : ""}
           >
-            <Save className="mr-2 h-4 w-4" /> Update Tester Quantity
+            <Save className="mr-2 h-4 w-4" /> Update Sample/Tester/Demo Quantity
           </Button>
         </CardFooter>
       </Card>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Products Currently Assigned as Testers</CardTitle>
+          <CardTitle>Products with Sample/Tester/Demo Units</CardTitle>
            <CardDescription>
-            List of products with one or more units designated as testers.
+            List of products with units designated as samples, testers, or demos.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -325,7 +325,7 @@ export default function TestersPage() {
               <TableRow>
                 <TableHead>Product Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead className="text-center">Current Testers</TableHead>
+                <TableHead className="text-center">Sample/Tester/Demo Units</TableHead>
                 <TableHead className="text-center">Sellable Stock</TableHead>
               </TableRow>
             </TableHeader>
@@ -342,7 +342,7 @@ export default function TestersPage() {
           </Table>
           {productsWithTestersList.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              No products are currently assigned as testers. Use the form above to assign them.
+              No products are currently assigned as samples, testers, or demos. Use the form above to assign them.
             </div>
           )}
         </CardContent>

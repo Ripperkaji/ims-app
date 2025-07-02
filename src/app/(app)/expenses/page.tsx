@@ -183,7 +183,7 @@ export default function ExpensesPage() {
   };
 
   const openEditExpenseDialog = (expense: Expense) => {
-    if (["Product Damage", "Tester Allocation"].includes(expense.category)) {
+    if (["Product Damage", "Sample/Demo Allocation"].includes(expense.category)) {
       toast({ title: "Edit Restricted", description: `System-generated expenses like '${expense.category}' cannot be fully edited here. Their amounts are system-derived.`, variant: "default" });
        setExpenseToEdit(expense);
        setIsEditExpenseDialogOpen(true);
@@ -219,7 +219,7 @@ export default function ExpensesPage() {
   const handleDeleteExpense = (expenseId: string) => {
     const expenseIndex = mockExpenses.findIndex(exp => exp.id === expenseId);
     if (expenseIndex > -1) {
-      const systemCategories = ["Product Damage", "Tester Allocation"];
+      const systemCategories = ["Product Damage", "Sample/Demo Allocation"];
       if (systemCategories.includes(mockExpenses[expenseIndex].category)) {
         toast({ title: "Deletion Restricted", description: `System-generated expenses like '${mockExpenses[expenseIndex].category}' cannot be deleted directly.`, variant: "destructive" });
         return;
@@ -369,8 +369,8 @@ export default function ExpensesPage() {
                         <Button 
                             variant="destructive" 
                             size="icon"
-                            disabled={["Product Damage", "Tester Allocation"].includes(expense.category)}
-                            title={["Product Damage", "Tester Allocation"].includes(expense.category) ? "System expenses cannot be deleted" : "Delete Expense"}
+                            disabled={["Product Damage", "Sample/Demo Allocation"].includes(expense.category)}
+                            title={["Product Damage", "Sample/Demo Allocation"].includes(expense.category) ? "System expenses cannot be deleted" : "Delete Expense"}
                         >
                           <Trash2 className="h-4 w-4" />
                            <span className="sr-only">Delete Expense</span>
