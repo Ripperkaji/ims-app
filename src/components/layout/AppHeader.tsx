@@ -21,17 +21,17 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'staff'] },
-  { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['admin', 'staff'] },
   { href: '/products', label: 'Products', icon: Package, roles: ['admin', 'staff'] },
-  { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
-  { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
   { href: '/testers', label: 'Samples / Demos', icon: FlaskConical, roles: ['admin'] },
-  { href: '/damaged-products', label: 'Damaged Products', icon: AlertOctagon, roles: ['admin'] },
-  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['admin', 'staff'] },
+  { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
+  { href: '/damaged-products', label: 'Damaged & Returned', icon: AlertOctagon, roles: ['admin'] },
   { href: '/customers', label: 'Customers', icon: Users, roles: ['admin'] },
-  { href: '/accounts', label: 'Accounts', icon: Wallet, roles: ['admin'] },
-  { href: '/logs', label: 'Activity Logs', icon: FileText, roles: ['admin'] },
+  { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
+  { href: '/accounts', label: 'Finance', icon: Wallet, roles: ['admin'] },
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/logs', label: 'Activity Log', icon: FileText, roles: ['admin'] },
 ];
 
 
