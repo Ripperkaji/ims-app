@@ -17,24 +17,24 @@ body {
     --popover: 200 17% 99%;
     --popover-foreground: 210 20% 20%;
 
-    --primary: 173 41% 50%; /* Dark cyan #45B8AC */
+    --primary: 220 85% 55%; /* Elegant Blue */
     --primary-foreground: 0 0% 100%; /* White for good contrast on primary */
 
-    --secondary: 259 46% 90%; /* Lighter Lavender for secondary elements */
-    --secondary-foreground: 259 46% 30%; /* Darker Lavender text for secondary */
+    --secondary: 220 85% 92%; /* Lighter Blue for secondary elements */
+    --secondary-foreground: 220 85% 25%; /* Darker Blue text for secondary */
 
     --muted: 200 17% 90%; /* Lighter gray for muted elements */
     --muted-foreground: 210 15% 45%; /* Softer gray for muted text */
 
-    --accent: 259 46% 73%; /* Soft lavender #B39DDB */
-    --accent-foreground: 259 46% 15%; /* Darker text for accent for readability */
+    --accent: 220 85% 95%; /* Even lighter blue for accent */
+    --accent-foreground: 220 85% 20%; /* Darker text for accent for readability */
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
     --border: 200 10% 85%; /* Light gray border */
     --input: 200 10% 92%; /* Slightly darker input background */
-    --ring: 173 41% 50%; /* Primary color for rings/focus */
+    --ring: 220 85% 55%; /* Primary color for rings/focus */
 
     --radius: 0.5rem;
 
@@ -48,12 +48,12 @@ body {
     /* Sidebar specific theme */
     --sidebar-background: 210 20% 18%; /* Darker sidebar for contrast */
     --sidebar-foreground: 200 17% 90%;
-    --sidebar-primary: 173 41% 50%;
+    --sidebar-primary: 220 85% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 41% 40%; /* Slightly darker primary for sidebar accents */
+    --sidebar-accent: 220 85% 45%; /* Slightly darker primary for sidebar accents */
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 210 20% 28%;
-    --sidebar-ring: 173 41% 50%;
+    --sidebar-ring: 220 85% 55%;
   }
 
   .dark {
@@ -67,16 +67,16 @@ body {
     --popover: 210 20% 12%;
     --popover-foreground: 200 17% 96%;
 
-    --primary: 173 41% 50%;
+    --primary: 220 85% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 259 46% 30%;
-    --secondary-foreground: 259 46% 90%;
+    --secondary: 220 85% 25%;
+    --secondary-foreground: 220 85% 92%;
 
     --muted: 210 20% 20%;
     --muted-foreground: 200 17% 70%;
 
-    --accent: 259 46% 65%;
+    --accent: 220 85% 50%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
@@ -84,7 +84,7 @@ body {
 
     --border: 210 20% 25%;
     --input: 210 20% 22%;
-    --ring: 173 41% 50%;
+    --ring: 220 85% 55%;
     
     /* Chart colors for dark theme - Same as light for consistency */
     --chart-1: 15 85% 55%;
@@ -95,12 +95,12 @@ body {
 
     --sidebar-background: 210 20% 8%; 
     --sidebar-foreground: 200 17% 90%;
-    --sidebar-primary: 173 41% 50%;
+    --sidebar-primary: 220 85% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 173 41% 40%; 
+    --sidebar-accent: 220 85% 45%; 
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 210 20% 15%;
-    --sidebar-ring: 173 41% 50%;
+    --sidebar-ring: 220 85% 55%;
   }
 }
 
