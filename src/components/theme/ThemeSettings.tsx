@@ -8,10 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { colord, extend } from 'colord';
-import hsl from 'colord/plugins/hsl';
-
-extend([hsl]);
+import { colord } from 'colord';
 
 // Helper to convert HSL string "H S% L%" to a hex color for the color picker
 const hslStringToHex = (hslString: string) => {
