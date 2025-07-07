@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuthStore } from '@/stores/authStore';
@@ -28,10 +29,14 @@ const TawkToChat = () => {
           window.Tawk_API.setAttributes({
             name: user.name,
             email: `${sanitizedEmailLocalPart}@sh-ims.example.com`,
-          }, (error: any) => {
-            if (error) {
+          }, (error: unknown) => {
+            // A meaningful error from Tawk.to is usually an object or a string.
+            // We will ignore other truthy values like `true` which might be
+            // passed on certain success conditions by their script.
+            if (error && (typeof error === 'object' || typeof error === 'string')) {
               console.error('Tawk.to setAttributes error:', error);
             } else {
+              // Treat as success if there's no meaningful error
               attributesSet.current = true; // Mark as set
             }
           });
