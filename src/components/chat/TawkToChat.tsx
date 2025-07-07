@@ -21,9 +21,15 @@ const TawkToChat = () => {
         if (window.Tawk_API && typeof window.Tawk_API.setAttributes === 'function') {
           clearInterval(interval); // Stop polling once the API is ready.
           
+          // Sanitize user name to create a valid email local part
+          const sanitizedEmailLocalPart = user.name
+            .toLowerCase()
+            .replace(/\s+/g, '.') // Replace spaces with dots
+            .replace(/[^a-z0-9._-]/g, ''); // Remove invalid email characters
+
           window.Tawk_API.setAttributes({
             name: user.name,
-            email: `${user.name.replace(/\s+/g, '.').toLowerCase()}@sh-ims.example.com`,
+            email: `${sanitizedEmailLocalPart}@sh-ims.example.com`,
           }, (error: any) => {
             if (error) {
               console.error('Tawk.to setAttributes error:', error);
