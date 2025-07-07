@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuthStore } from '@/stores/authStore';
@@ -25,13 +24,12 @@ const TawkToChat = () => {
             name: user.name,
             email: 'sudheer.kajee@gmail.com',
           }, (error: unknown) => {
-            // A meaningful error from Tawk.to is usually an object or a string.
-            // We will ignore other truthy values like `true` which might be
-            // passed on certain success conditions by their script.
-            if (error && (typeof error === 'object' || typeof error === 'string')) {
+            // Tawk.to's callback is non-standard. It returns `true` on success.
+            // We must explicitly check for this and only log actual errors.
+            if (error && error !== true) {
               console.error('Tawk.to setAttributes error:', error);
             } else {
-              // Treat as success if there's no meaningful error
+              // Treat as success if there's no error or if the error is `true`.
               attributesSet.current = true; // Mark as set
             }
           });
@@ -72,4 +70,3 @@ const TawkToChat = () => {
 };
 
 export default TawkToChat;
-    
