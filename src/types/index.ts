@@ -174,15 +174,6 @@ export interface Condition3Data extends BaseResolution {
 
 export type ResolutionData = Condition1Data | Condition2Data | Condition3Data;
 
-// Chat Feature Types
-export interface ChatMessage {
-  id: string;
-  text: string;
-  senderName: string;
-  senderRole: UserRole;
-  timestamp: Timestamp | Date; // Firestore Timestamp on read, Date on write preparation
-}
-
 // User Management Type
 export interface ManagedUser {
   id: string;
@@ -208,4 +199,3 @@ export interface SupplierDueItem {
 
 // This is essentially a subset of the main Expense type now
 export interface ExpenseDueItem extends Expense {}
-    
