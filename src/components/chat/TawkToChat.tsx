@@ -2,33 +2,32 @@
 
 import TawkMessengerReact from '@tawk.to/tawk-messenger-react';
 import { useAuthStore } from '@/stores/authStore';
-import { useRef, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const TawkToChat = () => {
   const { user } = useAuthStore();
-  const tawkMessengerRef = useRef<any>();
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [isTawkLoaded, setIsTawkLoaded] = useState(false);
 
   const propertyId = process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID;
   const widgetId = process.env.NEXT_PUBLIC_TAWK_WIDGET_ID;
 
-  // Effect to set user attributes once the widget is loaded and user is available
+  // This effect will run when either the widget loads or the user state changes.
   useEffect(() => {
-    // We wait for the widget to be loaded and the user to be available.
-    if (isLoaded && user && tawkMessengerRef.current && typeof tawkMessengerRef.current.setAttributes === 'function') {
-      tawkMessengerRef.current.setAttributes({
+    // We only try to set attributes if the widget has loaded AND the user is available.
+    if (isTawkLoaded && user && window.Tawk_API && typeof window.Tawk_API.setAttributes === 'function') {
+      window.Tawk_API.setAttributes({
         name: user.name,
-        email: `${user.name.replace(/\s+/g, '.').toLowerCase()}@sh-ims.example.com`, // Example email
-      }, function (error: any) {
-         if (error) {
-            console.error('Tawk.to setAttributes error:', error);
-         }
+        email: `${user.name.replace(/\s+/g, '.').toLowerCase()}@sh-ims.example.com`,
+      }, (error: any) => {
+        if (error) {
+          console.error('Tawk.to setAttributes error:', error);
+        }
       });
     }
-  }, [isLoaded, user]); // This effect runs whenever the loaded status or the user changes.
+  }, [isTawkLoaded, user]); // Re-run this effect if the load status or user changes.
 
+  // Don't render the component if the required IDs are missing.
   if (!propertyId || !widgetId) {
-    // The component will simply not render if the IDs are missing.
     return null;
   }
 
@@ -36,9 +35,10 @@ const TawkToChat = () => {
     <TawkMessengerReact
       propertyId={propertyId}
       widgetId={widgetId}
-      ref={tawkMessengerRef}
       onLoad={() => {
-        setIsLoaded(true);
+        // When the Tawk.to script loads, we set our state variable to true.
+        // This will trigger the useEffect above to check if it can set the attributes.
+        setIsTawkLoaded(true);
       }}
     />
   );
