@@ -21,14 +21,24 @@ const TawkToChat = () => {
         if (window.Tawk_API && typeof window.Tawk_API.setAttributes === 'function') {
           clearInterval(intervalId);
 
-          const sanitizedEmailLocalPart = user.name
+          // A more robust sanitization for the email local part.
+          let localPart = user.name
             .toLowerCase()
-            .replace(/\s+/g, '.')
-            .replace(/[^a-z0-9._-]/g, '');
+            // Replace one or more spaces or invalid characters with a single dot.
+            .replace(/[^a-z0-9_.-]+/g, '.')
+            // Remove any leading or trailing dots that might result from the replacement.
+            .replace(/^\.|\.$/g, '');
+
+          // If the username was all invalid characters, it might become empty. Fallback to a default.
+          if (!localPart) {
+            localPart = 'user';
+          }
+          
+          const finalEmail = `${localPart}@sh-ims.example.com`;
 
           window.Tawk_API.setAttributes({
             name: user.name,
-            email: `${sanitizedEmailLocalPart}@sh-ims.example.com`,
+            email: finalEmail,
           }, (error: unknown) => {
             // A meaningful error from Tawk.to is usually an object or a string.
             // We will ignore other truthy values like `true` which might be
