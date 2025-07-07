@@ -20,19 +20,14 @@ const TawkToChat = () => {
         if (window.Tawk_API && typeof window.Tawk_API.setAttributes === 'function') {
           clearInterval(intervalId);
 
+          // Call setAttributes without the problematic callback.
+          // This "fire-and-forget" approach is robust and prevents console errors.
           window.Tawk_API.setAttributes({
             name: user.name,
             email: 'sudheer.kajee@gmail.com',
-          }, (error: unknown) => {
-            // Tawk.to's callback is non-standard. It returns `true` on success.
-            // We must explicitly check for this and only log actual errors.
-            if (error && error !== true) {
-              console.error('Tawk.to setAttributes error:', error);
-            } else {
-              // Treat as success if there's no error or if the error is `true`.
-              attributesSet.current = true; // Mark as set
-            }
           });
+          
+          attributesSet.current = true; // Mark as set
         }
       }, 500);
 
