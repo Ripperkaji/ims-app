@@ -22,21 +22,19 @@ const TawkToChat = () => {
           clearInterval(intervalId);
 
           // A more robust sanitization for the email local part.
+          // 1. Convert to lowercase.
+          // 2. Remove all non-alphanumeric characters.
           let localPart = user.name
             .toLowerCase()
-            // 1. Replace any character that is not a letter or number with a dot.
-            .replace(/[^a-z0-9]/g, '.')
-            // 2. Replace multiple consecutive dots with a single dot.
-            .replace(/\.{2,}/g, '.')
-            // 3. Remove any leading or trailing dots.
-            .replace(/^\.|\.$/g, '');
+            .replace(/[^a-z0-9]/g, '');
 
           // If the username was all invalid characters, it might become empty. Fallback to a default.
           if (!localPart) {
             localPart = 'user';
           }
           
-          const finalEmail = `${localPart}@sh-ims.example.com`;
+          // Use a more unique domain to avoid potential blocks on generic domains.
+          const finalEmail = `${localPart}@sh-ims-user.com`;
 
           window.Tawk_API.setAttributes({
             name: user.name,
