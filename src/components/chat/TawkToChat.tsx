@@ -24,9 +24,11 @@ const TawkToChat = () => {
           // A more robust sanitization for the email local part.
           let localPart = user.name
             .toLowerCase()
-            // Replace one or more spaces or invalid characters with a single dot.
-            .replace(/[^a-z0-9_.-]+/g, '.')
-            // Remove any leading or trailing dots that might result from the replacement.
+            // 1. Replace any character that is not a letter or number with a dot.
+            .replace(/[^a-z0-9]/g, '.')
+            // 2. Replace multiple consecutive dots with a single dot.
+            .replace(/\.{2,}/g, '.')
+            // 3. Remove any leading or trailing dots.
             .replace(/^\.|\.$/g, '');
 
           // If the username was all invalid characters, it might become empty. Fallback to a default.
@@ -87,3 +89,4 @@ const TawkToChat = () => {
 };
 
 export default TawkToChat;
+    
