@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo, useEffect } from 'react';
@@ -17,13 +18,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 
 interface PurchaseHistoryItem extends AcquisitionBatch {
+  // Add individual product identifiers for easier grouping
   productName: string;
+  modelName?: string;
+  flavorName?: string;
+}
+
+interface GroupedPurchase {
+    productName: string;
+    modelName?: string;
+    variants: PurchaseHistoryItem[];
 }
 
 interface Supplier {
   name: string;
-  purchaseHistory: PurchaseHistoryItem[];
-  totalSpent: number; // This is total value of goods acquired, not necessarily paid
+  // This will hold the grouped data
+  groupedPurchaseHistory: GroupedPurchase[];
+  // These are still needed for the top-level summary
+  totalAcquisitions: number;
+  totalSpent: number;
   totalDue: number;
   firstPurchaseDate: string; // ISO string
   lastPurchaseDate: string; // ISO string
@@ -42,11 +55,17 @@ export default function SuppliersPage() {
   }, [user, router, toast]);
 
   const suppliers = useMemo(() => {
-    const supplierMap = new Map<string, Supplier>();
+    // Temporary structure to build the data
+    const supplierMap = new Map<string, {
+        name: string;
+        purchaseHistory: PurchaseHistoryItem[];
+        totalSpent: number;
+        totalDue: number;
+        firstPurchaseDate: string;
+        lastPurchaseDate: string;
+    }>();
 
     mockProducts.forEach(product => {
-      const fullProductName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
-      
       product.acquisitionHistory.forEach(batch => {
         if (!batch.supplierName) return;
 
@@ -64,7 +83,14 @@ export default function SuppliersPage() {
         }
 
         const supplier = supplierMap.get(key)!;
-        supplier.purchaseHistory.push({ ...batch, productName: fullProductName });
+        
+        const purchaseItem: PurchaseHistoryItem = {
+            ...batch,
+            productName: product.name,
+            modelName: product.modelName,
+            flavorName: product.flavorName,
+        };
+        supplier.purchaseHistory.push(purchaseItem);
         supplier.totalSpent += batch.totalBatchCost;
         supplier.totalDue += batch.dueToSupplier;
         
@@ -77,13 +103,40 @@ export default function SuppliersPage() {
       });
     });
 
-    const sortedSuppliers = Array.from(supplierMap.values());
-    
-    sortedSuppliers.forEach(supplier => {
-      supplier.purchaseHistory.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const suppliersArray = Array.from(supplierMap.values());
+
+    const finalSuppliers: Supplier[] = suppliersArray.map(tempSupplier => {
+        const grouped = new Map<string, GroupedPurchase>();
+
+        tempSupplier.purchaseHistory.forEach(purchase => {
+            const groupKey = `${purchase.productName}___${purchase.modelName || 'no-model'}`;
+            if (!grouped.has(groupKey)) {
+                grouped.set(groupKey, {
+                    productName: purchase.productName,
+                    modelName: purchase.modelName,
+                    variants: []
+                });
+            }
+            grouped.get(groupKey)!.variants.push(purchase);
+        });
+
+        // Sort variants within each group by date
+        grouped.forEach(group => {
+            group.variants.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        });
+
+        return {
+            name: tempSupplier.name,
+            groupedPurchaseHistory: Array.from(grouped.values()).sort((a,b) => a.productName.localeCompare(b.productName)),
+            totalAcquisitions: tempSupplier.purchaseHistory.length,
+            totalSpent: tempSupplier.totalSpent,
+            totalDue: tempSupplier.totalDue,
+            firstPurchaseDate: tempSupplier.firstPurchaseDate,
+            lastPurchaseDate: tempSupplier.lastPurchaseDate,
+        }
     });
 
-    return sortedSuppliers.sort((a, b) => a.name.localeCompare(b.name));
+    return finalSuppliers.sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
   if (!user || user.role !== 'admin') {
@@ -129,7 +182,7 @@ export default function SuppliersPage() {
                             {supplier.name}
                         </div>
                         <div className="text-muted-foreground hidden md:flex items-center gap-2 text-xs">
-                           <ShoppingCart className="h-3 w-3" /> {supplier.purchaseHistory.length} Acquisitions
+                           <ShoppingCart className="h-3 w-3" /> {supplier.totalAcquisitions} Acquisitions
                         </div>
                          <div className="font-medium flex items-center gap-2 text-xs">
                            <DollarSign className="h-3 w-3" /> Total Acquired: NRP {formatCurrency(supplier.totalSpent)}
@@ -141,47 +194,60 @@ export default function SuppliersPage() {
                   </AccordionTrigger>
                   <AccordionContent className="px-4 py-3 bg-muted/20">
                     <h4 className="text-sm font-semibold mb-2">Purchase History from {supplier.name}</h4>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[120px]">Date</TableHead>
-                          <TableHead>Product</TableHead>
-                          <TableHead className="text-center">Qty</TableHead>
-                          <TableHead className="text-right">Cost/Unit</TableHead>
-                          <TableHead className="text-right">Total Cost</TableHead>
-                          <TableHead className="text-center">Payment</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {supplier.purchaseHistory.map((batch) => (
-                          <TableRow key={batch.batchId}>
-                            <TableCell>{format(parseISO(batch.date), 'MMM dd, yyyy')}</TableCell>
-                            <TableCell className="text-xs max-w-xs truncate font-medium">
-                               {batch.productName}
-                            </TableCell>
-                            <TableCell className="text-center">{batch.quantityAdded}</TableCell>
-                            <TableCell className="text-right">NRP {formatCurrency(batch.costPricePerUnit)}</TableCell>
-                            <TableCell className="text-right font-semibold">NRP {formatCurrency(batch.totalBatchCost)}</TableCell>
-                            <TableCell className="text-center">
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge variant={batch.dueToSupplier > 0 ? "destructive" : "default"} className={cn(batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600", "text-xs cursor-default")}>
-                                      {batch.paymentMethod}
-                                      {batch.dueToSupplier > 0 && <AlertCircle className="ml-1 h-3 w-3" />}
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="max-w-xs">{getPaymentDetailsTooltip(batch)}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                     <div className="text-xs text-muted-foreground mt-2 flex justify-between">
+                    
+                    <Accordion type="multiple" className="w-full space-y-2">
+                      {supplier.groupedPurchaseHistory.map((group, index) => (
+                        <AccordionItem value={`${supplier.name}-group-${index}`} key={`${supplier.name}-group-${index}`} className="bg-background rounded-md border">
+                          <AccordionTrigger className="hover:bg-muted/50 px-3 py-2 text-sm rounded-t-md">
+                            <span className="font-semibold text-base">{group.productName} {group.modelName ? `(${group.modelName})` : ''}</span>
+                          </AccordionTrigger>
+                          <AccordionContent className="p-0">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="w-[120px]">Date</TableHead>
+                                  <TableHead>Variant/Flavor</TableHead>
+                                  <TableHead className="text-center">Qty</TableHead>
+                                  <TableHead className="text-right">Cost/Unit</TableHead>
+                                  <TableHead className="text-right">Total Cost</TableHead>
+                                  <TableHead className="text-center">Payment</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {group.variants.map((batch) => (
+                                  <TableRow key={batch.batchId}>
+                                    <TableCell>{format(parseISO(batch.date), 'MMM dd, yyyy')}</TableCell>
+                                    <TableCell className="text-xs max-w-xs truncate font-medium">
+                                      {batch.flavorName || 'Base'}
+                                    </TableCell>
+                                    <TableCell className="text-center">{batch.quantityAdded}</TableCell>
+                                    <TableCell className="text-right">NRP {formatCurrency(batch.costPricePerUnit)}</TableCell>
+                                    <TableCell className="text-right font-semibold">NRP {formatCurrency(batch.totalBatchCost)}</TableCell>
+                                    <TableCell className="text-center">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge variant={batch.dueToSupplier > 0 ? "destructive" : "default"} className={cn(batch.dueToSupplier > 0 ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600", "text-xs cursor-default")}>
+                                              {batch.paymentMethod}
+                                              {batch.dueToSupplier > 0 && <AlertCircle className="ml-1 h-3 w-3" />}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="max-w-xs">{getPaymentDetailsTooltip(batch)}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+
+                    <div className="text-xs text-muted-foreground mt-2 flex justify-between">
                        <span>First Purchase: {format(parseISO(supplier.firstPurchaseDate), 'MMM dd, yyyy')}</span>
                        <span>Last Purchase: {format(parseISO(supplier.lastPurchaseDate), 'MMM dd, yyyy')}</span>
                     </div>
