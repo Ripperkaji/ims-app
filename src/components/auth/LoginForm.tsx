@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Eye, EyeOff, LogIn, Mail, KeyRound, User as UserIcon } from 'lucide-react';
+import { Eye, EyeOff, LogIn, KeyRound, User as UserIcon } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -25,7 +25,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
   const router = useRouter();
 
   // State for staff form
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -48,7 +48,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
         loginSuccess = actions.login(adminToLogin.email, adminToLogin.passwordHash, 'admin', router.push);
       }
     } else { // staff
-      loginSuccess = actions.login(email, password, 'staff', router.push);
+      loginSuccess = actions.login(username, password, 'staff', router.push);
     }
     
     if (loginSuccess) {
@@ -128,15 +128,15 @@ export default function LoginForm({ userType }: LoginFormProps) {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="username">Username</Label>
                <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="username"
+                  type="text"
+                  placeholder="E.g., Staff User"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                   className="text-base pl-10"
                 />

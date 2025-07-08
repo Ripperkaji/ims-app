@@ -10,7 +10,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   actions: {
-    login: (email: string, password_plaintext: string, role: UserRole, routerPush: (path: string) => void) => boolean;
+    login: (identifier: string, password_plaintext: string, role: UserRole, routerPush: (path: string) => void) => boolean;
     logout: (routerPush: (path: string) => void) => void;
     setLoading: (loading: boolean) => void;
   };
@@ -22,10 +22,20 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: true, // Start as true
       actions: {
-        login: (email, password_plaintext, role, routerPush) => {
-          const userToLogin = mockManagedUsers.find(
-            u => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
-          );
+        login: (identifier, password_plaintext, role, routerPush) => {
+          let userToLogin;
+
+          if (role === 'admin') {
+            // Admin logs in with email
+            userToLogin = mockManagedUsers.find(
+              u => u.email.toLowerCase() === identifier.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
+            );
+          } else {
+            // Staff logs in with username (name)
+            userToLogin = mockManagedUsers.find(
+              u => u.name.toLowerCase() === identifier.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
+            );
+          }
 
           if (userToLogin) {
             set({ user: { id: userToLogin.id, name: userToLogin.name, email: userToLogin.email, role: userToLogin.role }, isLoading: false });
