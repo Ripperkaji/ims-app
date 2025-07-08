@@ -4,11 +4,11 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +126,17 @@ const AgingTable = ({ data, title }: { data: AgingData; title: string }) => {
   );
 };
 
+// --- P&L Calculation Data Structure ---
+interface PnlData {
+  productId: string;
+  productName: string;
+  unitsSold: number;
+  totalRevenue: number;
+  totalCostOfGoodsSold: number;
+  totalProfit: number;
+  profitMargin: number;
+}
+
 
 export default function AccountsPage() {
   const { user } = useAuthStore();
@@ -180,7 +191,7 @@ export default function AccountsPage() {
       }
     });
   });
-  supplierDueItems.sort((a, b) => new Date(b.acquisitionDate).getTime() - new Date(a.acquisitionDate).getTime());
+  supplierDueItems.sort((a, b) => new Date(b.isoAcquisitionDate).getTime() - new Date(a.isoAcquisitionDate).getTime());
 
   const expenseDueItems: ExpenseDueItem[] = mockExpenses
     .filter(e => e.amountDue && e.amountDue > 0)
@@ -341,6 +352,58 @@ export default function AccountsPage() {
     toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
     setSaleToAdjust(null);
   };
+  
+  // --- Logic for P&L ---
+  const { pnlData, pnlTotals, overallProfitMargin } = useMemo(() => {
+    const pnlMap = new Map<string, Omit<PnlData, 'profitMargin' | 'productName'>>();
+
+    mockSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = mockProducts.find(p => p.id === item.productId);
+        // If product not found, we can't calculate profit, so skip.
+        if (!product) return;
+
+        const costOfGoods = product.currentCostPrice * item.quantity;
+        const profit = item.totalPrice - costOfGoods;
+
+        const existingEntry = pnlMap.get(item.productId);
+
+        if (existingEntry) {
+          existingEntry.unitsSold += item.quantity;
+          existingEntry.totalRevenue += item.totalPrice;
+          existingEntry.totalCostOfGoodsSold += costOfGoods;
+          existingEntry.totalProfit += profit;
+        } else {
+          pnlMap.set(item.productId, {
+            productId: item.productId,
+            unitsSold: item.quantity,
+            totalRevenue: item.totalPrice,
+            totalCostOfGoodsSold: costOfGoods,
+            totalProfit: profit,
+          });
+        }
+      });
+    });
+
+    const pnlArray: PnlData[] = Array.from(pnlMap.values()).map(data => {
+      const product = mockProducts.find(p => p.id === data.productId)!;
+      const profitMargin = data.totalRevenue > 0 ? (data.totalProfit / data.totalRevenue) * 100 : 0;
+      return {
+        ...data,
+        productName: `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`,
+        profitMargin,
+      };
+    }).sort((a,b) => b.totalProfit - a.totalProfit);
+
+    const totals = {
+        totalRevenue: pnlArray.reduce((sum, item) => sum + item.totalRevenue, 0),
+        totalCostOfGoodsSold: pnlArray.reduce((sum, item) => sum + item.totalCostOfGoodsSold, 0),
+        totalProfit: pnlArray.reduce((sum, item) => sum + item.totalProfit, 0),
+    }
+    const overallProfitMargin = totals.totalRevenue > 0 ? (totals.totalProfit / totals.totalRevenue) * 100 : 0;
+
+    return { pnlData: pnlArray, pnlTotals: totals, overallProfitMargin };
+  }, [mockSales, mockProducts, refreshTrigger]);
 
 
   if (!user || user.role !== 'admin') { return null; }
@@ -355,9 +418,10 @@ export default function AccountsPage() {
       </div>
 
       <Tabs defaultValue="payables" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="payables">Accounts Payable</TabsTrigger>
           <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
+          <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
           <TabsTrigger value="capital">Capital Management</TabsTrigger>
         </TabsList>
         <TabsContent value="payables" className="mt-4">
@@ -384,7 +448,7 @@ export default function AccountsPage() {
               {selectedPayableType === 'supplier' && (
                 supplierDueItems.length > 0 ? (
                   <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Vendor/Supplier Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalSupplierDue)}</span></p>
+                  <p className="text-sm text-muted-foreground mb-3">Total Vendor/Supplier Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalSupplierDue)}</span></p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Vendor/Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -392,7 +456,7 @@ export default function AccountsPage() {
                         <TableRow key={item.batchId}>
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.supplierName || "N/A"}</TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.dueAmount)}</TableCell>
+                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
                           <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
                           <TableCell>{item.acquisitionDate}</TableCell>
                           <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
@@ -407,16 +471,16 @@ export default function AccountsPage() {
               {selectedPayableType === 'expense' && (
                 expenseDueItems.length > 0 ? (
                   <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalExpenseDue)}</span></p>
+                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalExpenseDue)}</span></p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total Expense</TableHead><TableHead>Payment Breakdown</TableHead><TableHead className="text-right">Outstanding Due</TableHead><TableHead>Recorded Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {expenseDueItems.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
-                          <TableCell className="text-right">NRP ${formatCurrency(item.amount)}</TableCell>
+                          <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
                           <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.amountDue || 0)}</TableCell>
+                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue || 0)}</TableCell>
                           <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                           <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
                         </TableRow>
@@ -446,7 +510,7 @@ export default function AccountsPage() {
                     <TableRow key={sale.id}>
                       <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell><TableCell>{sale.customerName}</TableCell>
                       <TableCell>{sale.customerContact ? (<a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary"><Phone className="h-3 w-3" /> {sale.customerContact}</a>) : <span className="text-xs">N/A</span>}</TableCell>
-                      <TableCell>NRP ${formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP ${formatCurrency(sale.amountDue)}</TableCell>
+                      <TableCell>NRP {formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP {formatCurrency(sale.amountDue)}</TableCell>
                       <TableCell>
                         {sale.isFlagged ? (<TooltipProvider><Tooltip><TooltipTrigger asChild><Flag className="h-4 w-4 text-destructive cursor-pointer" /></TooltipTrigger><TooltipContent><p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p></TooltipContent></Tooltip></TooltipProvider>) : (<span>No</span>)}
                       </TableCell>
@@ -465,6 +529,61 @@ export default function AccountsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="pnl" className="mt-4">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><PieChartIcon className="h-5 w-5 text-primary"/> Product Profit & Loss</CardTitle>
+                <CardDescription>Profitability analysis for each product based on all-time sales and current cost price.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pnlData.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product Name</TableHead>
+                        <TableHead className="text-center">Units Sold</TableHead>
+                        <TableHead className="text-right">Total Revenue</TableHead>
+                        <TableHead className="text-right">Total COGS</TableHead>
+                        <TableHead className="text-right">Total Profit</TableHead>
+                        <TableHead className="text-right">Profit Margin</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pnlData.map((pnl) => (
+                        <TableRow key={pnl.productId}>
+                          <TableCell className="font-medium max-w-xs truncate">{pnl.productName}</TableCell>
+                          <TableCell className="text-center">{pnl.unitsSold}</TableCell>
+                          <TableCell className="text-right">NRP {formatCurrency(pnl.totalRevenue)}</TableCell>
+                          <TableCell className="text-right text-muted-foreground">NRP {formatCurrency(pnl.totalCostOfGoodsSold)}</TableCell>
+                          <TableCell className={cn("text-right font-semibold", pnl.totalProfit >= 0 ? 'text-green-600' : 'text-destructive')}>
+                            NRP {formatCurrency(pnl.totalProfit)}
+                          </TableCell>
+                          <TableCell className={cn("text-right font-semibold", pnl.profitMargin >= 0 ? 'text-green-600' : 'text-destructive')}>
+                            {pnl.profitMargin.toFixed(1)}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                        <TableRow className="bg-muted/50 hover:bg-muted/50">
+                            <TableHead colSpan={2} className="font-bold text-lg">Grand Totals</TableHead>
+                            <TableHead className="text-right font-bold text-lg">NRP {formatCurrency(pnlTotals.totalRevenue)}</TableHead>
+                            <TableHead className="text-right font-bold text-lg text-muted-foreground">NRP {formatCurrency(pnlTotals.totalCostOfGoodsSold)}</TableHead>
+                            <TableHead className={cn("text-right font-bold text-lg", pnlTotals.totalProfit >= 0 ? 'text-green-700' : 'text-destructive')}>
+                                NRP {formatCurrency(pnlTotals.totalProfit)}
+                            </TableHead>
+                            <TableHead className={cn("text-right font-bold text-lg", overallProfitMargin >= 0 ? 'text-green-700' : 'text-destructive')}>
+                                {overallProfitMargin.toFixed(1)}%
+                            </TableHead>
+                        </TableRow>
+                    </TableFooter>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">No sales data available to generate a P&L statement.</div>
+                )}
+              </CardContent>
+            </Card>
+        </TabsContent>
         <TabsContent value="capital" className="mt-4">
           <div className="space-y-6">
             <Card className="shadow-lg">
@@ -473,10 +592,10 @@ export default function AccountsPage() {
                 <CardDescription>A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-4">
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentCashInHand)}</p></div>
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentDigitalBalance)}</p></div>
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentInventoryValue)}</p></div>
-                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Current Assets</h3><p className="text-2xl font-bold text-primary">NRP ${formatCurrency(totalCurrentAssets)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
+                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Current Assets</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCurrentAssets)}</p></div>
               </CardContent>
             </Card>
           </div>
@@ -490,7 +609,7 @@ export default function AccountsPage() {
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP ${formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
+                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">
