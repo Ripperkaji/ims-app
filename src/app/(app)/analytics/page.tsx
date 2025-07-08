@@ -5,7 +5,7 @@ import { useAuthStore } from "@/stores/authStore";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo } from "react";
 import AnalyticsCard from "@/components/dashboard/AnalyticsCard";
-import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Archive, BarChart3, Wallet, Store, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { mockSales, mockExpenses, mockProducts, mockLogEntries } from "@/lib/data"; 
 import type { Sale } from "@/types";
@@ -112,6 +112,17 @@ export default function AnalyticsPage() {
       .map(([name, value]) => ({ name, value }))
       .filter(entry => entry.value > 0) 
       .sort((a, b) => b.value - a.value);
+  }, []);
+
+  const { storeSalesCount, onlineSalesCount } = useMemo(() => {
+    return mockSales.reduce((acc, sale) => {
+        if (sale.saleOrigin === 'store') {
+            acc.storeSalesCount++;
+        } else if (sale.saleOrigin === 'online') {
+            acc.onlineSalesCount++;
+        }
+        return acc;
+    }, { storeSalesCount: 0, onlineSalesCount: 0 });
   }, []);
 
   const categoryChartConfig = useMemo(() => {
@@ -223,6 +234,26 @@ export default function AnalyticsPage() {
             description="Total outstanding dues to suppliers and for recorded expenses." 
             isCurrency={true}
         />
+        <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Sales Origin</CardTitle>
+              <BarChart3 className="h-5 w-5 text-primary" />
+          </CardHeader>
+          <CardContent className="flex-grow flex items-center">
+              <div className="w-full flex justify-around items-center">
+                  <div className="text-center">
+                      <Store className="h-7 w-7 mx-auto text-primary mb-1"/>
+                      <p className="text-2xl font-bold">{storeSalesCount}</p>
+                      <p className="text-xs text-muted-foreground">Store Visits</p>
+                  </div>
+                  <div className="text-center">
+                      <Globe className="h-7 w-7 mx-auto text-primary mb-1"/>
+                      <p className="text-2xl font-bold">{onlineSalesCount}</p>
+                      <p className="text-xs text-muted-foreground">Online Purchases</p>
+                  </div>
+              </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
