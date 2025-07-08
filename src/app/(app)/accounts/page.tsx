@@ -18,7 +18,7 @@ import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem, Acquisit
 import { format, parseISO, differenceInDays, isValid, parse } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
 import SettlePayableDialog from '@/components/accounts/SettlePayableDialog';
-import { calculateCurrentStock } from '@/lib/productUtils';
+import { calculateCurrentStock } from "@/lib/productUtils";
 import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog";
 import {
   AlertDialog,
@@ -455,14 +455,17 @@ export default function AccountsPage() {
     return grouped;
   }, [refreshTrigger, mockProducts]);
 
-  const allMonthKeys = useMemo(() => {
-    const keys = new Set([
-      ...Object.keys(salesByMonth),
-      ...Object.keys(expensesByMonth),
-      ...Object.keys(acquisitionsByMonth),
-    ]);
-    return Array.from(keys).sort((a, b) => b.localeCompare(a));
-  }, [salesByMonth, expensesByMonth, acquisitionsByMonth]);
+  const sortedSalesMonths = useMemo(() => {
+    return Object.keys(salesByMonth).sort((a,b) => b.localeCompare(a));
+  }, [salesByMonth]);
+
+  const sortedExpensesMonths = useMemo(() => {
+    return Object.keys(expensesByMonth).sort((a,b) => b.localeCompare(a));
+  }, [expensesByMonth]);
+
+  const sortedAcquisitionsMonths = useMemo(() => {
+    return Object.keys(acquisitionsByMonth).sort((a,b) => b.localeCompare(a));
+  }, [acquisitionsByMonth]);
 
 
   if (!user || user.role !== 'admin') { return null; }
@@ -650,43 +653,72 @@ export default function AccountsPage() {
                 <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" /> Monthly Reports</CardTitle>
                 <CardDescription>View detailed reports for sales, expenses, and product acquisitions grouped by month.</CardDescription>
             </CardHeader>
-            <CardContent>
-                <Accordion type="multiple" className="w-full space-y-4">
-                  {allMonthKeys.length > 0 ? allMonthKeys.map(monthKey => {
-                      const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
-                      const monthDataSales = salesByMonth[monthKey];
-                      const monthDataExpenses = expensesByMonth[monthKey];
-                      const monthDataAcquisitions = acquisitionsByMonth[monthKey];
+            <CardContent className="space-y-8">
+              {/* Monthly Sales Report */}
+              <div>
+                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrendingUp className="text-green-600"/> Monthly Sales Report</h3>
+                  <Accordion type="multiple" className="w-full space-y-2">
+                    {sortedSalesMonths.length > 0 ? sortedSalesMonths.map(monthKey => {
+                        const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
+                        const monthDataSales = salesByMonth[monthKey];
+                        return (
+                            <AccordionItem value={`sales-${monthKey}`} key={`sales-${monthKey}`} className="border rounded-lg">
+                                <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
+                                    {monthDisplay}
+                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataSales.total)}</span></span>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4">
+                                    <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{monthDataSales.sales.map(s=>(<TableRow key={s.id}><TableCell>{format(parseISO(s.date), 'dd')}</TableCell><TableCell>{s.customerName}</TableCell><TableCell className="text-xs max-w-xs truncate">{s.items.map(i=>`${i.productName}(${i.quantity})`).join(', ')}</TableCell><TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell><TableCell><Badge variant={s.status==='Paid'?'default':'destructive'}>{s.status}</Badge></TableCell></TableRow>))}</TableBody></Table>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    }) : <p className="text-center text-muted-foreground py-4">No monthly sales data available.</p>}
+                  </Accordion>
+              </div>
+              
+              {/* Monthly Expenses Report */}
+              <div>
+                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrendingDown className="text-red-600"/> Monthly Expenses Report</h3>
+                  <Accordion type="multiple" className="w-full space-y-2">
+                    {sortedExpensesMonths.length > 0 ? sortedExpensesMonths.map(monthKey => {
+                        const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
+                        const monthDataExpenses = expensesByMonth[monthKey];
+                        return (
+                            <AccordionItem value={`expenses-${monthKey}`} key={`expenses-${monthKey}`} className="border rounded-lg">
+                                <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
+                                    {monthDisplay}
+                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataExpenses.total)}</span></span>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4">
+                                  <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{monthDataExpenses.expenses.map(e=>(<TableRow key={e.id}><TableCell>{format(parseISO(e.date), 'dd')}</TableCell><TableCell>{e.category}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right">{formatCurrency(e.amount)}</TableCell></TableRow>))}</TableBody></Table>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    }) : <p className="text-center text-muted-foreground py-4">No monthly expenses data available.</p>}
+                  </Accordion>
+              </div>
 
-                      return (
-                          <AccordionItem value={monthKey} key={monthKey} className="border rounded-lg">
-                              <AccordionTrigger className="px-4 py-3 text-lg font-semibold hover:bg-muted/30 rounded-t-lg">
-                                  {monthDisplay}
-                              </AccordionTrigger>
-                              <AccordionContent className="p-4 space-y-6">
-                                  {monthDataSales && (
-                                    <Card>
-                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="text-green-600"/>Sales Report for {monthDisplay}</CardTitle><CardDescription>Total Sales: <span className="font-bold">NRP {formatCurrency(monthDataSales.total)}</span></CardDescription></CardHeader>
-                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{monthDataSales.sales.map(s=>(<TableRow key={s.id}><TableCell>{format(parseISO(s.date), 'dd')}</TableCell><TableCell>{s.customerName}</TableCell><TableCell className="text-xs max-w-xs truncate">{s.items.map(i=>`${i.productName}(${i.quantity})`).join(', ')}</TableCell><TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell><TableCell><Badge variant={s.status==='Paid'?'default':'destructive'}>{s.status}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent>
-                                    </Card>
-                                  )}
-                                  {monthDataExpenses && (
-                                    <Card>
-                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingDown className="text-red-600"/>Expenses Report for {monthDisplay}</CardTitle><CardDescription>Total Expenses: <span className="font-bold">NRP {formatCurrency(monthDataExpenses.total)}</span></CardDescription></CardHeader>
-                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{monthDataExpenses.expenses.map(e=>(<TableRow key={e.id}><TableCell>{format(parseISO(e.date), 'dd')}</TableCell><TableCell>{e.category}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right">{formatCurrency(e.amount)}</TableCell></TableRow>))}</TableBody></Table></CardContent>
-                                    </Card>
-                                  )}
-                                  {monthDataAcquisitions && (
-                                    <Card>
-                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><PackagePlus className="text-blue-600"/>Acquisitions Report for {monthDisplay}</CardTitle><CardDescription>Total Acquisition Cost: <span className="font-bold">NRP {formatCurrency(monthDataAcquisitions.total)}</span></CardDescription></CardHeader>
-                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead>Vendor</TableHead><TableHead className="text-center">Qty</TableHead><TableHead className="text-right">Cost/Unit</TableHead><TableHead className="text-right">Total Cost</TableHead></TableRow></TableHeader><TableBody>{monthDataAcquisitions.acquisitions.map(b=>(<TableRow key={b.batchId}><TableCell>{format(parseISO(b.date), 'dd')}</TableCell><TableCell>{b.productName}</TableCell><TableCell>{b.supplierName}</TableCell><TableCell className="text-center">{b.quantityAdded}</TableCell><TableCell className="text-right">{formatCurrency(b.costPricePerUnit)}</TableCell><TableCell className="text-right">{formatCurrency(b.totalBatchCost)}</TableCell></TableRow>))}</TableBody></Table></CardContent>
-                                    </Card>
-                                  )}
-                              </AccordionContent>
-                          </AccordionItem>
-                      )
-                  }) : <p className="text-center text-muted-foreground py-4">No monthly data available.</p>}
-                </Accordion>
+              {/* Monthly Acquisitions Report */}
+              <div>
+                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><PackagePlus className="text-blue-600"/> Monthly Acquisitions Report</h3>
+                  <Accordion type="multiple" className="w-full space-y-2">
+                    {sortedAcquisitionsMonths.length > 0 ? sortedAcquisitionsMonths.map(monthKey => {
+                        const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
+                        const monthDataAcquisitions = acquisitionsByMonth[monthKey];
+                        return (
+                            <AccordionItem value={`acquisitions-${monthKey}`} key={`acquisitions-${monthKey}`} className="border rounded-lg">
+                                <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
+                                    {monthDisplay}
+                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total Cost: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataAcquisitions.total)}</span></span>
+                                </AccordionTrigger>
+                                <AccordionContent className="p-4">
+                                  <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead>Vendor</TableHead><TableHead className="text-center">Qty</TableHead><TableHead className="text-right">Cost/Unit</TableHead><TableHead className="text-right">Total Cost</TableHead></TableRow></TableHeader><TableBody>{monthDataAcquisitions.acquisitions.map(b=>(<TableRow key={b.batchId}><TableCell>{format(parseISO(b.date), 'dd')}</TableCell><TableCell>{b.productName}</TableCell><TableCell>{b.supplierName}</TableCell><TableCell className="text-center">{b.quantityAdded}</TableCell><TableCell className="text-right">{formatCurrency(b.costPricePerUnit)}</TableCell><TableCell className="text-right">{formatCurrency(b.totalBatchCost)}</TableCell></TableRow>))}</TableBody></Table>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    }) : <p className="text-center text-muted-foreground py-4">No monthly acquisition data available.</p>}
+                  </Accordion>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
