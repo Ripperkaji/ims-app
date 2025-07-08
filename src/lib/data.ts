@@ -1,43 +1,13 @@
 
-import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod } from '@/types';
+import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole } from '@/types';
 import { formatISO } from 'date-fns';
 import { calculateCurrentStock as calculateStockShared } from './productUtils'; // For internal use if needed
 
-// Helper to create initial acquisition batch
-const createInitialBatch = (
-  productId: string,
-  date: string, // Expecting ISO string
-  qty: number,
-  cost: number,
-  mrp: number,
-  paymentMethod: AcquisitionPaymentMethod,
-  cash: number,
-  digital: number,
-  due: number,
-  addedBy: string,
-  supplier?: string,
-  condition: string = "Initial Stock"
-): AcquisitionBatch => ({
-  batchId: `batch-${productId}-${new Date(date).getTime()}-${Math.random().toString(36).substring(2,7)}`,
-  date,
-  condition,
-  supplierName: supplier,
-  quantityAdded: qty,
-  costPricePerUnit: cost,
-  sellingPricePerUnitAtAcquisition: mrp,
-  paymentMethod,
-  totalBatchCost: qty * cost,
-  cashPaid: cash,
-  digitalPaid: digital,
-  dueToSupplier: due,
-  addedBy,
-});
-
-export const mockProducts: Product[] = []; // Initially empty, populated after initialization or via UI
-export const mockSales: Sale[] = []; // Initially empty
-export const mockExpenses: Expense[] = []; // Initially empty
-export const mockLogEntries: LogEntry[] = []; // Initially empty
-export let mockManagedUsers: any[] = []; // Placeholder
+export let mockProducts: Product[] = []; 
+export let mockSales: Sale[] = [];
+export let mockExpenses: Expense[] = [];
+export let mockLogEntries: LogEntry[] = []; 
+export let mockManagedUsers: ManagedUser[] = [];
 export let mockCapital = {
   cashInHand: 0,
   lastUpdated: new Date().toISOString(),
@@ -61,7 +31,7 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>, actorName: st
   const newExpense: Expense = { 
       id: `exp-sys-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, 
       ...expenseData,
-      recordedBy: actorName, // Ensure recordedBy is set
+      recordedBy: actorName, 
       paymentMethod: 'Digital',
       cashPaid: expenseData.amount,
       digitalPaid: 0,
@@ -91,3 +61,77 @@ export const updateCashInHand = (newAmount: number, actorName: string): { newAmo
   
   return { newAmount: mockCapital.cashInHand, lastUpdated: mockCapital.lastUpdated };
 };
+
+// --- Managed User Functions ---
+
+export function addManagedUser(name: string, role: UserRole, password_plaintext: string, addedBy: string, contactNumber: string): ManagedUser | null {
+  const email = `${name.toLowerCase().replace(/\s+/g, '.')}@sh.com`;
+  if (mockManagedUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+    console.error(`User with email ${email} already exists.`);
+    return null;
+  }
+  
+  if (role === 'admin') {
+      console.error("Cannot add 'admin' role via this function. Only 'staff' can be added.");
+      return null;
+  }
+  
+  const newUser: ManagedUser = {
+    id: `user-${role}-${Date.now()}`,
+    name,
+    email,
+    contactNumber,
+    role,
+    passwordHash: password_plaintext, // In real app, this would be hashed
+    status: 'active',
+    createdAt: new Date().toISOString(),
+    addedBy,
+  };
+  mockManagedUsers.push(newUser);
+  addLogEntry(addedBy, 'User Added', `New user '${name}' (${role}) was added by ${addedBy}.`);
+  return newUser;
+}
+
+export function editManagedUser(userId: string, newName: string, editedBy: string, newContactNumber: string): ManagedUser | null {
+  const userIndex = mockManagedUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    console.error(`User with ID ${userId} not found for editing.`);
+    return null;
+  }
+  const originalUser = mockManagedUsers[userIndex];
+  originalUser.name = newName;
+  originalUser.contactNumber = newContactNumber;
+  addLogEntry(editedBy, 'User Edited', `User details for '${originalUser.email}' were updated by ${editedBy}.`);
+  return originalUser;
+}
+
+export function deleteManagedUser(userId: string, deletedBy: string): boolean {
+  const userIndex = mockManagedUsers.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    console.error(`User with ID ${userId} not found for deletion.`);
+    return false;
+  }
+  const deletedUser = mockManagedUsers[userIndex];
+  if (deletedUser.role === 'admin') {
+      console.error("Admins cannot be deleted via this function.");
+      return false;
+  }
+  mockManagedUsers.splice(userIndex, 1);
+  addLogEntry(deletedBy, 'User Deleted', `User '${deletedUser.name}' (${deletedUser.email}) was deleted by ${deletedBy}.`);
+  return true;
+}
+
+
+function initializeDefaultUsers() {
+    if (mockManagedUsers.length === 0) {
+        mockManagedUsers.push(
+            { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
+            { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
+            { id: 'user-staff-test', name: 'Staff User', email: 'staff@sh.com', contactNumber: '9800000003', role: 'staff', passwordHash: 'staff123', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
+        );
+         addLogEntry('System', 'Initialization', 'Default admin and staff users created.');
+    }
+}
+
+// Initialize default users on load
+initializeDefaultUsers();

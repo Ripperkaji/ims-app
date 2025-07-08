@@ -1,15 +1,16 @@
 
 "use client";
 
-import type { User } from '@/types';
+import type { User, UserRole } from '@/types';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { mockManagedUsers } from '@/lib/data';
 
 interface AuthState {
   user: User | null;
   isLoading: boolean;
   actions: {
-    login: (userData: User, routerPush: (path: string) => void) => void;
+    login: (email: string, password_plaintext: string, role: UserRole, routerPush: (path: string) => void) => boolean;
     logout: (routerPush: (path: string) => void) => void;
     setLoading: (loading: boolean) => void;
   };
@@ -21,9 +22,18 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: true, // Start as true
       actions: {
-        login: (userData, routerPush) => {
-          set({ user: userData, isLoading: false });
-          routerPush('/dashboard');
+        login: (email, password_plaintext, role, routerPush) => {
+          const userToLogin = mockManagedUsers.find(
+            u => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
+          );
+
+          if (userToLogin) {
+            set({ user: { id: userToLogin.id, name: userToLogin.name, email: userToLogin.email, role: userToLogin.role }, isLoading: false });
+            routerPush('/dashboard');
+            return true;
+          }
+          // Do not update state on failed login
+          return false;
         },
         logout: (routerPush) => {
           set({ user: null, isLoading: false });

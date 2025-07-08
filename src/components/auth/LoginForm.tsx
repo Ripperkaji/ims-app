@@ -28,16 +28,20 @@ export default function LoginForm({ userType }: LoginFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    actions.login({
-      id: `${userType}-${Math.random()}`,
-      name: email, 
-      email: email,
-      role: userType as UserRole,
-    }, router.push);
-    toast({
-      title: "Login Successful",
-      description: `Welcome, ${userType}!`,
-    });
+    const loginSuccess = actions.login(email, password, userType, router.push);
+    
+    if (loginSuccess) {
+      toast({
+        title: "Login Successful",
+        description: `Welcome, ${userType}!`,
+      });
+    } else {
+      toast({
+        title: "Login Failed",
+        description: "Invalid email or password for this role.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
