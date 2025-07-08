@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -103,7 +102,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
                     <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
-                        placeholder="Default is 12345"
+                        placeholder="Enter password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
