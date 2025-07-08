@@ -132,8 +132,8 @@ export default function ProductsPage() {
         const existingProductWithNewIdentifiers = mockProducts.find(p => 
             p.id !== updatedDetails.id &&
             p.name.toLowerCase() === newName.toLowerCase() &&
-            p.modelName?.toLowerCase() === newModelName?.toLowerCase() &&
-            p.flavorName?.toLowerCase() === newFlavorName?.toLowerCase()
+            (p.modelName || '').toLowerCase() === (newModelName || '').toLowerCase() &&
+            (p.flavorName || '').toLowerCase() === (newFlavorName || '').toLowerCase()
         );
         if (existingProductWithNewIdentifiers) {
           const conflictDisplayName = `${newName}${newModelName ? ` (${newModelName})` : ''}${newFlavorName ? ` - ${newFlavorName}` : ''}`;
@@ -181,8 +181,8 @@ export default function ProductsPage() {
       const flavorInfo = data.flavors[0];
       const existingProduct = mockProducts.find(p =>
           p.name.toLowerCase() === data.name.toLowerCase() &&
-          p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
-          p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
+          (p.modelName || '').toLowerCase() === (data.modelName || '').toLowerCase() &&
+          (p.flavorName || '').toLowerCase() === (flavorInfo.flavorName || '').toLowerCase()
       );
 
       if (existingProduct) {
@@ -207,8 +207,8 @@ export default function ProductsPage() {
       for (const flavorInfo of data.flavors) {
         const existingProduct = mockProducts.find(p =>
           p.name.toLowerCase() === data.name.toLowerCase() &&
-          p.modelName?.toLowerCase() === data.modelName?.toLowerCase() &&
-          p.flavorName?.toLowerCase() === flavorInfo.flavorName?.toLowerCase()
+          (p.modelName || '').toLowerCase() === (data.modelName || '').toLowerCase() &&
+          (p.flavorName || '').toLowerCase() === (flavorInfo.flavorName || '').toLowerCase()
         );
 
         if (existingProduct) {
@@ -640,3 +640,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    
