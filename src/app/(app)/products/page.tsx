@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -232,7 +233,7 @@ export default function ProductsPage() {
 
       const firstBatch: AcquisitionBatch = {
         batchId: `batch-${newProductId}-${Date.now()}`,
-        date: new Date().toISOString(),
+        date: data.acquisitionDate.toISOString(),
         condition: "Product Added",
         supplierName: data.supplierName,
         quantityAdded: totalAcquiredStock,
@@ -266,7 +267,7 @@ export default function ProductsPage() {
     setRefreshTrigger(prev => prev + 1);
 
     const fullProductName = `${data.name}${data.modelName ? ` (${data.modelName})` : ''}`;
-    let logDetails = `Batch product add for '${fullProductName}' by ${user.name}. Variants: ${productsAddedDetails.join('; ')}. Cost/Unit: ${formatCurrency(data.costPrice)}, MRP/Unit: ${formatCurrency(data.sellingPrice)}.`;
+    let logDetails = `Batch product add for '${fullProductName}' by ${user.name} with acquisition date of ${format(data.acquisitionDate, 'MMM dd, yyyy')}. Variants: ${productsAddedDetails.join('; ')}. Cost/Unit: ${formatCurrency(data.costPrice)}, MRP/Unit: ${formatCurrency(data.sellingPrice)}.`;
     if (data.supplierName) logDetails += ` Supplier: ${data.supplierName}.`;
     if (data.acquisitionPaymentDetails.totalAcquisitionCost > 0) {
       logDetails += ` Total Batch Cost: NRP ${formatCurrency(data.acquisitionPaymentDetails.totalAcquisitionCost)} via ${data.acquisitionPaymentDetails.method}.`;

@@ -140,6 +140,7 @@ export interface NewProductData {
   costPrice: number;
   supplierName?: string;
   flavors: { flavorName?: string; totalAcquiredStock: number }[];
+  acquisitionDate: Date;
   acquisitionPaymentDetails: {
     method: AcquisitionPaymentMethod;
     cashPaid: number;

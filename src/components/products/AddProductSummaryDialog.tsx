@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -15,10 +16,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
-import { Landmark, Package, Tag, Layers, DollarSign, Users, Hash } from 'lucide-react';
+import { Landmark, Package, Tag, Layers, DollarSign, Users, Hash, CalendarDays } from 'lucide-react';
 import type { NewProductData } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import { cn } from "@/lib/utils";
+import { format } from 'date-fns';
 
 interface AddProductSummaryDialogProps {
   isOpen: boolean;
@@ -43,7 +45,7 @@ export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, pr
   
   if (!isOpen || !productData) return null;
   
-  const { name, modelName, category, sellingPrice, costPrice, supplierName, flavors, acquisitionPaymentDetails } = productData;
+  const { name, modelName, category, sellingPrice, costPrice, supplierName, flavors, acquisitionDate, acquisitionPaymentDetails } = productData;
   const { method, cashPaid, digitalPaid, dueAmount, totalAcquisitionCost } = acquisitionPaymentDetails;
 
   const isConfirmationValid = confirmationText.trim().toUpperCase() === 'YES';
@@ -86,6 +88,10 @@ export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, pr
                   <span className="font-semibold">{supplierName}</span>
                 </div>
               )}
+               <div className="flex justify-between">
+                <span className="text-muted-foreground flex items-center gap-2"><CalendarDays /> Acquisition Date</span>
+                <span className="font-semibold">{format(acquisitionDate, 'PPP')}</span>
+              </div>
             </CardContent>
           </Card>
 

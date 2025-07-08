@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -16,11 +17,14 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle as DialogCardTitleImport } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { PackagePlus, Landmark, Info, PlusCircle, Trash2 } from 'lucide-react';
+import { PackagePlus, Landmark, Info, PlusCircle, Trash2, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { ProductType, NewProductData } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { format } from 'date-fns';
 
 type AcquisitionPaymentMethod = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 interface FlavorStock {
@@ -44,6 +48,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
   const [sellingPrice, setSellingPrice] = useState<string>('');
   const [costPrice, setCostPrice] = useState<string>('');
   const [supplierName, setSupplierName] = useState<string>('');
+  const [acquisitionDate, setAcquisitionDate] = useState<Date | undefined>(new Date());
 
   const [flavors, setFlavors] = useState<FlavorStock[]>([{ id: `flavor-${Date.now()}`, flavorName: '', totalAcquiredStock: '' }]);
 
@@ -159,6 +164,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
 
     if (!name.trim()) { toast({ title: "Invalid Name", description: "Company name cannot be empty.", variant: "destructive" }); return; }
     if (!category) { toast({ title: "Invalid Category", description: "Please select a product category.", variant: "destructive" }); return; }
+    if (!acquisitionDate) { toast({ title: "Invalid Date", description: "Please select an acquisition date.", variant: "destructive" }); return; }
     if (isNaN(numSellingPrice) || numSellingPrice <= 0) { toast({ title: "Invalid Selling Price", description: "Please enter a valid positive selling price.", variant: "destructive" }); return; }
     if (isNaN(numCostPrice) || numCostPrice <= 0) { toast({ title: "Invalid Cost Price", description: "Please enter a valid positive cost price.", variant: "destructive" }); return; }
     if (numCostPrice > numSellingPrice) { toast({ title: "Logical Error", description: "Cost price cannot be greater than selling price.", variant: "destructive" }); return; }
@@ -214,6 +220,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
         flavorName: f.flavorName?.trim() || undefined,
         totalAcquiredStock: parseInt(f.totalAcquiredStock, 10) || 0,
       })).filter(f => f.totalAcquiredStock > 0), // Only include variants with stock
+      acquisitionDate: acquisitionDate,
       acquisitionPaymentDetails: {
         method: acquisitionPaymentMethod,
         cashPaid: finalCashPaid,
@@ -226,6 +233,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
 
   const resetForm = () => {
     setName(''); setModelName(''); setCategory(''); setSellingPrice(''); setCostPrice(''); setSupplierName('');
+    setAcquisitionDate(new Date());
     setFlavors([{ id: `flavor-${Date.now()}`, flavorName: '', totalAcquiredStock: '' }]);
     setAcquisitionPaymentMethod('Cash'); setIsAcquisitionHybridPayment(false);
     setAcquisitionCashPaid(''); setAcquisitionDigitalPaid(''); setAcquisitionAmountDueToSupplier('');
@@ -293,19 +301,40 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
           
           <div className="space-y-3 pt-3 border-t">
             <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-1.5">
+              <div className="space-y-1.5">
                 <Label>Vendor/Supplier Name (Optional)</Label>
                 <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="E.g., Vape Supplies Co."/>
               </div>
+              <div className="space-y-1.5">
+                <Label>Acquisition Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal h-9">
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {acquisitionDate ? format(acquisitionDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={acquisitionDate}
+                      onSelect={setAcquisitionDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
                 <Label>Cost Price (per Unit)</Label>
                 <Input type="number" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01"/>
               </div>
-            </div>
-             <div className="space-y-1.5">
+               <div className="space-y-1.5">
                 <Label>Selling Price (MRP per Unit)</Label>
                 <Input type="number" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} placeholder="NRP 0.00" min="0.01" step="0.01"/>
             </div>
+             </div>
 
             {totalAcquisitionCost > 0 &&
               <div className="p-3 my-1 rounded-md border border-dashed border-primary bg-primary/5">
