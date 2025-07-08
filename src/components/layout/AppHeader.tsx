@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut, Settings2, ChevronsLeftRight, UserShield } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
-import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, FileText, FlaskConical, AlertOctagon, BarChart3, UserCog, Wallet, Users } from 'lucide-react';
+import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, FileText, FlaskConical, AlertOctagon, BarChart3, UserCog, Wallet, Users, Briefcase } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['admin', 'staff'] },
   { href: '/damaged-products', label: 'Damaged & Returned', icon: AlertOctagon, roles: ['admin'] },
   { href: '/customers', label: 'Customers', icon: Users, roles: ['admin'] },
+  { href: '/suppliers', label: 'Suppliers', icon: Briefcase, roles: ['admin'] },
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   { href: '/accounts', label: 'Finance', icon: Wallet, roles: ['admin'] },
