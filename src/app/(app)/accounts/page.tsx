@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,9 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital, updateCashInHand, addLogEntry as globalAddLog } from "@/lib/data";
-import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem } from "@/types";
-import { format, parseISO, differenceInDays, isValid } from 'date-fns';
+import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem, AcquisitionBatch } from "@/types";
+import { format, parseISO, differenceInDays, isValid, parse } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
 import SettlePayableDialog from '@/components/accounts/SettlePayableDialog';
 import { calculateCurrentStock } from '@/lib/productUtils';
@@ -30,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from '@/components/ui/badge';
 
 
 type PayableType = 'supplier' | 'expense' | '';
@@ -405,6 +407,63 @@ export default function AccountsPage() {
     return { pnlData: pnlArray, pnlTotals: totals, overallProfitMargin };
   }, [mockSales, mockProducts, refreshTrigger]);
 
+  // --- Logic for Monthly Reports ---
+  const salesByMonth = useMemo(() => {
+    const grouped: { [key: string]: { sales: Sale[]; total: number } } = {};
+    mockSales.forEach(sale => {
+      const monthYearKey = format(new Date(sale.date), 'yyyy-MM');
+      if (!grouped[monthYearKey]) {
+        grouped[monthYearKey] = { sales: [], total: 0 };
+      }
+      grouped[monthYearKey].sales.push(sale);
+      grouped[monthYearKey].total += sale.totalAmount;
+    });
+    return grouped;
+  }, [refreshTrigger, mockSales]);
+
+  const expensesByMonth = useMemo(() => {
+    const grouped: { [key: string]: { expenses: Expense[]; total: number } } = {};
+    mockExpenses.forEach(expense => {
+      const monthYearKey = format(parseISO(expense.date), 'yyyy-MM');
+      if (!grouped[monthYearKey]) {
+        grouped[monthYearKey] = { expenses: [], total: 0 };
+      }
+      grouped[monthYearKey].expenses.push(expense);
+      grouped[monthYearKey].total += expense.amount;
+    });
+    return grouped;
+  }, [refreshTrigger, mockExpenses]);
+
+  const acquisitionsByMonth = useMemo(() => {
+    const grouped: { [key: string]: { acquisitions: (AcquisitionBatch & { productName: string })[]; total: number } } = {};
+    mockProducts.forEach(product => {
+      product.acquisitionHistory.forEach(batch => {
+        const monthYearKey = format(parseISO(batch.date), 'yyyy-MM');
+        if (!grouped[monthYearKey]) {
+          grouped[monthYearKey] = { acquisitions: [], total: 0 };
+        }
+        grouped[monthYearKey].acquisitions.push({
+          productName: `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`,
+          ...batch,
+        });
+        grouped[monthYearKey].total += batch.totalBatchCost;
+      });
+    });
+    Object.values(grouped).forEach(monthData => {
+      monthData.acquisitions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
+    return grouped;
+  }, [refreshTrigger, mockProducts]);
+
+  const allMonthKeys = useMemo(() => {
+    const keys = new Set([
+      ...Object.keys(salesByMonth),
+      ...Object.keys(expensesByMonth),
+      ...Object.keys(acquisitionsByMonth),
+    ]);
+    return Array.from(keys).sort((a, b) => b.localeCompare(a));
+  }, [salesByMonth, expensesByMonth, acquisitionsByMonth]);
+
 
   if (!user || user.role !== 'admin') { return null; }
 
@@ -418,10 +477,11 @@ export default function AccountsPage() {
       </div>
 
       <Tabs defaultValue="payables" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="payables">Accounts Payable</TabsTrigger>
           <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
           <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
+          <TabsTrigger value="monthly-reports">Monthly Reports</TabsTrigger>
           <TabsTrigger value="capital">Capital Management</TabsTrigger>
         </TabsList>
         <TabsContent value="payables" className="mt-4">
@@ -584,6 +644,52 @@ export default function AccountsPage() {
               </CardContent>
             </Card>
         </TabsContent>
+        <TabsContent value="monthly-reports" className="mt-4">
+          <Card className="shadow-lg">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" /> Monthly Reports</CardTitle>
+                <CardDescription>View detailed reports for sales, expenses, and product acquisitions grouped by month.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Accordion type="multiple" className="w-full space-y-4">
+                  {allMonthKeys.length > 0 ? allMonthKeys.map(monthKey => {
+                      const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
+                      const monthDataSales = salesByMonth[monthKey];
+                      const monthDataExpenses = expensesByMonth[monthKey];
+                      const monthDataAcquisitions = acquisitionsByMonth[monthKey];
+
+                      return (
+                          <AccordionItem value={monthKey} key={monthKey} className="border rounded-lg">
+                              <AccordionTrigger className="px-4 py-3 text-lg font-semibold hover:bg-muted/30 rounded-t-lg">
+                                  {monthDisplay}
+                              </AccordionTrigger>
+                              <AccordionContent className="p-4 space-y-6">
+                                  {monthDataSales && (
+                                    <Card>
+                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="text-green-600"/>Sales Report for {monthDisplay}</CardTitle><CardDescription>Total Sales: <span className="font-bold">NRP {formatCurrency(monthDataSales.total)}</span></CardDescription></CardHeader>
+                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{monthDataSales.sales.map(s=>(<TableRow key={s.id}><TableCell>{format(parseISO(s.date), 'dd')}</TableCell><TableCell>{s.customerName}</TableCell><TableCell className="text-xs max-w-xs truncate">{s.items.map(i=>`${i.productName}(${i.quantity})`).join(', ')}</TableCell><TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell><TableCell><Badge variant={s.status==='Paid'?'default':'destructive'}>{s.status}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent>
+                                    </Card>
+                                  )}
+                                  {monthDataExpenses && (
+                                    <Card>
+                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><TrendingDown className="text-red-600"/>Expenses Report for {monthDisplay}</CardTitle><CardDescription>Total Expenses: <span className="font-bold">NRP {formatCurrency(monthDataExpenses.total)}</span></CardDescription></CardHeader>
+                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{monthDataExpenses.expenses.map(e=>(<TableRow key={e.id}><TableCell>{format(parseISO(e.date), 'dd')}</TableCell><TableCell>{e.category}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right">{formatCurrency(e.amount)}</TableCell></TableRow>))}</TableBody></Table></CardContent>
+                                    </Card>
+                                  )}
+                                  {monthDataAcquisitions && (
+                                    <Card>
+                                      <CardHeader><CardTitle className="text-base flex items-center gap-2"><PackagePlus className="text-blue-600"/>Acquisitions Report for {monthDisplay}</CardTitle><CardDescription>Total Acquisition Cost: <span className="font-bold">NRP {formatCurrency(monthDataAcquisitions.total)}</span></CardDescription></CardHeader>
+                                      <CardContent><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead>Vendor</TableHead><TableHead className="text-center">Qty</TableHead><TableHead className="text-right">Cost/Unit</TableHead><TableHead className="text-right">Total Cost</TableHead></TableRow></TableHeader><TableBody>{monthDataAcquisitions.acquisitions.map(b=>(<TableRow key={b.batchId}><TableCell>{format(parseISO(b.date), 'dd')}</TableCell><TableCell>{b.productName}</TableCell><TableCell>{b.supplierName}</TableCell><TableCell className="text-center">{b.quantityAdded}</TableCell><TableCell className="text-right">{formatCurrency(b.costPricePerUnit)}</TableCell><TableCell className="text-right">{formatCurrency(b.totalBatchCost)}</TableCell></TableRow>))}</TableBody></Table></CardContent>
+                                    </Card>
+                                  )}
+                              </AccordionContent>
+                          </AccordionItem>
+                      )
+                  }) : <p className="text-center text-muted-foreground py-4">No monthly data available.</p>}
+                </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="capital" className="mt-4">
           <div className="space-y-6">
             <Card className="shadow-lg">
@@ -630,3 +736,5 @@ export default function AccountsPage() {
     </>
   );
 }
+
+    
