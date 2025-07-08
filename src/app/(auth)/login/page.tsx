@@ -4,8 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogIn } from 'lucide-react';
 import Image from "next/image";
+import { mockManagedUsers } from '@/lib/data';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 export default function LoginPage() {
+  const hasStaffUsers = mockManagedUsers.some(user => user.role === 'staff');
+
+  const StaffButtonContent = () => (
+    <>
+      <LogIn className="mr-2 h-5 w-5"/> Staff Login
+    </>
+  );
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
@@ -24,11 +34,31 @@ export default function LoginPage() {
               <LogIn className="mr-2 h-5 w-5"/> Admin Login
             </Link>
           </Button>
-          <Button asChild variant="secondary" className="text-lg py-6">
-            <Link href="/login/staff">
-               <LogIn className="mr-2 h-5 w-5"/> Staff Login
-            </Link>
-          </Button>
+          
+          {hasStaffUsers ? (
+            <Button asChild variant="secondary" className="text-lg py-6">
+              <Link href="/login/staff">
+                <StaffButtonContent />
+              </Link>
+            </Button>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {/* Wrapper div for disabled button */}
+                  <div className="w-full">
+                    <Button variant="outline" className="text-lg py-6 w-full" disabled>
+                      <StaffButtonContent />
+                    </Button>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>No staff accounts exist. Please log in as an Admin to create one.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
         </CardContent>
       </Card>
       <p className="mt-8 text-sm text-muted-foreground">
