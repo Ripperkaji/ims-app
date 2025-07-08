@@ -292,7 +292,7 @@ export default function AccountsPage() {
     return dueSales.map(sale => ({ date: sale.date, amount: sale.amountDue }));
   }, [dueSales]);
 
-  const receivableAging = useMemo(() => calculateAging(receivablesForAging), [receivablesForAging]);
+  const receivableAging = useMemo(() => calculateAging(receivablesForAging), [dueSales]);
 
   const openMarkAsPaidDialog = (sale: Sale) => {
     setSaleToMarkAsPaid(sale);
@@ -653,10 +653,10 @@ export default function AccountsPage() {
                 <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" /> Monthly Reports</CardTitle>
                 <CardDescription>View detailed reports for sales, expenses, and product acquisitions grouped by month.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Monthly Sales Report */}
-              <div>
-                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrendingUp className="text-green-600"/> Monthly Sales Report</h3>
+              <div className="space-y-3">
+                  <h3 className="text-xl font-semibold flex items-center gap-2"><TrendingUp className="text-green-600"/> Monthly Sales Report</h3>
                   <Accordion type="multiple" className="w-full space-y-2">
                     {sortedSalesMonths.length > 0 ? sortedSalesMonths.map(monthKey => {
                         const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
@@ -677,8 +677,8 @@ export default function AccountsPage() {
               </div>
               
               {/* Monthly Expenses Report */}
-              <div>
-                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><TrendingDown className="text-red-600"/> Monthly Expenses Report</h3>
+              <div className="space-y-3">
+                  <h3 className="text-xl font-semibold flex items-center gap-2"><TrendingDown className="text-red-600"/> Monthly Expenses Report</h3>
                   <Accordion type="multiple" className="w-full space-y-2">
                     {sortedExpensesMonths.length > 0 ? sortedExpensesMonths.map(monthKey => {
                         const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
@@ -699,8 +699,8 @@ export default function AccountsPage() {
               </div>
 
               {/* Monthly Acquisitions Report */}
-              <div>
-                  <h3 className="text-xl font-semibold mb-3 flex items-center gap-2"><PackagePlus className="text-blue-600"/> Monthly Acquisitions Report</h3>
+              <div className="space-y-3">
+                  <h3 className="text-xl font-semibold flex items-center gap-2"><PackagePlus className="text-blue-600"/> Monthly Acquisitions Report</h3>
                   <Accordion type="multiple" className="w-full space-y-2">
                     {sortedAcquisitionsMonths.length > 0 ? sortedAcquisitionsMonths.map(monthKey => {
                         const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
@@ -768,5 +768,3 @@ export default function AccountsPage() {
     </>
   );
 }
-
-    
