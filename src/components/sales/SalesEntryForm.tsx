@@ -7,7 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { PlusCircle, Trash2, ShoppingCart, Landmark, Phone, Info, Store, Globe, CalendarDays } from 'lucide-react';
 import type { Product, SaleItem, Sale, LogEntry, ProductType } from '@/types';
 import { ALL_PRODUCT_TYPES } from '@/types';
 import { useAuthStore } from '@/stores/authStore';
@@ -15,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { mockProducts as allGlobalProducts, mockSales, mockLogEntries } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatCurrency } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface SalesEntryFormProps {
   onSaleAdded?: (newSale: Sale) => void;
@@ -37,16 +40,25 @@ const calculateCurrentStockForSaleForm = (product: Product | undefined, allSales
   if (!product || !product.acquisitionHistory) return 0;
   const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
   const totalSold = allSales
-    .flatMap(sale => sale.items)
-    .filter(item => item.productId === product.id)
-    .reduce((sum, item) => sum + item.quantity, 0);
-  return totalAcquired - totalSold - (product.damagedQuantity || 0) - (product.testerQuantity || 0);
+    .flatMap(sale => sale.items || []) // Ensure sale.items exists
+    .filter(item => item && item.productId === product.id) // Ensure item exists
+    .reduce((sum, item) => {
+      // Ensure item.quantity is a number, default to 0 if not
+      const quantity = typeof item.quantity === 'number' ? item.quantity : 0;
+      return sum + quantity;
+    }, 0);
+    
+  const damaged = typeof product.damagedQuantity === 'number' ? product.damagedQuantity : 0;
+  const testers = typeof product.testerQuantity === 'number' ? product.testerQuantity : 0;
+    
+  return totalAcquired - totalSold - damaged - testers;
 };
 
 export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const { user } = useAuthStore();
   const { toast } = useToast();
   const [saleOrigin, setSaleOrigin] = useState<'store' | 'online' | null>(null);
+  const [saleDate, setSaleDate] = useState<Date | undefined>(new Date());
   const [customerName, setCustomerName] = useState('');
   const [customerContact, setCustomerContact] = useState('');
   const [selectedItems, setSelectedItems] = useState<LocalSaleItemInForm[]>([]);
@@ -182,7 +194,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     const product = allGlobalProducts.find(p => p.id === productId);
     if (product) {
       item.productId = product.id;
-      item.productName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+      item.productName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`.trim();
       item.unitPrice = product.currentSellingPrice;
       item.quantity = 1;
       const currentStock = calculateCurrentStockForSaleForm(product, mockSales);
@@ -224,6 +236,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!saleOrigin) { toast({ title: "Missing Information", description: "Please select a Sale Origin (Store Visit or Online).", variant: "destructive" }); return; }
+    if (!saleDate) { toast({ title: "Missing Information", description: "Please select a sale date.", variant: "destructive" }); return; }
     if (!customerName.trim()) { toast({ title: "Missing Information", description: "Please enter customer name.", variant: "destructive" }); return; }
     if (selectedItems.length === 0) { toast({ title: "No Items", description: "Please add at least one product to the sale.", variant: "destructive" }); return; }
     if (selectedItems.some(item => item.productId === '' || item.quantity <= 0 || isNaN(item.quantity))) { toast({ title: "Invalid Item", description: "One or more items are incomplete or have zero/invalid quantity.", variant: "destructive" }); return; }
@@ -244,7 +257,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     }
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
     const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({ productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice, }));
-    const newSale: Sale = { id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: new Date().toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
+    const newSale: Sale = { id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: saleDate.toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
     mockSales.unshift(newSale);
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
@@ -254,7 +267,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     addLog("Sale Created", logDetails);
     toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${formatCurrency(totalAmount)} has been recorded.` });
     if (onSaleAdded) { onSaleAdded(newSale); }
-    setSaleOrigin(null); setCustomerName(''); setCustomerContact(''); setSelectedItems([]); setFormPaymentMethod('Cash'); setHybridCashPaid(''); setHybridDigitalPaid(''); setHybridAmountLeftDue(''); setValidationError(null);
+    setSaleOrigin(null); setSaleDate(new Date()); setCustomerName(''); setCustomerContact(''); setSelectedItems([]); setFormPaymentMethod('Cash'); setHybridCashPaid(''); setHybridDigitalPaid(''); setHybridAmountLeftDue(''); setValidationError(null);
   };
 
   return (
@@ -275,9 +288,32 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
           </div>
 
           <fieldset disabled={!saleOrigin} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div> <Label htmlFor="customerName" className="text-base">Customer Name</Label> <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="E.g., John Doe" className="mt-1" required /> </div>
-              <div> <Label htmlFor="customerContact" className="text-base">Contact Number (Optional)</Label> <div className="relative mt-1"> <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <Input id="customerContact" type="tel" value={customerContact} onChange={(e) => setCustomerContact(e.target.value)} placeholder="E.g., 98XXXXXXXX" className="pl-10" /> </div> </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+               <div className="md:col-span-1">
+                  <Label htmlFor="saleDate" className="text-base">Sale Date</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button
+                          variant={"outline"}
+                          className="w-full justify-start text-left font-normal mt-1 h-9"
+                          >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {saleDate ? format(saleDate, "PPP") : <span>Pick a date</span>}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={saleDate} onSelect={setSaleDate} initialFocus />
+                      </PopoverContent>
+                  </Popover>
+              </div>
+              <div className="md:col-span-1"> 
+                <Label htmlFor="customerName" className="text-base">Customer Name</Label> 
+                <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="E.g., John Doe" className="mt-1" required /> 
+              </div>
+              <div className="md:col-span-1"> 
+                <Label htmlFor="customerContact" className="text-base">Contact Number (Optional)</Label> 
+                <div className="relative mt-1"> <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /> <Input id="customerContact" type="tel" value={customerContact} onChange={(e) => setCustomerContact(e.target.value)} placeholder="E.g., 98XXXXXXXX" className="pl-10" /> </div> 
+              </div>
             </div>
 
             <div className="space-y-3">
