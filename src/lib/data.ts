@@ -260,7 +260,7 @@ function initializeData() {
         const saleDate = subDays(new Date(), i * 2);
 
         const newSale: Sale = {
-            id: `${saleDate.getTime()}${String(i).padStart(3,'0')}`,
+            id: String(i + 1).padStart(4, '0'),
             customerName: saleCustomers[i % saleCustomers.length],
             customerContact: `98000000${10 + i}`,
             items: saleItems,
@@ -282,11 +282,11 @@ function initializeData() {
         let paymentLogDetails = '';
         if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${formatCurrency(newSale.cashPaid)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${formatCurrency(newSale.digitalPaid)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${formatCurrency(newSale.amountDue)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
         else { paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`; }
-        const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+        const logDetails = `Sale ID ${newSale.id} for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
         addLogEntry(newSale.createdBy, "Sale Created", logDetails);
 
         if (newSale.isFlagged) {
-            addLogEntry(newSale.createdBy, "Sale Flagged", `Sale ID ${newSale.id.substring(0,8)}... flagged by ${newSale.createdBy}. ${newSale.flaggedComment}`);
+            addLogEntry(newSale.createdBy, "Sale Flagged", `Sale ID ${newSale.id} flagged by ${newSale.createdBy}. ${newSale.flaggedComment}`);
         }
     }
      

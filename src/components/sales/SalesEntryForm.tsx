@@ -263,13 +263,20 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     }
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
     const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({ productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice, }));
-    const newSale: Sale = { id: `${Date.now()}${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: saleDate.toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
+    
+    const maxId = mockSales.reduce((max, sale) => {
+        const idNum = parseInt(sale.id, 10);
+        return !isNaN(idNum) && idNum > max ? idNum : max;
+    }, 0);
+    const newSaleId = String(maxId + 1).padStart(4, '0');
+
+    const newSale: Sale = { id: newSaleId, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: saleDate.toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
     mockSales.unshift(newSale);
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';
     if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${formatCurrency(newSale.cashPaid)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${formatCurrency(newSale.digitalPaid)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${formatCurrency(newSale.amountDue)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
     else { paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`; }
-    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    const logDetails = `Sale ID ${newSale.id} for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
     addLog("Sale Created", logDetails);
     toast({ title: "Sale Recorded!", description: `Sale for ${customerName} totaling NRP ${formatCurrency(totalAmount)} has been recorded.` });
     if (onSaleAdded) { onSaleAdded(newSale); }

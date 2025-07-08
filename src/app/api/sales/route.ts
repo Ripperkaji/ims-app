@@ -132,8 +132,14 @@ export async function POST(request: NextRequest) {
     
     const status: Sale['status'] = amountDue > 0.001 ? 'Due' : 'Paid';
 
+    const maxId = mockSales.reduce((max, sale) => {
+        const idNum = parseInt(sale.id, 10);
+        return !isNaN(idNum) && idNum > max ? idNum : max;
+    }, 0);
+    const newSaleId = String(maxId + 1).padStart(4, '0');
+
     const newSale: Sale = {
-      id: `${Date.now()}${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`,
+      id: newSaleId,
       customerName,
       customerContact: customerContact?.trim() || undefined,
       items: processedSaleItems,
@@ -163,7 +169,7 @@ export async function POST(request: NextRequest) {
     } else {
         paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`;
     }
-    const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+    const logDetails = `Sale ID ${newSale.id} for ${newSale.customerName}${contactInfoLog}, Total: NRP ${newSale.totalAmount.toFixed(2)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
     addLogEntry(createdBy, "Sale Created via API", logDetails);
 
     return NextResponse.json(newSale, { status: 201 });

@@ -319,9 +319,9 @@ export default function AccountsPage() {
       mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
       mockSales[saleIndex].amountDue = 0;
       mockSales[saleIndex].status = 'Paid'; 
-      globalAddLog(user.name, "Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`);
+      globalAddLog(user.name, "Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`);
       setRefreshTrigger(p => p + 1);
-      toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id.substring(0,8)}... marked as Paid.` });
+      toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id} marked as Paid.` });
     } else {
       toast({ title: "Error", description: "Sale not found.", variant: "destructive" });
     }
@@ -357,9 +357,9 @@ export default function AccountsPage() {
     if (adjustmentComment.trim()) { finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`; }
     
     mockSales[originalSaleIndex] = { ...originalSale, ...updatedSaleDataFromDialog, flaggedComment: finalFlaggedComment, status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid' };
-    globalAddLog(user.name, "Sale Adjusted", `Sale ID ${originalSaleId.substring(0,8)} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`);
+    globalAddLog(user.name, "Sale Adjusted", `Sale ID ${originalSaleId} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`);
     setRefreshTrigger(p => p + 1);
-    toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId} has been updated.` });
     setSaleToAdjust(null);
   };
   
@@ -581,7 +581,7 @@ export default function AccountsPage() {
                 <TableBody>
                   {dueSales.map((sale) => (
                     <TableRow key={sale.id}>
-                      <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell><TableCell>{sale.customerName}</TableCell>
+                      <TableCell className="font-medium">{sale.id}</TableCell><TableCell>{sale.customerName}</TableCell>
                       <TableCell>{sale.customerContact ? (<a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary"><Phone className="h-3 w-3" /> {sale.customerContact}</a>) : <span className="text-xs">N/A</span>}</TableCell>
                       <TableCell>NRP {formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP {formatCurrency(sale.amountDue)}</TableCell>
                       <TableCell>
@@ -760,7 +760,7 @@ export default function AccountsPage() {
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
+                You are about to mark sale <strong>{saleToMarkAsPaid.id}</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">

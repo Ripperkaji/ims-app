@@ -181,7 +181,7 @@ export default function SalesPage() {
     
     const logAction = wasInitiallyFlagged ? "Sale Flag Resolved & Adjusted" : "Sale Adjusted";
     const commentForLog = adjustmentComment.trim() ? `Comment: ${adjustmentComment}` : "No comment provided for adjustment.";
-    addLog(logAction, `Sale ID ${originalSaleId.substring(0,8)}... details updated by ${user.name}. New Total: NRP ${formatCurrency(finalUpdatedSale.totalAmount)}. ${commentForLog}`);
+    addLog(logAction, `Sale ID ${originalSaleId} details updated by ${user.name}. New Total: NRP ${formatCurrency(finalUpdatedSale.totalAmount)}. ${commentForLog}`);
     
     const newAllSales = [...mockSales].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setAllSalesData(newAllSales);
@@ -190,7 +190,7 @@ export default function SalesPage() {
     } else {
       setDisplayedSales(newAllSales);
     }
-    toast({ title: logAction.replace(" &", " and"), description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    toast({ title: logAction.replace(" &", " and"), description: `Sale ${originalSaleId} has been updated.` });
     
     setSaleToAdjust(null);
   };
@@ -218,7 +218,7 @@ export default function SalesPage() {
 
     addLog(
         "Sale Deleted", 
-        `Sale ID ${saleToDelete.id.substring(0,8)}... (Customer: ${saleToDelete.customerName}, Amount: NRP ${formatCurrency(saleToDelete.totalAmount)}) deleted by ${user.name}. Reason: ${deleteReason}`
+        `Sale ID ${saleToDelete.id} (Customer: ${saleToDelete.customerName}, Amount: NRP ${formatCurrency(saleToDelete.totalAmount)}) deleted by ${user.name}. Reason: ${deleteReason}`
     );
     
     const saleIndex = mockSales.findIndex(s => s.id === saleToDelete.id);
@@ -234,7 +234,7 @@ export default function SalesPage() {
       setDisplayedSales(newAllSales);
     }
     
-    toast({ title: "Sale Deleted", description: `Sale ${saleToDelete.id.substring(0,8)}... has been deleted.` });
+    toast({ title: "Sale Deleted", description: `Sale ${saleToDelete.id} has been deleted.` });
     closeDeleteDialog();
   };
 
@@ -463,7 +463,7 @@ export default function SalesPage() {
               <TableBody>
                 {displayedSales.map((sale) => (
                   <TableRow key={sale.id} className={cn(sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : '', "text-xs")}>
-                    <TableCell className="font-medium py-2.5">{sale.id.substring(0, 8)}...</TableCell>
+                    <TableCell className="font-medium py-2.5">{sale.id}</TableCell>
                     <TableCell className="py-2.5">{sale.customerName}</TableCell>
                     <TableCell className="py-2.5">
                       {sale.customerContact ? (
@@ -568,7 +568,7 @@ export default function SalesPage() {
                 <TableBody>
                   {monthlySales.map((sale) => (
                     <TableRow key={sale.id} className={cn(sale.isFlagged ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : '', "text-xs")}>
-                      <TableCell className="font-medium py-2.5">{sale.id.substring(0, 8)}...</TableCell>
+                      <TableCell className="font-medium py-2.5">{sale.id}</TableCell>
                       <TableCell className="py-2.5">{sale.customerName}</TableCell>
                       <TableCell className="py-2.5">
                         {sale.customerContact ? (
@@ -652,7 +652,7 @@ export default function SalesPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Confirm Sale Deletion</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete sale <strong>{saleToDelete.id.substring(0,8)}...</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {formatCurrency(saleToDelete.totalAmount)})? This action cannot be undone. Stock for items in this sale will be reverted.
+                Are you sure you want to delete sale <strong>{saleToDelete.id}</strong> for customer <strong>{saleToDelete.customerName}</strong> (Total: NRP {formatCurrency(saleToDelete.totalAmount)})? This action cannot be undone. Stock for items in this sale will be reverted.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4 space-y-2">

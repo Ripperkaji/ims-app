@@ -115,12 +115,12 @@ export default function DashboardPage() {
 
               product.damagedQuantity += itemDetail.quantitySold;
               
-              const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId.substring(0,8)}... marked damaged & exchanged by ${user.name}. Prev Sellable Stock (before damage): ${originalStock + itemDetail.quantitySold}, New Sellable Stock (after damage): ${calculateCurrentStock(product, mockSales)}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
+              const damageLogDetail = `Product Damage & Stock Update (Exchange): Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) from Sale ID ${saleId} marked damaged & exchanged by ${user.name}. Prev Sellable Stock (before damage): ${originalStock + itemDetail.quantitySold}, New Sellable Stock (after damage): ${calculateCurrentStock(product, mockSales)}. Prev Dmg: ${originalDamage}, New Dmg: ${product.damagedQuantity}. Comment: ${itemDetail.comment}`;
               addLogEntry("Product Damage & Stock Update (Exchange)", damageLogDetail, user.name);
 
               const damageExpense: Omit<Expense, 'id'> = {
                 date: new Date().toISOString(),
-                description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId.substring(0,8)}`,
+                description: `Damaged (Sale Exchange): ${itemDetail.quantitySold}x ${itemDetail.productName} from Sale ID ${saleId}`,
                 category: "Product Damage",
                 amount: itemDetail.quantitySold * product.currentCostPrice,
                 recordedBy: user.name, // actorName for addSystemExpense
@@ -129,12 +129,12 @@ export default function DashboardPage() {
 
               allDamageExchangeLogDetails += `Item '${itemDetail.productName}' (Qty: ${itemDetail.quantitySold}) processed. Cost: NRP ${(itemDetail.quantitySold * product.currentCostPrice).toFixed(2)}. `;
             } else {
-               addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId.substring(0,8)}... not found during damage exchange.`, user.name);
+               addLogEntry("Damage Exchange Error", `Product ID ${itemDetail.productId} from Sale ID ${saleId} not found during damage exchange.`, user.name);
             }
           }
         }
       });
-       addLogEntry("Sale Items Flagged (Damage)", `Sale ID ${saleId.substring(0,8)}... had items flagged for damage by ${user.name}. Details: ${itemDamageSummary}`, user.name);
+       addLogEntry("Sale Items Flagged (Damage)", `Sale ID ${saleId} had items flagged for damage by ${user.name}. Details: ${itemDamageSummary}`, user.name);
     }
 
     let finalFlaggedComment = `General reason: ${generalReasonComment.trim()}`;
@@ -142,12 +142,12 @@ export default function DashboardPage() {
       finalFlaggedComment += `\nDamaged items: ${itemDamageSummary}`;
     }
 
-    addLogEntry("Sale Flagged", `Sale ID ${saleId.substring(0,8)}... flagged by ${user.name}. ${finalFlaggedComment}`, user.name);
+    addLogEntry("Sale Flagged", `Sale ID ${saleId} flagged by ${user.name}. ${finalFlaggedComment}`, user.name);
 
     targetSale.flaggedComment = finalFlaggedComment.trim();
     targetSale.isFlagged = true;
 
-    toast({ title: "Sale Flagged", description: `Sale ${saleId.substring(0,8)}... has been flagged. Reason: ${generalReasonComment}`});
+    toast({ title: "Sale Flagged", description: `Sale ${saleId} has been flagged. Reason: ${generalReasonComment}`});
 
     if (itemsProcessedForDamageExchangeCount > 0) {
         toast({ title: "Damage Exchanged & Expense Logged", description: `Processed ${itemsProcessedForDamageExchangeCount} item(s) for damage exchange. Details: ${allDamageExchangeLogDetails}`});
