@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -29,7 +30,7 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
     // 2. If initialized, handle auth state
     if (appSettings.isInitialized && !isLoading) {
       const isAuthPage = pathname.startsWith('/login');
-      const isSetupPage = pathname.startsWith('/initialize');
+      const isSetupPage = pathname === '/initialize';
       
       if (isSetupPage) {
         // App is set up, user should not be on this page. Redirect to login.
@@ -47,7 +48,7 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
     }
   }, [user, isLoading, pathname, router]);
 
-  // Show a global loader during initial auth check or redirects.
+  // Show a global loader during initial auth check.
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -56,7 +57,9 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
     );
   }
 
-  // Prevent flash of content during redirects
+  // Render-blocking checks to prevent content flashing during redirects
+
+  // Prevent flash of content if app is not initialized and user is not on the setup page
   if (!appSettings.isInitialized && pathname !== '/initialize') {
       return (
           <div className="flex h-screen items-center justify-center bg-background">
@@ -64,6 +67,28 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
               <p className="ml-2">Redirecting to setup...</p>
           </div>
       );
+  }
+  
+  // Prevent flash of the setup page if the app IS initialized
+  if (appSettings.isInitialized && pathname === '/initialize') {
+       return (
+          <div className="flex h-screen items-center justify-center bg-background">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="ml-2">Redirecting to login...</p>
+          </div>
+      );
+  }
+
+  // Prevent flash of protected pages for unauthenticated users.
+  // This covers the time between the initial load and the useEffect redirect.
+  const isProtectedRoute = !pathname.startsWith('/login') && pathname !== '/initialize';
+  if (appSettings.isInitialized && !isLoading && !user && isProtectedRoute) {
+     return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+         <p className="ml-2">Redirecting...</p>
+      </div>
+    );
   }
 
   return <>{children}</>;
