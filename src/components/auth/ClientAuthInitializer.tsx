@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -31,6 +30,12 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
     if (appSettings.isInitialized && !isLoading) {
       const isAuthPage = pathname.startsWith('/login');
       const isSetupPage = pathname.startsWith('/initialize');
+      
+      if (isSetupPage) {
+        // App is set up, user should not be on this page. Redirect to login.
+        router.push('/login');
+        return;
+      }
       
       if (!user && !isAuthPage && !isSetupPage) {
         // Not logged in, not on login, not on setup -> go to login
