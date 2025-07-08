@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -207,13 +208,15 @@ export default function AccountsPage() {
   const totalSupplierDue = supplierDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
   const totalExpenseDue = expenseDueItems.reduce((sum, item) => sum + (item.amountDue || 0), 0);
 
-  const payablesForAging = useMemo(() => {
-    const supplierDues = supplierDueItems.map(item => ({ date: item.isoAcquisitionDate, amount: item.dueAmount }));
-    const expenseDues = expenseDueItems.map(item => ({ date: item.date, amount: item.amountDue || 0 }));
-    return [...supplierDues, ...expenseDues];
-  }, [supplierDueItems, expenseDueItems]);
+  const supplierDuesForAging = useMemo(() => {
+    return supplierDueItems.map(item => ({ date: item.isoAcquisitionDate, amount: item.dueAmount }));
+  }, [supplierDueItems]);
+  const supplierPayableAging = useMemo(() => calculateAging(supplierDuesForAging), [supplierDuesForAging]);
 
-  const payableAging = useMemo(() => calculateAging(payablesForAging), [payablesForAging]);
+  const expenseDuesForAging = useMemo(() => {
+    return expenseDueItems.map(item => ({ date: item.date, amount: item.amountDue || 0 }));
+  }, [expenseDueItems]);
+  const expensePayableAging = useMemo(() => calculateAging(expenseDuesForAging), [expenseDuesForAging]);
 
   const getSupplierPaymentDetails = (item: SupplierDueItem): string => {
     if (!item.paymentMethod) return 'N/A';
@@ -509,51 +512,56 @@ export default function AccountsPage() {
               </Select>
             </CardHeader>
             <CardContent>
-              <AgingTable data={payableAging} title="Payables Aging Summary" />
               {selectedPayableType === 'supplier' && (
-                supplierDueItems.length > 0 ? (
-                  <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Vendor/Supplier Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalSupplierDue)}</span></p>
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Vendor/Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {supplierDueItems.map((item) => (
-                        <TableRow key={item.batchId}>
-                          <TableCell className="font-medium">{item.productName}</TableCell>
-                          <TableCell>{item.supplierName || "N/A"}</TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
-                          <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
-                          <TableCell>{item.acquisitionDate}</TableCell>
-                          <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  </>
-                ) : <p className="text-center py-4 text-muted-foreground">No vendor/supplier dues found.</p>
+                <>
+                  <AgingTable data={supplierPayableAging} title="Vendor/Supplier Payables Aging Summary" />
+                  {supplierDueItems.length > 0 ? (
+                    <>
+                    <p className="text-sm text-muted-foreground mb-3">Total Vendor/Supplier Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalSupplierDue)}</span></p>
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Vendor/Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {supplierDueItems.map((item) => (
+                          <TableRow key={item.batchId}>
+                            <TableCell className="font-medium">{item.productName}</TableCell>
+                            <TableCell>{item.supplierName || "N/A"}</TableCell>
+                            <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
+                            <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
+                            <TableCell>{item.acquisitionDate}</TableCell>
+                            <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    </>
+                  ) : <p className="text-center py-4 text-muted-foreground">No vendor/supplier dues found.</p>}
+                </>
               )}
 
               {selectedPayableType === 'expense' && (
-                expenseDueItems.length > 0 ? (
-                  <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalExpenseDue)}</span></p>
-                  <Table>
-                    <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total Expense</TableHead><TableHead>Payment Breakdown</TableHead><TableHead className="text-right">Outstanding Due</TableHead><TableHead>Recorded Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                      {expenseDueItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
-                          <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
-                          <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue || 0)}</TableCell>
-                          <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
-                          <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  </>
-                ) : <p className="text-center py-4 text-muted-foreground">No expense dues found.</p>
+                 <>
+                  <AgingTable data={expensePayableAging} title="Expense Payables Aging Summary" />
+                  {expenseDueItems.length > 0 ? (
+                    <>
+                    <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalExpenseDue)}</span></p>
+                    <Table>
+                      <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total Expense</TableHead><TableHead>Payment Breakdown</TableHead><TableHead className="text-right">Outstanding Due</TableHead><TableHead>Recorded Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                      <TableBody>
+                        {expenseDueItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
+                            <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
+                            <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
+                            <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue || 0)}</TableCell>
+                            <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
+                            <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    </>
+                  ) : <p className="text-center py-4 text-muted-foreground">No expense dues found.</p>}
+                 </>
               )}
               {selectedPayableType === '' && <p className="text-center py-4 text-muted-foreground">Please select a payable type from the dropdown to view details.</p>}
             </CardContent>
