@@ -5,44 +5,22 @@ import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter, usePathname } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { appSettings } from '@/lib/data';
 
 export default function ClientAuthInitializer({ children }: { children: React.ReactNode }) {
-  const { user, isLoading, actions } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // This effect runs once on mount to ensure loading state is handled
-    // if hydration didn't immediately set it or if there's no persisted state.
-    actions.initializeSession();
-  }, [actions]);
-
-  useEffect(() => {
     // This is the core routing logic for the entire app.
-    
-    // 1. If not initialized, force user to setup page
-    if (!appSettings.isInitialized && pathname !== '/initialize') {
-        router.push('/initialize');
-        return;
-    }
-    
-    // 2. If initialized, handle auth state
-    if (appSettings.isInitialized && !isLoading) {
+    if (!isLoading) {
       const isAuthPage = pathname.startsWith('/login');
-      const isSetupPage = pathname === '/initialize';
       
-      if (isSetupPage) {
-        // App is set up, user should not be on this page. Redirect to login.
+      if (!user && !isAuthPage) {
+        // Not logged in, and not on a login page -> go to login
         router.push('/login');
-        return;
-      }
-      
-      if (!user && !isAuthPage && !isSetupPage) {
-        // Not logged in, not on login, not on setup -> go to login
-        router.push('/login');
-      } else if (user && (isAuthPage || isSetupPage)) {
-        // Logged in, but on login or setup page -> go to dashboard
+      } else if (user && isAuthPage) {
+        // Logged in, but on a login page -> go to dashboard
         router.push('/dashboard');
       }
     }
@@ -57,32 +35,9 @@ export default function ClientAuthInitializer({ children }: { children: React.Re
     );
   }
 
-  // Render-blocking checks to prevent content flashing during redirects
-
-  // Prevent flash of content if app is not initialized and user is not on the setup page
-  if (!appSettings.isInitialized && pathname !== '/initialize') {
-      return (
-          <div className="flex h-screen items-center justify-center bg-background">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="ml-2">Redirecting to setup...</p>
-          </div>
-      );
-  }
-  
-  // Prevent flash of the setup page if the app IS initialized
-  if (appSettings.isInitialized && pathname === '/initialize') {
-       return (
-          <div className="flex h-screen items-center justify-center bg-background">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <p className="ml-2">Redirecting to login...</p>
-          </div>
-      );
-  }
-
   // Prevent flash of protected pages for unauthenticated users.
-  // This covers the time between the initial load and the useEffect redirect.
-  const isProtectedRoute = !pathname.startsWith('/login') && pathname !== '/initialize';
-  if (appSettings.isInitialized && !isLoading && !user && isProtectedRoute) {
+  const isProtectedRoute = !pathname.startsWith('/login');
+  if (!isLoading && !user && isProtectedRoute) {
      return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />

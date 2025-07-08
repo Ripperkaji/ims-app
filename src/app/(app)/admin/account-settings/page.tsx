@@ -27,7 +27,7 @@ export default function AdminAccountSettingsPage() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   useEffect(() => {
-    if (user && user.role !== 'admin' && user.role !== 'super-admin') {
+    if (user && user.role !== 'admin') {
       toast({
         title: "Access Denied",
         description: "You do not have permission to view this page.",
@@ -54,7 +54,11 @@ export default function AdminAccountSettingsPage() {
     e.preventDefault();
     if (!user) return;
     
-    const currentUserData = mockManagedUsers.find(u => u.id === user.id);
+    // This is a mock implementation. In a real app, you'd call an API.
+    const currentUserData = user.role === 'admin' 
+        ? mockManagedUsers.find(u => u.email === user.email && u.role === 'admin')
+        : mockManagedUsers.find(u => u.email === user.email && u.role === 'staff');
+    
     if (!currentUserData) {
         toast({ title: "Error", description: "Could not find your user data.", variant: "destructive" });
         return;
@@ -87,11 +91,8 @@ export default function AdminAccountSettingsPage() {
 
     // Update password in mock data
     currentUserData.passwordHash = newPassword;
-    // If the auth store holds the full user object, we might need to update it too.
-    // For this mock, we assume the password check on next login will use the updated mockManagedUsers.
-    // actions.login(currentUserData, ()=>{}); // This would re-login user with new data if needed
 
-    addLog(`${user.role.replace('-', ' ')} Password Changed`, `${user.name} updated their password.`);
+    addLog(`Password Changed`, `${user.name} updated their password.`);
     toast({ title: "Success", description: "Password changed successfully." });
 
     setCurrentPassword('');
@@ -99,7 +100,7 @@ export default function AdminAccountSettingsPage() {
     setConfirmNewPassword('');
   };
 
-  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+  if (!user || user.role !== 'admin') {
     return (
         <div className="flex h-screen items-center justify-center">
             <p>Redirecting...</p>

@@ -1,7 +1,6 @@
 
-import { redirect } from 'next/navigation';
+import LoginForm from '@/components/auth/LoginForm';
 
 export default function AdminLoginPage() {
-  redirect('/login');
-  return null;
+  return <LoginForm userType="admin" />;
 }

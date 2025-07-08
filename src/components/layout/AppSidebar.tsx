@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { appSettings } from '@/lib/data';
 import {
   LayoutDashboard,
   ShoppingCart,
@@ -28,22 +27,22 @@ interface NavItem {
   action?: () => void;
   label: string;
   icon: React.ElementType;
-  roles: ('super-admin' | 'admin' | 'staff')[];
+  roles: ('admin' | 'staff')[];
 }
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['super-admin', 'admin', 'staff'] },
-  { href: '/products', label: 'Products', icon: Package, roles: ['super-admin', 'admin', 'staff'] },
-  { href: '/testers', label: 'Samples / Demos', icon: FlaskConical, roles: ['super-admin', 'admin'] },
-  { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['super-admin', 'admin', 'staff'] },
-  { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['super-admin', 'admin'] },
-  { href: '/damaged-products', label: 'Damaged & Returned', icon: AlertOctagon, roles: ['super-admin', 'admin'] },
-  { href: '/customers', label: 'Customers', icon: Users, roles: ['super-admin', 'admin'] },
-  { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['super-admin', 'admin'] },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['super-admin', 'admin'] },
-  { href: '/accounts', label: 'Finance', icon: Wallet, roles: ['super-admin', 'admin'] },
-  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['super-admin', 'admin'] },
-  { href: '/logs', label: 'Activity Log', icon: FileText, roles: ['super-admin', 'admin'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'staff'] },
+  { href: '/products', label: 'Products', icon: Package, roles: ['admin', 'staff'] },
+  { href: '/testers', label: 'Samples / Demos', icon: FlaskConical, roles: ['admin'] },
+  { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['admin', 'staff'] },
+  { href: '/due-sales', label: 'Due Sales', icon: AlertTriangle, roles: ['admin'] },
+  { href: '/damaged-products', label: 'Damaged & Returned', icon: AlertOctagon, roles: ['admin'] },
+  { href: '/customers', label: 'Customers', icon: Users, roles: ['admin'] },
+  { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
+  { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
+  { href: '/accounts', label: 'Finance', icon: Wallet, roles: ['admin'] },
+  { href: '/user-management', label: 'User Management', icon: UserCog, roles: ['admin'] },
+  { href: '/logs', label: 'Activity Log', icon: FileText, roles: ['admin'] },
 ];
 
 export default function AppSidebar() {
@@ -59,7 +58,7 @@ export default function AppSidebar() {
       <div className="flex h-16 items-center border-b px-6 bg-sidebar-accent text-sidebar-accent-foreground">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline text-lg">
           <Zap className="h-7 w-7 text-primary" />
-          <span>{appSettings.companyName || "SH IMS"}</span>
+          <span>SH IMS</span>
         </Link>
       </div>
       <ScrollArea className="flex-1">

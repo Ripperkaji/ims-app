@@ -1,8 +1,7 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'super-admin' | 'admin' | 'staff';
+export type UserRole = 'admin' | 'staff';
 
 export const ALL_PRODUCT_TYPES = [
   "Disposables",
@@ -46,7 +45,7 @@ export interface AcquisitionBatch {
   cashPaid: number;
   digitalPaid: number;
   dueToSupplier: number;
-  addedBy: string;
+  addedBy?: string;
 }
 
 export interface Product {
@@ -100,10 +99,10 @@ export interface Expense {
   category: ExpenseCategory | string; // Allow string for system categories
   amount: number;
   recordedBy: string;
-  paymentMethod: ExpensePaymentMethod;
-  cashPaid: number;
-  digitalPaid: number;
-  amountDue: number;
+  paymentMethod?: ExpensePaymentMethod;
+  cashPaid?: number;
+  digitalPaid?: number;
+  amountDue?: number;
 }
 
 export interface LogEntry {
@@ -114,6 +113,14 @@ export interface LogEntry {
   details: string;
 }
 
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+// Below types were for the more complex add/edit dialogs, keep for reference or future use.
 export interface AttemptedProductData {
   name: string;
   modelName?: string;
@@ -141,7 +148,6 @@ export interface NewProductData {
     totalAcquisitionCost: number;
   };
 }
-
 
 interface BaseResolution {
   existingProductId: string;
@@ -181,7 +187,7 @@ export interface ManagedUser {
   email: string;
   contactNumber: string;
   role: UserRole;
-  passwordHash: string; // Storing a plaintext password for this mock, in real app this would be a hash.
+  passwordHash: string;
   status: 'active' | 'pending';
   createdAt: string;
   addedBy: string;

@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useEffect } from 'react';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
 import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'next/navigation'; // Keep for potential direct usage if needed
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 export default function AppLayout({
@@ -13,19 +14,17 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const { user, isLoading } = useAuthStore();
-  const router = useRouter(); // Keep router instance for clarity or future direct use
+  const router = useRouter();
 
-  // The primary redirection logic is now in ClientAuthInitializer.
-  // This useEffect is a safeguard for the app layout itself.
   useEffect(() => {
+    // Basic protection. A more robust solution might use middleware
+    // or a dedicated auth provider component.
     if (!isLoading && !user) {
-      // This should ideally not be hit if ClientAuthInitializer works correctly,
-      // but acts as a failsafe for direct navigation to protected layout.
       router.push('/login');
     }
   }, [user, isLoading, router]);
 
-  if (isLoading && !user) { // Show loader if actively loading and no user yet
+  if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -34,13 +33,11 @@ export default function AppLayout({
   }
 
   if (!user) {
-    // If still no user after loading (e.g. auth failed or cleared),
-    // and redirection hasn't happened, show loader or minimal content
-    // to prevent flashing protected UI. ClientAuthInitializer should handle redirection.
-     return (
-      <div className="flex h-screen items-center justify-center bg-background">
+    // This state prevents flashing the layout while redirecting.
+    // The useEffect above will handle the redirect.
+    return (
+       <div className="flex h-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-         <p className="ml-2">Redirecting...</p>
       </div>
     );
   }

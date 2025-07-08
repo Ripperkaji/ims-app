@@ -8,12 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Eye, EyeOff, LogIn, Mail, KeyRound } from 'lucide-react';
+import type { UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { mockManagedUsers, appSettings } from '@/lib/data';
 import Image from "next/image";
 
-export default function LoginForm() {
+
+interface LoginFormProps {
+  userType: 'admin' | 'staff';
+}
+
+export default function LoginForm({ userType }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,44 +28,27 @@ export default function LoginForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!email || !password) {
-        toast({ title: "Error", description: "Email and password are required.", variant: "destructive"});
-        return;
-    }
-    
-    const foundUser = mockManagedUsers.find(
-      (user) => user.email.toLowerCase() === email.toLowerCase()
-    );
-
-    if (!foundUser) {
-      toast({ title: "Login Failed", description: "No user found with this email.", variant: "destructive" });
-      return;
-    }
-
-    if (foundUser.passwordHash !== password) {
-      toast({ title: "Login Failed", description: "Incorrect password.", variant: "destructive" });
-      return;
-    }
-
-     if (foundUser.status === 'pending') {
-      toast({ title: "Account Pending", description: "Your account is pending activation.", variant: "destructive" });
-      return;
-    }
-    
-    actions.login(foundUser, router.push); 
-    toast({ title: "Login Successful", description: `Welcome back, ${foundUser.name}!`,});
+    actions.login({
+      id: `${userType}-${Math.random()}`,
+      name: email, 
+      email: email,
+      role: userType as UserRole,
+    }, router.push);
+    toast({
+      title: "Login Successful",
+      description: `Welcome, ${userType}!`,
+    });
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
+           <div className="mx-auto mb-4">
             <Image src="/SHLOGO.png" alt="Logo" height={70} width={150} />
-          </div>
+           </div>
           <CardTitle className="text-3xl font-headline">
-            {appSettings.companyName ? `${appSettings.companyName} Login` : "Welcome Back"}
+            {userType === 'admin' ? 'Admin Login' : 'Staff Login'}
           </CardTitle>
           <CardDescription className="text-lg">
             Access your Inventory Management System.
@@ -75,7 +63,7 @@ export default function LoginForm() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@company.com"
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -116,11 +104,14 @@ export default function LoginForm() {
               >
               <LogIn className="mr-2 h-5 w-5" /> Login
             </Button>
+            <Button variant="link" size="sm" onClick={() => router.push('/login')}>
+                Not a {userType}? Go back to role selection.
+            </Button>
           </CardFooter>
         </form>
       </Card>
        <p className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} {appSettings.companyName || "SH IMS"}. All rights reserved.
+        &copy; {new Date().getFullYear()} SH IMS. All rights reserved.
       </p>
     </div>
   );
