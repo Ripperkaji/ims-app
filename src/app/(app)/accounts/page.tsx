@@ -37,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 type PayableType = 'supplier' | 'expense' | '';
 type PayableItem = SupplierDueItem | ExpenseDueItem;
 type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
+type ReportType = 'sales' | 'expenses' | 'acquisitions';
 
 // --- Aging Calculation ---
 
@@ -161,6 +162,10 @@ export default function AccountsPage() {
   const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
   const [saleToMarkAsPaid, setSaleToMarkAsPaid] = useState<Sale | null>(null);
   const [markAsPaidConfirmationInput, setMarkAsPaidConfirmationInput] = useState('');
+  
+  // State for Monthly Reports
+  const [selectedReportType, setSelectedReportType] = useState<ReportType>('sales');
+
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -455,17 +460,14 @@ export default function AccountsPage() {
     return grouped;
   }, [refreshTrigger, mockProducts]);
 
-  const sortedSalesMonths = useMemo(() => {
-    return Object.keys(salesByMonth).sort((a,b) => b.localeCompare(a));
-  }, [salesByMonth]);
-
-  const sortedExpensesMonths = useMemo(() => {
-    return Object.keys(expensesByMonth).sort((a,b) => b.localeCompare(a));
-  }, [expensesByMonth]);
-
-  const sortedAcquisitionsMonths = useMemo(() => {
-    return Object.keys(acquisitionsByMonth).sort((a,b) => b.localeCompare(a));
-  }, [acquisitionsByMonth]);
+  const allMonths = useMemo(() => {
+    const months = new Set([
+        ...Object.keys(salesByMonth),
+        ...Object.keys(expensesByMonth),
+        ...Object.keys(acquisitionsByMonth),
+    ]);
+    return Array.from(months).sort((a,b) => b.localeCompare(a));
+  }, [salesByMonth, expensesByMonth, acquisitionsByMonth]);
 
 
   if (!user || user.role !== 'admin') { return null; }
@@ -651,74 +653,77 @@ export default function AccountsPage() {
           <Card className="shadow-lg">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><CalendarClock className="h-5 w-5 text-primary" /> Monthly Reports</CardTitle>
-                <CardDescription>View detailed reports for sales, expenses, and product acquisitions grouped by month.</CardDescription>
+                <CardDescription>Select a report type and expand a month to view detailed records.</CardDescription>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Monthly Sales Report */}
-              <div className="space-y-3">
-                  <h3 className="text-xl font-semibold flex items-center gap-2"><TrendingUp className="text-green-600"/> Monthly Sales Report</h3>
-                  <Accordion type="multiple" className="w-full space-y-2">
-                    {sortedSalesMonths.length > 0 ? sortedSalesMonths.map(monthKey => {
+            <CardContent>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Button variant={selectedReportType === 'sales' ? 'default' : 'outline'} onClick={() => setSelectedReportType('sales')}>
+                      <TrendingUp className="mr-2 h-4 w-4 text-green-600"/> Monthly Sales
+                  </Button>
+                  <Button variant={selectedReportType === 'expenses' ? 'default' : 'outline'} onClick={() => setSelectedReportType('expenses')}>
+                      <TrendingDown className="mr-2 h-4 w-4 text-red-600"/> Monthly Expenses
+                  </Button>
+                  <Button variant={selectedReportType === 'acquisitions' ? 'default' : 'outline'} onClick={() => setSelectedReportType('acquisitions')}>
+                      <PackagePlus className="mr-2 h-4 w-4 text-blue-600"/> Monthly Acquisitions
+                  </Button>
+                </div>
+                
+                <Accordion type="multiple" className="w-full space-y-2">
+                    {allMonths.length > 0 ? allMonths.map(monthKey => {
                         const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
-                        const monthDataSales = salesByMonth[monthKey];
-                        return (
-                            <AccordionItem value={`sales-${monthKey}`} key={`sales-${monthKey}`} className="border rounded-lg">
-                                <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
-                                    {monthDisplay}
-                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataSales.total)}</span></span>
-                                </AccordionTrigger>
-                                <AccordionContent className="p-4">
-                                    <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{monthDataSales.sales.map(s=>(<TableRow key={s.id}><TableCell>{format(parseISO(s.date), 'dd')}</TableCell><TableCell>{s.customerName}</TableCell><TableCell className="text-xs max-w-xs truncate">{s.items.map(i=>`${i.productName}(${i.quantity})`).join(', ')}</TableCell><TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell><TableCell><Badge variant={s.status==='Paid'?'default':'destructive'}>{s.status}</Badge></TableCell></TableRow>))}</TableBody></Table>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )
-                    }) : <p className="text-center text-muted-foreground py-4">No monthly sales data available.</p>}
-                  </Accordion>
-              </div>
-              
-              {/* Monthly Expenses Report */}
-              <div className="space-y-3">
-                  <h3 className="text-xl font-semibold flex items-center gap-2"><TrendingDown className="text-red-600"/> Monthly Expenses Report</h3>
-                  <Accordion type="multiple" className="w-full space-y-2">
-                    {sortedExpensesMonths.length > 0 ? sortedExpensesMonths.map(monthKey => {
-                        const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
-                        const monthDataExpenses = expensesByMonth[monthKey];
-                        return (
-                            <AccordionItem value={`expenses-${monthKey}`} key={`expenses-${monthKey}`} className="border rounded-lg">
-                                <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
-                                    {monthDisplay}
-                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataExpenses.total)}</span></span>
-                                </AccordionTrigger>
-                                <AccordionContent className="p-4">
-                                  <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{monthDataExpenses.expenses.map(e=>(<TableRow key={e.id}><TableCell>{format(parseISO(e.date), 'dd')}</TableCell><TableCell>{e.category}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right">{formatCurrency(e.amount)}</TableCell></TableRow>))}</TableBody></Table>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )
-                    }) : <p className="text-center text-muted-foreground py-4">No monthly expenses data available.</p>}
-                  </Accordion>
-              </div>
+                        
+                        let totalDisplay = 0;
+                        let totalLabel = '';
+                        let hasDataForSelectedType = false;
+                        let dataForMonth: any;
 
-              {/* Monthly Acquisitions Report */}
-              <div className="space-y-3">
-                  <h3 className="text-xl font-semibold flex items-center gap-2"><PackagePlus className="text-blue-600"/> Monthly Acquisitions Report</h3>
-                  <Accordion type="multiple" className="w-full space-y-2">
-                    {sortedAcquisitionsMonths.length > 0 ? sortedAcquisitionsMonths.map(monthKey => {
-                        const monthDisplay = format(parse(monthKey, 'yyyy-MM', new Date()), 'MMMM yyyy');
-                        const monthDataAcquisitions = acquisitionsByMonth[monthKey];
+                        if (selectedReportType === 'sales' && salesByMonth[monthKey]) {
+                            dataForMonth = salesByMonth[monthKey];
+                            totalDisplay = dataForMonth.total;
+                            totalLabel = 'Total Sales';
+                            hasDataForSelectedType = true;
+                        } else if (selectedReportType === 'expenses' && expensesByMonth[monthKey]) {
+                            dataForMonth = expensesByMonth[monthKey];
+                            totalDisplay = dataForMonth.total;
+                            totalLabel = 'Total Expenses';
+                            hasDataForSelectedType = true;
+                        } else if (selectedReportType === 'acquisitions' && acquisitionsByMonth[monthKey]) {
+                            dataForMonth = acquisitionsByMonth[monthKey];
+                            totalDisplay = dataForMonth.total;
+                            totalLabel = 'Total Acq. Cost';
+                            hasDataForSelectedType = true;
+                        }
+                        
                         return (
-                            <AccordionItem value={`acquisitions-${monthKey}`} key={`acquisitions-${monthKey}`} className="border rounded-lg">
+                            <AccordionItem value={monthKey} key={monthKey} className="border rounded-lg">
                                 <AccordionTrigger className="px-4 py-3 font-semibold hover:bg-muted/30 rounded-t-lg">
                                     {monthDisplay}
-                                    <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">Total Cost: <span className="font-semibold text-foreground">NRP {formatCurrency(monthDataAcquisitions.total)}</span></span>
+                                    {hasDataForSelectedType ? (
+                                        <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">
+                                            {totalLabel}: <span className="font-semibold text-foreground">NRP {formatCurrency(totalDisplay)}</span>
+                                        </span>
+                                    ) : (
+                                        <span className="ml-auto mr-4 text-sm font-normal text-muted-foreground">No {selectedReportType} data</span>
+                                    )}
                                 </AccordionTrigger>
                                 <AccordionContent className="p-4">
-                                  <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead>Vendor</TableHead><TableHead className="text-center">Qty</TableHead><TableHead className="text-right">Cost/Unit</TableHead><TableHead className="text-right">Total Cost</TableHead></TableRow></TableHeader><TableBody>{monthDataAcquisitions.acquisitions.map(b=>(<TableRow key={b.batchId}><TableCell>{format(parseISO(b.date), 'dd')}</TableCell><TableCell>{b.productName}</TableCell><TableCell>{b.supplierName}</TableCell><TableCell className="text-center">{b.quantityAdded}</TableCell><TableCell className="text-right">{formatCurrency(b.costPricePerUnit)}</TableCell><TableCell className="text-right">{formatCurrency(b.totalBatchCost)}</TableCell></TableRow>))}</TableBody></Table>
+                                    {selectedReportType === 'sales' && hasDataForSelectedType && (
+                                        <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Customer</TableHead><TableHead>Items</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>{dataForMonth.sales.map((s: Sale)=>(<TableRow key={s.id}><TableCell>{format(parseISO(s.date), 'dd')}</TableCell><TableCell>{s.customerName}</TableCell><TableCell className="text-xs max-w-xs truncate">{s.items.map(i=>`${i.productName}(${i.quantity})`).join(', ')}</TableCell><TableCell className="text-right">{formatCurrency(s.totalAmount)}</TableCell><TableCell><Badge variant={s.status==='Paid'?'default':'destructive'}>{s.status}</Badge></TableCell></TableRow>))}</TableBody></Table>
+                                    )}
+                                    {selectedReportType === 'expenses' && hasDataForSelectedType && (
+                                        <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Category</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader><TableBody>{dataForMonth.expenses.map((e: Expense)=>(<TableRow key={e.id}><TableCell>{format(parseISO(e.date), 'dd')}</TableCell><TableCell>{e.category}</TableCell><TableCell>{e.description}</TableCell><TableCell className="text-right">{formatCurrency(e.amount)}</TableCell></TableRow>))}</TableBody></Table>
+                                    )}
+                                    {selectedReportType === 'acquisitions' && hasDataForSelectedType && (
+                                        <Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Product</TableHead><TableHead>Vendor</TableHead><TableHead className="text-center">Qty</TableHead><TableHead className="text-right">Cost/Unit</TableHead><TableHead className="text-right">Total Cost</TableHead></TableRow></TableHeader><TableBody>{dataForMonth.acquisitions.map((b: any)=>(<TableRow key={b.batchId}><TableCell>{format(parseISO(b.date), 'dd')}</TableCell><TableCell>{b.productName}</TableCell><TableCell>{b.supplierName}</TableCell><TableCell className="text-center">{b.quantityAdded}</TableCell><TableCell className="text-right">{formatCurrency(b.costPricePerUnit)}</TableCell><TableCell className="text-right">{formatCurrency(b.totalBatchCost)}</TableCell></TableRow>))}</TableBody></Table>
+                                    )}
+                                    {!hasDataForSelectedType && (
+                                        <p className="text-center text-muted-foreground py-4">No {selectedReportType} data available for this month.</p>
+                                    )}
                                 </AccordionContent>
                             </AccordionItem>
                         )
-                    }) : <p className="text-center text-muted-foreground py-4">No monthly acquisition data available.</p>}
-                  </Accordion>
-              </div>
+                    }) : <p className="text-center text-muted-foreground py-4">No monthly data available.</p>}
+                </Accordion>
             </CardContent>
           </Card>
         </TabsContent>
