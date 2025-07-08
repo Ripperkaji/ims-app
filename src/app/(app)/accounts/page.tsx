@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital, updateCashInHand, addLogEntry as globalAddLog } from "@/lib/data";
 import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem } from "@/types";
-import { format } from 'date-fns';
+import { format, parseISO, differenceInDays, isValid } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
 import SettlePayableDialog from '@/components/accounts/SettlePayableDialog';
 import { calculateCurrentStock } from '@/lib/productUtils';
@@ -36,6 +36,97 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 type PayableType = 'supplier' | 'expense' | '';
 type PayableItem = SupplierDueItem | ExpenseDueItem;
 type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
+
+// --- Aging Calculation ---
+
+type AgingData = {
+  current: number; // 0-30 days
+  '31-60': number;
+  '61-90': number;
+  '90+': number;
+  total: number;
+};
+
+const calculateAging = (items: { date: string; amount: number }[]): AgingData => {
+  const today = new Date();
+  const agingData: AgingData = {
+    current: 0,
+    '31-60': 0,
+    '61-90': 0,
+    '90+': 0,
+    total: 0,
+  };
+
+  items.forEach(item => {
+    try {
+        const itemDate = parseISO(item.date);
+        if (!isValid(itemDate)) {
+            console.warn("Invalid date found for aging calculation:", item.date);
+            return; // Skip this item
+        }
+        const diffDays = differenceInDays(today, itemDate);
+
+        if (diffDays <= 30) {
+          agingData.current += item.amount;
+        } else if (diffDays <= 60) {
+          agingData['31-60'] += item.amount;
+        } else if (diffDays <= 90) {
+          agingData['61-90'] += item.amount;
+        } else {
+          agingData['90+'] += item.amount;
+        }
+        agingData.total += item.amount;
+    } catch(e) {
+        console.error("Error parsing date for aging:", item.date, e);
+    }
+  });
+  return agingData;
+};
+
+const AgingTable = ({ data, title }: { data: AgingData; title: string }) => {
+  if (data.total <= 0) {
+    return null;
+  }
+
+  const buckets = [
+    { label: "0-30 Days", value: data.current },
+    { label: "31-60 Days", value: data["31-60"] },
+    { label: "61-90 Days", value: data["61-90"] },
+    { label: "90+ Days", value: data["90+"] },
+  ];
+
+  return (
+    <div className="mt-2 mb-8 p-4 border rounded-lg bg-muted/30">
+      <h3 className="text-lg font-semibold mb-3">{title}</h3>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Aging Bucket</TableHead>
+            <TableHead className="text-right">Amount (NRP)</TableHead>
+            <TableHead className="text-right">% of Total</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {buckets.map(bucket => (
+            <TableRow key={bucket.label}>
+              <TableCell className="font-medium">{bucket.label}</TableCell>
+              <TableCell className="text-right">{formatCurrency(bucket.value)}</TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                {data.total > 0 ? ((bucket.value / data.total) * 100).toFixed(1) : '0.0'}%
+              </TableCell>
+            </TableRow>
+          ))}
+          <TableRow className="font-bold bg-muted/50 border-t-2">
+            <TableCell>Total Due</TableCell>
+            <TableCell className="text-right">{formatCurrency(data.total)}</TableCell>
+            <TableCell className="text-right">100.0%</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
 
 export default function AccountsPage() {
   const { user } = useAuthStore();
@@ -79,6 +170,7 @@ export default function AccountsPage() {
           productName: `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`,
           batchId: batch.batchId,
           acquisitionDate: format(new Date(batch.date), 'MMM dd, yyyy HH:mm'),
+          isoAcquisitionDate: batch.date,
           dueAmount: batch.dueToSupplier,
           supplierName: batch.supplierName,
           paymentMethod: batch.paymentMethod,
@@ -96,7 +188,15 @@ export default function AccountsPage() {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const totalSupplierDue = supplierDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
-  const totalExpenseDue = expenseDueItems.reduce((sum, item) => sum + item.dueAmount, 0);
+  const totalExpenseDue = expenseDueItems.reduce((sum, item) => sum + (item.amountDue || 0), 0);
+
+  const payablesForAging = useMemo(() => {
+    const supplierDues = supplierDueItems.map(item => ({ date: item.isoAcquisitionDate, amount: item.dueAmount }));
+    const expenseDues = expenseDueItems.map(item => ({ date: item.date, amount: item.amountDue || 0 }));
+    return [...supplierDues, ...expenseDues];
+  }, [supplierDueItems, expenseDueItems]);
+
+  const payableAging = useMemo(() => calculateAging(payablesForAging), [payablesForAging]);
 
   const getSupplierPaymentDetails = (item: SupplierDueItem): string => {
     if (!item.paymentMethod) return 'N/A';
@@ -176,6 +276,12 @@ export default function AccountsPage() {
   }, [currentCashInHand, currentDigitalBalance, currentInventoryValue]);
 
   // --- Logic for Receivables (Due Sales) ---
+  const receivablesForAging = useMemo(() => {
+    return dueSales.map(sale => ({ date: sale.date, amount: sale.amountDue }));
+  }, [dueSales]);
+
+  const receivableAging = useMemo(() => calculateAging(receivablesForAging), [receivablesForAging]);
+
   const openMarkAsPaidDialog = (sale: Sale) => {
     setSaleToMarkAsPaid(sale);
     setMarkAsPaidConfirmationInput('');
@@ -275,6 +381,7 @@ export default function AccountsPage() {
               </Select>
             </CardHeader>
             <CardContent>
+              <AgingTable data={payableAging} title="Payables Aging Summary" />
               {selectedPayableType === 'supplier' && (
                 supplierDueItems.length > 0 ? (
                   <>
@@ -310,7 +417,7 @@ export default function AccountsPage() {
                           <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
                           <TableCell className="text-right">NRP ${formatCurrency(item.amount)}</TableCell>
                           <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.amountDue)}</TableCell>
+                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.amountDue || 0)}</TableCell>
                           <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                           <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
                         </TableRow>
@@ -331,6 +438,7 @@ export default function AccountsPage() {
               <CardDescription>List of all sales with an outstanding due amount from customers.</CardDescription>
             </CardHeader>
             <CardContent>
+              <AgingTable data={receivableAging} title="Receivables Aging Summary" />
               {dueSales.length > 0 ? (
               <Table>
                 <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Customer</TableHead><TableHead>Contact</TableHead><TableHead>Total</TableHead><TableHead>Due</TableHead><TableHead>Flagged</TableHead><TableHead>Date</TableHead><TableHead>Recorded By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>

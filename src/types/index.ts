@@ -198,7 +198,8 @@ export interface SupplierDueItem {
   productId: string;
   productName: string;
   batchId: string;
-  acquisitionDate: string;
+  acquisitionDate: string; // Formatted display date
+  isoAcquisitionDate: string; // ISO date string for calculations
   dueAmount: number;
   supplierName?: string;
   paymentMethod: AcquisitionPaymentMethod;
