@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -38,7 +39,12 @@ interface LocalSaleItemInForm {
 
 const calculateCurrentStockForSaleForm = (product: Product | undefined, allSales: Sale[]): number => {
   if (!product || !product.acquisitionHistory) return 0;
-  const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => sum + batch.quantityAdded, 0);
+  const totalAcquired = product.acquisitionHistory.reduce((sum, batch) => {
+    // Ensure quantityAdded is a number, default to 0 if not
+    const quantity = typeof batch.quantityAdded === 'number' ? batch.quantityAdded : 0;
+    return sum + quantity;
+  }, 0);
+  
   const totalSold = allSales
     .flatMap(sale => sale.items || []) // Ensure sale.items exists
     .filter(item => item && item.productId === product.id) // Ensure item exists
@@ -139,7 +145,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
       details,
     };
     mockLogEntries.unshift(newLog);
-    mockLogEntries.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.date).getTime());
+    mockLogEntries.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   };
 
   const handleAddItem = () => {
@@ -257,7 +263,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     }
     const saleStatus = finalAmountDue > 0 ? 'Due' : 'Paid';
     const saleItemsToSave: SaleItem[] = selectedItems.map(item => ({ productId: item.productId, productName: item.productName, quantity: item.quantity, unitPrice: item.unitPrice, totalPrice: item.totalPrice, }));
-    const newSale: Sale = { id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: saleDate.toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
+    const newSale: Sale = { id: `${Date.now()}${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`, customerName, customerContact: customerContact.trim() || undefined, items: saleItemsToSave, totalAmount, cashPaid: finalCashPaid, digitalPaid: finalDigitalPaid, amountDue: finalAmountDue, formPaymentMethod: formPaymentMethod, date: saleDate.toISOString(), status: saleStatus, createdBy: user?.name || 'Unknown', saleOrigin: saleOrigin, isFlagged: false, flaggedComment: '' };
     mockSales.unshift(newSale);
     const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
     let paymentLogDetails = '';

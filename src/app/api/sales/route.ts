@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     const status: Sale['status'] = amountDue > 0.001 ? 'Due' : 'Paid';
 
     const newSale: Sale = {
-      id: `sale-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      id: `${Date.now()}${String(Math.floor(Math.random() * 999) + 1).padStart(3, '0')}`,
       customerName,
       customerContact: customerContact?.trim() || undefined,
       items: processedSaleItems,

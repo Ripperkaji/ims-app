@@ -257,9 +257,10 @@ function initializeData() {
 
         const isDue = i % 4 === 0;
         const isHybrid = i % 5 === 0 && !isDue;
+        const saleDate = subDays(new Date(), i * 2);
 
         const newSale: Sale = {
-            id: `sale-${i}-${Date.now()}`,
+            id: `${saleDate.getTime()}${String(i).padStart(3,'0')}`,
             customerName: saleCustomers[i % saleCustomers.length],
             customerContact: `98000000${10 + i}`,
             items: saleItems,
@@ -268,7 +269,7 @@ function initializeData() {
             digitalPaid: isDue ? 0 : (isHybrid ? totalAmount / 2 : 0),
             amountDue: isDue ? totalAmount : 0,
             formPaymentMethod: isDue ? 'Due' : (isHybrid ? 'Hybrid' : 'Cash'),
-            date: subDays(new Date(), i * 2).toISOString(),
+            date: saleDate.toISOString(),
             status: isDue ? 'Due' : 'Paid',
             createdBy: i % 2 === 0 ? 'NPS' : 'Staff User',
             saleOrigin: i % 2 === 0 ? 'store' : 'online',
