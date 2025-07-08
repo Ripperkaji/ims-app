@@ -32,7 +32,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <p className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} SH IMS. All rights reserved.
+        &copy; 2025 SH IMS. Your trusted sales partner.
       </p>
     </div>
   );

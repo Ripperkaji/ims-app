@@ -7,43 +7,114 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Eye, EyeOff, LogIn, Mail, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Mail, KeyRound, User as UserIcon } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { mockManagedUsers } from '@/lib/data';
 import Image from "next/image";
-
 
 interface LoginFormProps {
   userType: 'admin' | 'staff';
 }
 
 export default function LoginForm({ userType }: LoginFormProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Common state
   const { actions } = useAuthStore();
   const { toast } = useToast();
   const router = useRouter();
 
+  // State for staff form
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // State for admin form
+  const [selectedAdmin, setSelectedAdmin] = useState<string | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const loginSuccess = actions.login(email, password, userType, router.push);
+    let loginSuccess = false;
+
+    if (userType === 'admin') {
+      if (!selectedAdmin) {
+        toast({ title: "Selection Required", description: "Please select an admin user to login.", variant: "destructive" });
+        return;
+      }
+      const adminToLogin = mockManagedUsers.find(u => u.id === selectedAdmin && u.role === 'admin');
+      if (adminToLogin) {
+        // For this mock login, we bypass the password field and log in directly
+        // The authStore will still check the (mock) password hash
+        loginSuccess = actions.login(adminToLogin.email, adminToLogin.passwordHash, 'admin', router.push);
+      }
+    } else { // staff
+      loginSuccess = actions.login(email, password, 'staff', router.push);
+    }
     
     if (loginSuccess) {
       toast({
         title: "Login Successful",
-        description: `Welcome, ${userType}!`,
+        description: `Welcome!`,
       });
     } else {
       toast({
         title: "Login Failed",
-        description: "Invalid email or password for this role.",
+        description: "Invalid credentials or selection for this role.",
         variant: "destructive",
       });
     }
   };
 
+  // Admin-specific Login Form
+  if (userType === 'admin') {
+    const adminUsers = mockManagedUsers.filter(u => u.role === 'admin');
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-16 w-16 flex items-center justify-center bg-primary/10 rounded-full">
+              <UserIcon className="h-8 w-8 text-primary" />
+            </div>
+            <CardTitle className="text-3xl font-headline">Admin Login</CardTitle>
+            <CardDescription className="text-lg">Access your SH IMS admin panel.</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2 text-left">
+                <Label>Select Admin User</Label>
+                <div className="grid grid-cols-2 gap-4 pt-1">
+                  {adminUsers.map(admin => (
+                    <Button
+                      key={admin.id}
+                      type="button"
+                      variant={selectedAdmin === admin.id ? 'default' : 'outline'}
+                      onClick={() => setSelectedAdmin(admin.id)}
+                      className="py-6 text-base"
+                    >
+                      {admin.name}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4 pt-4">
+              <Button type="submit" className="w-full text-lg py-6" disabled={!selectedAdmin}>
+                <LogIn className="mr-2 h-5 w-5" /> Login
+              </Button>
+              <Button variant="link" size="sm" onClick={() => router.push('/login')}>
+                Back to role selection
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+        <p className="mt-8 text-sm text-muted-foreground">
+          &copy; 2025 SH IMS. Your trusted sales partner.
+        </p>
+      </div>
+    );
+  }
+
+  // Staff Login Form (the original design)
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
@@ -51,12 +122,8 @@ export default function LoginForm({ userType }: LoginFormProps) {
            <div className="mx-auto mb-4">
             <Image src="/SHLOGO.png" alt="Logo" height={70} width={150} />
            </div>
-          <CardTitle className="text-3xl font-headline">
-            {userType === 'admin' ? 'Admin Login' : 'Staff Login'}
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Access your Inventory Management System.
-          </CardDescription>
+          <CardTitle className="text-3xl font-headline">Staff Login</CardTitle>
+          <CardDescription className="text-lg">Access your Inventory Management System.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
@@ -75,7 +142,6 @@ export default function LoginForm({ userType }: LoginFormProps) {
                 />
               </div>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -115,7 +181,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
         </form>
       </Card>
        <p className="mt-8 text-sm text-muted-foreground">
-        &copy; {new Date().getFullYear()} SH IMS. All rights reserved.
+        &copy; 2025 SH IMS. Your trusted sales partner.
       </p>
     </div>
   );
