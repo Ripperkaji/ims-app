@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuthStore } from "@/stores/authStore";
@@ -29,7 +28,11 @@ export default function LogsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [allLogs] = useState<LogEntry[]>(() => [...mockLogEntries].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+  const [allLogs] = useState<LogEntry[]>(() => 
+    [...mockLogEntries]
+      .filter(log => log.user !== 'System' && log.user !== 'API System') // Filter out system logs
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  );
   const [filteredLogEntries, setFilteredLogEntries] = useState<LogEntry[]>(allLogs);
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
@@ -314,8 +317,8 @@ export default function LogsPage() {
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>System & User Activity</CardTitle>
-          <CardDescription>Chronological record of actions and modifications within the system. Click a row for details.</CardDescription>
+          <CardTitle>User Activity</CardTitle>
+          <CardDescription>Chronological record of user actions and modifications within the application. Click a row for details.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -395,5 +398,3 @@ const Label = ({ htmlFor, children, className }: { htmlFor?: string; children: R
     {children}
   </label>
 );
-
-    
