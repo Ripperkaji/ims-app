@@ -52,7 +52,6 @@ export default function AccountsPage() {
   // State for Capital
   const [currentCashInHand, setCurrentCashInHand] = useState(mockCapital.cashInHand);
   const [lastUpdated, setLastUpdated] = useState(mockCapital.lastUpdated);
-  const [newCashAmount, setNewCashAmount] = useState<string>('');
   
   // State for Receivables
   const [dueSales, setDueSales] = useState<Sale[]>([]);
@@ -176,20 +175,6 @@ export default function AccountsPage() {
     return currentCashInHand + currentDigitalBalance + currentInventoryValue;
   }, [currentCashInHand, currentDigitalBalance, currentInventoryValue]);
 
-  const handleUpdateCash = () => {
-    if (!user) return;
-    const amount = parseFloat(newCashAmount);
-    if (isNaN(amount) || amount < 0) {
-      toast({ title: "Invalid Amount", description: "Please enter a valid non-negative number for cash in hand.", variant: "destructive" });
-      return;
-    }
-    const { newAmount, lastUpdated: updatedTimestamp } = updateCashInHand(amount, user.name);
-    setCurrentCashInHand(newAmount);
-    setLastUpdated(updatedTimestamp);
-    setNewCashAmount('');
-    toast({ title: "Success", description: `Cash in hand has been updated to NRP ${formatCurrency(amount)}.` });
-  };
-  
   // --- Logic for Receivables (Due Sales) ---
   const openMarkAsPaidDialog = (sale: Sale) => {
     setSaleToMarkAsPaid(sale);
@@ -293,7 +278,7 @@ export default function AccountsPage() {
               {selectedPayableType === 'supplier' && (
                 supplierDueItems.length > 0 ? (
                   <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Supplier Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalSupplierDue)}</span></p>
+                  <p className="text-sm text-muted-foreground mb-3">Total Supplier Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalSupplierDue)}</span></p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -301,7 +286,7 @@ export default function AccountsPage() {
                         <TableRow key={item.batchId}>
                           <TableCell className="font-medium">{item.productName}</TableCell>
                           <TableCell>{item.supplierName || "N/A"}</TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
+                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.dueAmount)}</TableCell>
                           <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
                           <TableCell>{item.acquisitionDate}</TableCell>
                           <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
@@ -316,16 +301,16 @@ export default function AccountsPage() {
               {selectedPayableType === 'expense' && (
                 expenseDueItems.length > 0 ? (
                   <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalExpenseDue)}</span></p>
+                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalExpenseDue)}</span></p>
                   <Table>
                     <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total Expense</TableHead><TableHead>Payment Breakdown</TableHead><TableHead className="text-right">Outstanding Due</TableHead><TableHead>Recorded Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {expenseDueItems.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
-                          <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
+                          <TableCell className="text-right">NRP ${formatCurrency(item.amount)}</TableCell>
                           <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
-                          <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue)}</TableCell>
+                          <TableCell className="text-right font-semibold text-destructive">NRP ${formatCurrency(item.amountDue)}</TableCell>
                           <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
                           <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
                         </TableRow>
@@ -354,7 +339,7 @@ export default function AccountsPage() {
                     <TableRow key={sale.id}>
                       <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell><TableCell>{sale.customerName}</TableCell>
                       <TableCell>{sale.customerContact ? (<a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary"><Phone className="h-3 w-3" /> {sale.customerContact}</a>) : <span className="text-xs">N/A</span>}</TableCell>
-                      <TableCell>NRP {formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP {formatCurrency(sale.amountDue)}</TableCell>
+                      <TableCell>NRP ${formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP ${formatCurrency(sale.amountDue)}</TableCell>
                       <TableCell>
                         {sale.isFlagged ? (<TooltipProvider><Tooltip><TooltipTrigger asChild><Flag className="h-4 w-4 text-destructive cursor-pointer" /></TooltipTrigger><TooltipContent><p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p></TooltipContent></Tooltip></TooltipProvider>) : (<span>No</span>)}
                       </TableCell>
@@ -381,25 +366,11 @@ export default function AccountsPage() {
                 <CardDescription>A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-4">
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
-                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCapital)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentCashInHand)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentDigitalBalance)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentInventoryValue)}</p></div>
+                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3><p className="text-2xl font-bold text-primary">NRP ${formatCurrency(totalCapital)}</p></div>
               </CardContent>
-            </Card>
-
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle>Update Cash in Hand</CardTitle>
-                <CardDescription>Use this form to set or adjust the current amount of cash available to the business. This action will be logged.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  <div className="space-y-2 max-w-sm">
-                      <Label htmlFor="cashAmount">New Cash Amount (NRP)</Label>
-                      <Input id="cashAmount" type="number" value={newCashAmount} onChange={(e) => setNewCashAmount(e.target.value)} placeholder="Enter total cash amount" min="0" step="0.01" />
-                  </div>
-              </CardContent>
-              <CardFooter><Button onClick={handleUpdateCash}><Landmark className="mr-2 h-4 w-4" /> Update Cash Amount</Button></CardFooter>
             </Card>
           </div>
         </TabsContent>
@@ -412,7 +383,7 @@ export default function AccountsPage() {
           <AlertDialogContent>
             <AlertDialogHeader><AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
               <AlertDialogDescription>
-                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
+                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP ${formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-4">
