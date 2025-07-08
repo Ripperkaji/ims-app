@@ -188,7 +188,7 @@ export default function DashboardPage() {
               description={`${dueSalesCount} sale(s) with pending payment`}
               iconClassName={dueSalesCount > 0 ? "text-destructive" : "text-green-500"}
               isCurrency={false}
-              href="/due-sales"
+              href="/accounts"
             />
             <AnalyticsCard
               title="Flagged Sales"

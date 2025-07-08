@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,15 +13,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital, updateCashInHand, addLogEntry } from "@/lib/data";
-import type { SupplierDueItem, ExpenseDueItem, Expense } from "@/types";
+import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital, updateCashInHand, addLogEntry as globalAddLog } from "@/lib/data";
+import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem } from "@/types";
 import { format } from 'date-fns';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import SettlePayableDialog from '@/components/accounts/SettlePayableDialog';
 import { calculateCurrentStock } from '@/lib/productUtils';
+import AdjustSaleDialog from "@/components/sales/AdjustSaleDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 type PayableType = 'supplier' | 'expense' | '';
 type PayableItem = SupplierDueItem | ExpenseDueItem;
+type PaymentMethodSelection = 'Cash' | 'Digital' | 'Due' | 'Hybrid';
 
 export default function AccountsPage() {
   const { user } = useAuthStore();
@@ -39,19 +53,24 @@ export default function AccountsPage() {
   const [currentCashInHand, setCurrentCashInHand] = useState(mockCapital.cashInHand);
   const [lastUpdated, setLastUpdated] = useState(mockCapital.lastUpdated);
   const [newCashAmount, setNewCashAmount] = useState<string>('');
+  
+  // State for Receivables
+  const [dueSales, setDueSales] = useState<Sale[]>([]);
+  const [saleToAdjust, setSaleToAdjust] = useState<Sale | null>(null);
+  const [saleToMarkAsPaid, setSaleToMarkAsPaid] = useState<Sale | null>(null);
+  const [markAsPaidConfirmationInput, setMarkAsPaidConfirmationInput] = useState('');
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
-      toast({
-        title: "Access Denied",
-        description: "You do not have permission to view this page.",
-        variant: "destructive"
-      });
+      toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
       router.push('/dashboard');
     }
-  }, [user, router, toast]);
+     const updatedDueSales = mockSales.filter(sale => sale.amountDue > 0)
+        .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+     setDueSales(updatedDueSales);
+  }, [user, router, toast, refreshTrigger, mockSales]);
 
-  // Logic for Payables
+  // --- Logic for Payables ---
   const supplierDueItems: SupplierDueItem[] = [];
   mockProducts.forEach(product => {
     product.acquisitionHistory.forEach(batch => {
@@ -117,7 +136,7 @@ export default function AccountsPage() {
       batch.dueToSupplier -= totalPayment;
       batch.cashPaid += paymentDetails.cashPaid;
       batch.digitalPaid += paymentDetails.digitalPaid;
-      addLogEntry(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
+      globalAddLog(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
       toast({title: "Success", description: "Supplier due updated."});
     } else if (settlePayableType === 'expense') {
         const expenseIndex = mockExpenses.findIndex(e => e.id === itemId);
@@ -129,7 +148,7 @@ export default function AccountsPage() {
         expense.amountDue -= totalPayment;
         expense.cashPaid += paymentDetails.cashPaid;
         expense.digitalPaid += paymentDetails.digitalPaid;
-        addLogEntry(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
+        globalAddLog(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
         toast({title: "Success", description: "Expense due updated."});
     }
     setRefreshTrigger(prev => prev + 1);
@@ -138,7 +157,7 @@ export default function AccountsPage() {
     setSettlePayableType('');
   };
 
-  // Logic for Capital
+  // --- Logic for Capital ---
   const currentInventoryValue = useMemo(() => {
     return mockProducts.reduce((sum, product) => {
       const stock = calculateCurrentStock(product, mockSales);
@@ -163,10 +182,71 @@ export default function AccountsPage() {
     setNewCashAmount('');
     toast({ title: "Success", description: `Cash in hand has been updated to NRP ${formatCurrency(amount)}.` });
   };
+  
+  // --- Logic for Receivables (Due Sales) ---
+  const openMarkAsPaidDialog = (sale: Sale) => {
+    setSaleToMarkAsPaid(sale);
+    setMarkAsPaidConfirmationInput('');
+  };
 
-  if (!user || user.role !== 'admin') {
-    return null;
-  }
+  const confirmMarkAsPaid = () => {
+    if (!user || !saleToMarkAsPaid) return;
+    if (markAsPaidConfirmationInput.trim().toUpperCase() !== 'YES') {
+      toast({ title: "Confirmation Error", description: "Please type YES to confirm.", variant: "destructive" });
+      return;
+    }
+    const saleIndex = mockSales.findIndex(s => s.id === saleToMarkAsPaid.id);
+    if (saleIndex !== -1) {
+      const paidAmount = mockSales[saleIndex].amountDue;
+      mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
+      mockSales[saleIndex].amountDue = 0;
+      mockSales[saleIndex].status = 'Paid'; 
+      globalAddLog(user.name, "Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id.substring(0,8)} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`);
+      setRefreshTrigger(p => p + 1);
+      toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id.substring(0,8)}... marked as Paid.` });
+    } else {
+      toast({ title: "Error", description: "Sale not found.", variant: "destructive" });
+    }
+    setSaleToMarkAsPaid(null);
+    setMarkAsPaidConfirmationInput('');
+  };
+
+  const handleOpenAdjustDialog = (sale: Sale) => setSaleToAdjust(sale);
+
+  const handleSaleAdjusted = (originalSaleId: string, updatedSaleDataFromDialog: any, adjustmentComment: string) => {
+     if (!user) return;
+    const originalSaleIndex = mockSales.findIndex(s => s.id === originalSaleId);
+    if (originalSaleIndex === -1) { toast({ title: "Error", description: "Original sale not found.", variant: "destructive" }); return; }
+    
+    const originalSale = mockSales[originalSaleIndex];
+    let stockSufficient = true;
+    for (const newItem of updatedSaleDataFromDialog.items) {
+      const product = mockProducts.find(p => p.id === newItem.productId);
+      if (product) {
+        const originalItem = originalSale.items.find(oi => oi.productId === newItem.productId);
+        const originalQuantityInThisSale = originalItem ? originalItem.quantity : 0;
+        const currentStockWithOriginalSale = calculateCurrentStock(product, mockSales);
+        const availableStockForAdjustment = currentStockWithOriginalSale + originalQuantityInThisSale;
+        if (newItem.quantity > availableStockForAdjustment) {
+          toast({ title: "Stock Error", description: `Not enough stock for ${newItem.productName}. Only ${availableStockForAdjustment} available.`, variant: "destructive" });
+          stockSufficient = false; break;
+        }
+      } else { toast({ title: "Product Error", description: `Product ${newItem.productName} not found.`, variant: "destructive" }); stockSufficient = false; break; }
+    }
+    if (!stockSufficient) { setSaleToAdjust(null); return; }
+
+    let finalFlaggedComment = originalSale.flaggedComment || "";
+    if (adjustmentComment.trim()) { finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`; }
+    
+    mockSales[originalSaleIndex] = { ...originalSale, ...updatedSaleDataFromDialog, flaggedComment: finalFlaggedComment, status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid' };
+    globalAddLog(user.name, "Sale Adjusted", `Sale ID ${originalSaleId.substring(0,8)} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`);
+    setRefreshTrigger(p => p + 1);
+    toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId.substring(0,8)}... has been updated.` });
+    setSaleToAdjust(null);
+  };
+
+
+  if (!user || user.role !== 'admin') { return null; }
 
   return (
     <>
@@ -178,8 +258,9 @@ export default function AccountsPage() {
       </div>
 
       <Tabs defaultValue="payables" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="payables">Accounts Payable</TabsTrigger>
+          <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
           <TabsTrigger value="capital">Capital Management</TabsTrigger>
         </TabsList>
         <TabsContent value="payables" className="mt-4">
@@ -190,16 +271,11 @@ export default function AccountsPage() {
                   <Landmark className="h-5 w-5 text-primary" /> Payable Details
                 </CardTitle>
                 <CardDescription>
-                  View outstanding amounts.
-                  {selectedPayableType === 'supplier' && ` Total Supplier Due: NRP ${formatCurrency(totalSupplierDue)}.`}
-                  {selectedPayableType === 'expense' && ` Total Outstanding Expense Due: NRP ${formatCurrency(totalExpenseDue)}.`}
-                  {selectedPayableType === '' && ' Select a type to see due details.'}
+                  View outstanding amounts owed to suppliers or for expenses.
                 </CardDescription>
               </div>
               <Select value={selectedPayableType} onValueChange={(value) => setSelectedPayableType(value as PayableType)}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select Payable Type" />
-                </SelectTrigger>
+                <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select Payable Type" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="supplier">Supplier Due</SelectItem>
                   <SelectItem value="expense">Expenses Due</SelectItem>
@@ -209,17 +285,10 @@ export default function AccountsPage() {
             <CardContent>
               {selectedPayableType === 'supplier' && (
                 supplierDueItems.length > 0 ? (
+                  <>
+                  <p className="text-sm text-muted-foreground mb-3">Total Supplier Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalSupplierDue)}</span></p>
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Product Name</TableHead>
-                        <TableHead>Supplier</TableHead>
-                        <TableHead className="text-right">Due Amount</TableHead>
-                        <TableHead>Batch Pmt. Details</TableHead>
-                        <TableHead>Acq. Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {supplierDueItems.map((item) => (
                         <TableRow key={item.batchId}>
@@ -228,70 +297,71 @@ export default function AccountsPage() {
                           <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.dueAmount)}</TableCell>
                           <TableCell className="text-xs">{getSupplierPaymentDetails(item)}</TableCell>
                           <TableCell>{item.acquisitionDate}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}>
-                              <Edit className="mr-2 h-3 w-3" /> Settle
-                            </Button>
-                          </TableCell>
+                          <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'supplier')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                ) : (
-                  <p className="text-center py-4 text-muted-foreground">No supplier dues found.</p>
-                )
+                  </>
+                ) : <p className="text-center py-4 text-muted-foreground">No supplier dues found.</p>
               )}
 
               {selectedPayableType === 'expense' && (
                 expenseDueItems.length > 0 ? (
+                  <>
+                  <p className="text-sm text-muted-foreground mb-3">Total Outstanding Expense Due: <span className="font-semibold text-destructive">NRP {formatCurrency(totalExpenseDue)}</span></p>
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Total Expense</TableHead>
-                        <TableHead>Payment Breakdown</TableHead>
-                        <TableHead className="text-right">Outstanding Due</TableHead>
-                        <TableHead>Recorded Date</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Description</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Total Expense</TableHead><TableHead>Payment Breakdown</TableHead><TableHead className="text-right">Outstanding Due</TableHead><TableHead>Recorded Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {expenseDueItems.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.description}</TableCell>
-                          <TableCell>{item.category}</TableCell>
+                          <TableCell className="font-medium">{item.description}</TableCell><TableCell>{item.category}</TableCell>
                           <TableCell className="text-right">NRP {formatCurrency(item.amount)}</TableCell>
-                          <TableCell>
-                            {item.paymentMethod === "Hybrid" ? (
-                              <span className="text-xs">
-                                Hybrid (
-                                {item.cashPaid !== undefined && item.cashPaid > 0 && `Cash: NRP ${formatCurrency(item.cashPaid)}, `}
-                                {item.digitalPaid !== undefined && item.digitalPaid > 0 && `Digital: NRP ${formatCurrency(item.digitalPaid)}, `}
-                                Due: NRP {formatCurrency(item.amountDue)}
-                                )
-                              </span>
-                            ) : (
-                              "Fully Due"
-                            )}
-                          </TableCell>
+                          <TableCell><span className="text-xs">{item.paymentMethod === "Hybrid" ? `Hybrid (Cash: NRP ${formatCurrency(item.cashPaid)}, Digital: NRP ${formatCurrency(item.digitalPaid)}, Due: NRP ${formatCurrency(item.amountDue)})` : "Fully Due"}</span></TableCell>
                           <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(item.amountDue)}</TableCell>
                           <TableCell>{format(new Date(item.date), 'MMM dd, yyyy HH:mm')}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}>
-                              <Edit className="mr-2 h-3 w-3" /> Settle
-                            </Button>
-                          </TableCell>
+                          <TableCell className="text-right"><Button variant="outline" size="sm" onClick={() => handleOpenSettleDialog(item, 'expense')}><Edit className="mr-2 h-3 w-3" /> Settle</Button></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                ) : (
-                  <p className="text-center py-4 text-muted-foreground">No expense dues found.</p>
-                )
+                  </>
+                ) : <p className="text-center py-4 text-muted-foreground">No expense dues found.</p>
               )}
-              {selectedPayableType === '' && (
-                <p className="text-center py-4 text-muted-foreground">Please select a payable type from the dropdown to view details.</p>
+              {selectedPayableType === '' && <p className="text-center py-4 text-muted-foreground">Please select a payable type from the dropdown to view details.</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="receivables" className="mt-4">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><HandCoins className="h-5 w-5 text-primary"/> Accounts Receivable</CardTitle>
+              <CardDescription>List of all sales with an outstanding due amount from customers.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dueSales.length > 0 ? (
+              <Table>
+                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Customer</TableHead><TableHead>Contact</TableHead><TableHead>Total</TableHead><TableHead>Due</TableHead><TableHead>Flagged</TableHead><TableHead>Date</TableHead><TableHead>Recorded By</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {dueSales.map((sale) => (
+                    <TableRow key={sale.id}>
+                      <TableCell className="font-medium">{sale.id.substring(0,8)}...</TableCell><TableCell>{sale.customerName}</TableCell>
+                      <TableCell>{sale.customerContact ? (<a href={`tel:${sale.customerContact}`} className="flex items-center gap-1 hover:underline text-primary"><Phone className="h-3 w-3" /> {sale.customerContact}</a>) : <span className="text-xs">N/A</span>}</TableCell>
+                      <TableCell>NRP {formatCurrency(sale.totalAmount)}</TableCell><TableCell className="font-semibold text-destructive">NRP {formatCurrency(sale.amountDue)}</TableCell>
+                      <TableCell>
+                        {sale.isFlagged ? (<TooltipProvider><Tooltip><TooltipTrigger asChild><Flag className="h-4 w-4 text-destructive cursor-pointer" /></TooltipTrigger><TooltipContent><p className="max-w-xs whitespace-pre-wrap">{sale.flaggedComment || "Flagged for review"}</p></TooltipContent></Tooltip></TooltipProvider>) : (<span>No</span>)}
+                      </TableCell>
+                      <TableCell>{format(new Date(sale.date), 'MMM dd, yyyy')}</TableCell><TableCell>{sale.createdBy}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => openMarkAsPaidDialog(sale)}><CheckCircle2 className="mr-2 h-4 w-4" /> Mark as Paid</Button>
+                        <Button variant="outline" size="icon" onClick={() => handleOpenAdjustDialog(sale)} title="Adjust Sale"><Edit3 className="h-4 w-4" /><span className="sr-only">Adjust Sale</span></Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              ) : (
+                 <div className="text-center py-8 text-muted-foreground">No due sales records found. Well done!</div>
               )}
             </CardContent>
           </Card>
@@ -301,64 +371,57 @@ export default function AccountsPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Capital Overview</CardTitle>
-                <CardDescription>
-                  A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}
-                </CardDescription>
+                <CardDescription>A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-3">
-                  <div className="p-4 border rounded-lg">
-                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3>
-                      <p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p>
-                  </div>
-                  <div className="p-4 border rounded-lg">
-                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3>
-                      <p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p>
-                  </div>
-                  <div className="p-4 border rounded-lg bg-muted/50">
-                      <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3>
-                      <p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCapital)}</p>
-                  </div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
+                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCapital)}</p></div>
               </CardContent>
             </Card>
 
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Update Cash in Hand</CardTitle>
-                <CardDescription>
-                  Use this form to set or adjust the current amount of cash available to the business. This action will be logged.
-                </CardDescription>
+                <CardDescription>Use this form to set or adjust the current amount of cash available to the business. This action will be logged.</CardDescription>
               </CardHeader>
               <CardContent>
                   <div className="space-y-2 max-w-sm">
                       <Label htmlFor="cashAmount">New Cash Amount (NRP)</Label>
-                      <Input
-                          id="cashAmount"
-                          type="number"
-                          value={newCashAmount}
-                          onChange={(e) => setNewCashAmount(e.target.value)}
-                          placeholder="Enter total cash amount"
-                          min="0"
-                          step="0.01"
-                      />
+                      <Input id="cashAmount" type="number" value={newCashAmount} onChange={(e) => setNewCashAmount(e.target.value)} placeholder="Enter total cash amount" min="0" step="0.01" />
                   </div>
               </CardContent>
-              <CardFooter>
-                  <Button onClick={handleUpdateCash}>
-                      <Landmark className="mr-2 h-4 w-4" /> Update Cash Amount
-                  </Button>
-              </CardFooter>
+              <CardFooter><Button onClick={handleUpdateCash}><Landmark className="mr-2 h-4 w-4" /> Update Cash Amount</Button></CardFooter>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
     </div>
-    <SettlePayableDialog
-        isOpen={isSettleDialogOpen}
-        onClose={() => setIsSettleDialogOpen(false)}
-        item={itemToSettle}
-        payableType={settlePayableType}
-        onConfirm={handleConfirmSettle}
-    />
+    <SettlePayableDialog isOpen={isSettleDialogOpen} onClose={() => setIsSettleDialogOpen(false)} item={itemToSettle} payableType={settlePayableType} onConfirm={handleConfirmSettle} />
+
+    {saleToMarkAsPaid && (
+        <AlertDialog open={!!saleToMarkAsPaid} onOpenChange={(isOpen) => { if (!isOpen) { setSaleToMarkAsPaid(null); setMarkAsPaidConfirmationInput('');} }}>
+          <AlertDialogContent>
+            <AlertDialogHeader><AlertDialogTitle>Confirm Mark as Paid</AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to mark sale <strong>{saleToMarkAsPaid.id.substring(0,8)}...</strong> for customer <strong>{saleToMarkAsPaid.customerName}</strong> (Due: NRP {formatCurrency(saleToMarkAsPaid.amountDue)}) as fully paid. This action assumes the full due amount has been received.<br/><br/>To confirm, please type "<strong>YES</strong>" in the box below.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="confirmMarkAsPaidInput" className="sr-only">Type YES to confirm</Label>
+              <Input id="confirmMarkAsPaidInput" value={markAsPaidConfirmationInput} onChange={(e) => setMarkAsPaidConfirmationInput(e.target.value)} placeholder='Type YES here' autoFocus />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => { setSaleToMarkAsPaid(null); setMarkAsPaidConfirmationInput(''); }}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmMarkAsPaid} disabled={markAsPaidConfirmationInput.trim().toUpperCase() !== 'YES'} className={markAsPaidConfirmationInput.trim().toUpperCase() !== 'YES' ? "bg-primary/50" : ""}>Confirm Payment</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {saleToAdjust && (
+        <AdjustSaleDialog sale={saleToAdjust} isOpen={!!saleToAdjust} onClose={() => setSaleToAdjust(null)} onSaleAdjusted={handleSaleAdjusted} allGlobalProducts={mockProducts} isInitiallyFlagged={saleToAdjust.isFlagged || false} mockSales={mockSales} />
+      )}
     </>
   );
 }
