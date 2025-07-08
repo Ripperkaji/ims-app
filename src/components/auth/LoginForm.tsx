@@ -24,12 +24,10 @@ export default function LoginForm({ userType }: LoginFormProps) {
   const { toast } = useToast();
   const router = useRouter();
 
-  // State for staff form
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // State for forms
+  const [username, setUsername] = useState(''); // for staff
+  const [password, setPassword] = useState(''); // for staff AND admin
   const [showPassword, setShowPassword] = useState(false);
-
-  // State for admin form
   const [selectedAdmin, setSelectedAdmin] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -41,11 +39,13 @@ export default function LoginForm({ userType }: LoginFormProps) {
         toast({ title: "Selection Required", description: "Please select an admin user to login.", variant: "destructive" });
         return;
       }
+      if (!password) {
+        toast({ title: "Password Required", description: "Please enter your password.", variant: "destructive" });
+        return;
+      }
       const adminToLogin = mockManagedUsers.find(u => u.id === selectedAdmin && u.role === 'admin');
       if (adminToLogin) {
-        // For this mock login, we bypass the password field and log in directly
-        // The authStore will still check the (mock) password hash
-        loginSuccess = actions.login(adminToLogin.email, adminToLogin.passwordHash, 'admin', router.push);
+        loginSuccess = actions.login(adminToLogin.email, password, 'admin', router.push);
       }
     } else { // staff
       loginSuccess = actions.login(username, password, 'staff', router.push);
@@ -79,7 +79,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
             <CardDescription className="text-lg">Access your SH IMS admin panel.</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="space-y-2 text-left">
                 <Label>Select Admin User</Label>
                 <div className="grid grid-cols-2 gap-4 pt-1">
@@ -96,9 +96,36 @@ export default function LoginForm({ userType }: LoginFormProps) {
                   ))}
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Default is 12345"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="text-base pl-10"
+                        disabled={!selectedAdmin}
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={!selectedAdmin}
+                        tabIndex={-1}
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </Button>
+                </div>
+              </div>
             </CardContent>
             <CardFooter className="flex flex-col space-y-4 pt-4">
-              <Button type="submit" className="w-full text-lg py-6" disabled={!selectedAdmin}>
+              <Button type="submit" className="w-full text-lg py-6" disabled={!selectedAdmin || !password}>
                 <LogIn className="mr-2 h-5 w-5" /> Login
               </Button>
               <Button variant="link" size="sm" onClick={() => router.push('/login')}>
