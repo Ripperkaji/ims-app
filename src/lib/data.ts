@@ -2,6 +2,7 @@
 import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole, ProductType } from '@/types';
 import { formatISO, subDays, subHours, subMonths } from 'date-fns'; 
 import { calculateCurrentStock as calculateStockShared } from './productUtils';
+import { formatCurrency } from './utils';
 
 export let mockProducts: Product[] = []; 
 export let mockSales: Sale[] = [];
@@ -56,7 +57,7 @@ export const updateCashInHand = (newAmount: number, actorName: string): { newAmo
   addLogEntry(
     actorName,
     'Capital Updated',
-    `Cash in Hand updated by ${actorName}. Old: NRP ${oldAmount.toFixed(2)}, New: NRP ${newAmount.toFixed(2)}.`
+    `Cash in Hand updated by ${actorName}. Old: NRP ${formatCurrency(oldAmount)}, New: NRP ${formatCurrency(newAmount)}.`
   );
   
   return { newAmount: mockCapital.cashInHand, lastUpdated: mockCapital.lastUpdated };
@@ -123,24 +124,21 @@ export function deleteManagedUser(userId: string, deletedBy: string): boolean {
 
 
 function initializeData() {
-    if (mockProducts.length > 0 || mockManagedUsers.length > 0) {
+    if (mockProducts.length > 0 || mockManagedUsers.length > 2) { // check for > 2 to allow re-init if only admins are there
         return;
     }
-
-    addLogEntry('System', 'Initialization', 'Starting data initialization...');
 
     // 1. Initialize Users
     mockManagedUsers.push(
         { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-        { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-        { id: 'user-staff-1', name: 'Staff User', email: 'staff.user@sh.com', contactNumber: '9800000003', role: 'staff', passwordHash: 'staff123', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
+        { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
     );
-    addLogEntry('System', 'Initialization', 'Default users created.');
+    addManagedUser('Staff User', 'staff', 'staff123', 'SKG', '9800000003');
 
     // 2. Initialize Capital
     mockCapital.cashInHand = 50000;
     mockCapital.lastUpdated = new Date().toISOString();
-    addLogEntry('System', 'Initialization', `Initial cash in hand set to NRP ${mockCapital.cashInHand}.`);
+    addLogEntry('NPS', 'Capital Updated', `Initial cash in hand set to NRP ${formatCurrency(mockCapital.cashInHand)}.`);
 
     // 3. Initialize Products
     const productDefinitions = [
@@ -168,6 +166,7 @@ function initializeData() {
         const cashPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : totalBatchCost;
         const digitalPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : 0;
         const paymentMethod: AcquisitionPaymentMethod = dueAmount > 0 ? 'Hybrid' : 'Cash';
+        const addedBy = index % 2 === 0 ? 'SKG' : 'NPS';
 
         const firstBatch: AcquisitionBatch = {
             batchId: `batch-${newProductId}-${Date.now()}`,
@@ -182,7 +181,7 @@ function initializeData() {
             cashPaid,
             digitalPaid,
             dueToSupplier: dueAmount,
-            addedBy: 'SKG'
+            addedBy: addedBy
         };
 
         const newProduct: Product = {
@@ -198,9 +197,35 @@ function initializeData() {
             testerQuantity: index % 5 === 0 ? 1 : 0 // Some testers
         };
         mockProducts.push(newProduct);
-    });
-    addLogEntry('System', 'Initialization', `${mockProducts.length} products created.`);
+        
+        const fullProductName = `${newProduct.name}${newProduct.modelName ? ` (${newProduct.modelName})` : ''}${newProduct.flavorName ? ` - ${newProduct.flavorName}` : ''}`;
+        let logDetails = `Product '${fullProductName}' added by ${addedBy}. Current Cost: NRP ${formatCurrency(newProduct.currentCostPrice)}, Current MRP: NRP ${formatCurrency(newProduct.currentSellingPrice)}. Initial Batch Qty: ${p.stock}.`;
+        if (p.supplier) logDetails += ` Supplier: ${p.supplier}.`;
+         if (firstBatch.totalBatchCost > 0) {
+            logDetails += ` Batch Cost: NRP ${formatCurrency(firstBatch.totalBatchCost)} via ${firstBatch.paymentMethod}.`;
+            if (firstBatch.paymentMethod === 'Hybrid') {
+                logDetails += ` (Cash: ${formatCurrency(firstBatch.cashPaid)}, Digital: ${formatCurrency(firstBatch.digitalPaid)}, Due: ${formatCurrency(firstBatch.dueToSupplier)})`;
+            } else if (firstBatch.paymentMethod === 'Due') {
+                logDetails += ` (Due: ${formatCurrency(firstBatch.dueToSupplier)})`;
+            }
+        }
+        addLogEntry(addedBy, "Product Added", logDetails);
 
+        if (newProduct.damagedQuantity > 0) {
+            addLogEntry(
+                'SKG', 
+                "Product Damage & Stock Update (Exchange)", 
+                `Product Damage & Stock Update (Exchange): Item '${fullProductName}' (Qty: ${newProduct.damagedQuantity}) marked damaged & exchanged by SKG as part of initial setup.`
+            );
+        }
+        if (newProduct.testerQuantity > 0) {
+            addLogEntry(
+                'NPS', 
+                "Sample/Demo Quantity Updated", 
+                `Sample/Demo quantity for '${fullProductName}' changed from 0 to ${newProduct.testerQuantity} by NPS as part of initial setup.`
+            );
+        }
+    });
 
     // 4. Initialize Sales
     const saleCustomers = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
@@ -251,19 +276,45 @@ function initializeData() {
             flaggedComment: i === 1 ? 'Customer reported item was faulty. Exchanged on spot.' : ''
         };
         mockSales.push(newSale);
+        
+        const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
+        let paymentLogDetails = '';
+        if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${formatCurrency(newSale.cashPaid)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${formatCurrency(newSale.digitalPaid)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${formatCurrency(newSale.amountDue)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
+        else { paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`; }
+        const logDetails = `Sale ID ${newSale.id.substring(0,8)}... for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
+        addLogEntry(newSale.createdBy, "Sale Created", logDetails);
+
+        if (newSale.isFlagged) {
+            addLogEntry(newSale.createdBy, "Sale Flagged", `Sale ID ${newSale.id.substring(0,8)}... flagged by ${newSale.createdBy}. ${newSale.flaggedComment}`);
+        }
     }
-     addLogEntry('System', 'Initialization', `${mockSales.length} sales created.`);
-
+     
      // 5. Initialize Expenses
-     mockExpenses.push(
-         { id: 'exp-1', date: subDays(new Date(), 40).toISOString(), description: 'Office Rent - May', category: 'Rent', amount: 25000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 25000, digitalPaid: 0, amountDue: 0},
-         { id: 'exp-2', date: subDays(new Date(), 25).toISOString(), description: 'Internet Bill', category: 'Utilities', amount: 2000, recordedBy: 'SKG', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 2000, amountDue: 0 },
-         { id: 'exp-3', date: subDays(new Date(), 15).toISOString(), description: 'Catering for event', category: 'Marketing and Advertising', amount: 5000, recordedBy: 'NPS', paymentMethod: 'Due', cashPaid: 0, digitalPaid: 0, amountDue: 5000 },
-         { id: 'exp-4', date: subDays(new Date(), 5).toISOString(), description: 'Staff Salary - May', category: 'Salaries and Benefits', amount: 15000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 10000, digitalPaid: 5000, amountDue: 0 }
-     );
-     addLogEntry('System', 'Initialization', `${mockExpenses.length} expenses created.`);
-
-     addLogEntry('System', 'Initialization', 'Mock data generation complete.');
+     const tempExpenses: Omit<Expense, 'id'>[] = [
+         { date: subDays(new Date(), 40).toISOString(), description: 'Office Rent - May', category: 'Rent', amount: 25000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 25000, digitalPaid: 0, amountDue: 0},
+         { date: subDays(new Date(), 25).toISOString(), description: 'Internet Bill', category: 'Utilities', amount: 2000, recordedBy: 'SKG', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 2000, amountDue: 0 },
+         { date: subDays(new Date(), 15).toISOString(), description: 'Catering for event', category: 'Marketing and Advertising', amount: 5000, recordedBy: 'NPS', paymentMethod: 'Due', cashPaid: 0, digitalPaid: 0, amountDue: 5000 },
+         { date: subDays(new Date(), 5).toISOString(), description: 'Staff Salary - May', category: 'Salaries and Benefits', amount: 15000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 10000, digitalPaid: 5000, amountDue: 0 }
+     ];
+     tempExpenses.forEach((exp, index) => {
+        const newExpense: Expense = {
+            id: `exp-${index}-${Date.now()}`,
+            ...exp
+        }
+        mockExpenses.push(newExpense);
+        let paymentLogString = `Paid via ${newExpense.paymentMethod}.`;
+        if (newExpense.paymentMethod === 'Hybrid') {
+          const parts = [];
+          if (newExpense.cashPaid && newExpense.cashPaid > 0) parts.push(`Cash: NRP ${formatCurrency(newExpense.cashPaid)}`);
+          if (newExpense.digitalPaid && newExpense.digitalPaid > 0) parts.push(`Digital: NRP ${formatCurrency(newExpense.digitalPaid)}`);
+          if (newExpense.amountDue && newExpense.amountDue > 0) parts.push(`Due: NRP ${formatCurrency(newExpense.amountDue)}`);
+          paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
+        } else if (newExpense.paymentMethod === 'Due') {
+            paymentLogString = `Marked as Due (NRP ${formatCurrency(newExpense.amount)}).`;
+        }
+        const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${formatCurrency(newExpense.amount)} recorded by ${newExpense.recordedBy}. ${paymentLogString}`;
+        addLogEntry(newExpense.recordedBy, "Expense Recorded", logDetails);
+     })
 }
 
 
