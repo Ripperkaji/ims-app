@@ -1,8 +1,19 @@
+
 "use client";
 
 import { useAuthStore } from '@/stores/authStore';
 import { useEffect, useRef } from 'react';
 import Script from 'next/script';
+
+// This is a global declaration for the Tawk_API object to satisfy TypeScript
+declare global {
+  interface Window {
+    Tawk_API?: {
+      setAttributes: (attributes: any, callback?: (error?: any) => void) => void;
+      // You can add other Tawk_API methods here if you use them
+    };
+  }
+}
 
 const TawkToChat = () => {
   const { user } = useAuthStore();
@@ -20,12 +31,17 @@ const TawkToChat = () => {
         if (window.Tawk_API && typeof window.Tawk_API.setAttributes === 'function') {
           clearInterval(intervalId);
 
-          // Call setAttributes without the problematic callback.
-          // This "fire-and-forget" approach is robust and prevents console errors.
-          window.Tawk_API.setAttributes({
-            name: user.name,
-            email: 'sudheer.kajee@gmail.com',
-          });
+          // Provide an empty callback to override the library's default
+          // behavior, which appears to be logging to the console on success.
+          window.Tawk_API.setAttributes(
+            {
+              name: user.name,
+              email: 'sudheer.kajee@gmail.com',
+            },
+            () => {
+              // This empty callback prevents the default logging.
+            }
+          );
           
           attributesSet.current = true; // Mark as set
         }
