@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -125,7 +124,7 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Settle Due for {payableType === 'supplier' ? 'Supplier' : 'Expense'}</DialogTitle>
+          <DialogTitle>Settle Due for {payableType === 'supplier' ? 'Vendor/Supplier' : 'Expense'}</DialogTitle>
           <DialogDescription>
             Settling due for: <strong>{itemName}</strong>.
             <br />

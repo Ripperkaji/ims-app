@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo, useEffect } from 'react';
@@ -107,15 +106,15 @@ export default function SuppliersPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-          <Briefcase className="h-7 w-7 text-primary" /> Suppliers / Vendors
+          <Briefcase className="h-7 w-7 text-primary" /> Vendors/Suppliers
         </h1>
       </div>
 
       <Card className="shadow-lg">
         <CardHeader>
-          <CardTitle>Supplier List</CardTitle>
+          <CardTitle>Vendor/Supplier List</CardTitle>
           <CardDescription>
-            {`Showing ${suppliers.length} supplier(s). Click on a supplier to view their purchase history.`}
+            {`Showing ${suppliers.length} vendor(s)/supplier(s). Click on an entry to view their purchase history.`}
           </CardDescription>
         </CardHeader>
         <CardContent>

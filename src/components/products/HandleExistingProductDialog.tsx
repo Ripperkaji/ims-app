@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -179,7 +178,7 @@ export default function HandleExistingProductDialog({
     }
 
     if (selectedCondition === 'condition3' && !newSupplierName.trim()) {
-      toast({ title: "Supplier Name Required", description: "Please enter the new supplier's name for condition 3.", variant: "destructive" }); return;
+      toast({ title: "Vendor/Supplier Name Required", description: "Please enter the new vendor/supplier's name for condition 3.", variant: "destructive" }); return;
     }
     
     let finalCashPaid = 0;
@@ -277,7 +276,7 @@ export default function HandleExistingProductDialog({
               <Label htmlFor="condition1" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition1" id="condition1" />
-                  <span className="font-semibold">Restock (Same Supplier/Price)</span>
+                  <span className="font-semibold">Restock (Same Vendor/Supplier, Same Price)</span>
                 </div>
                 <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Uses existing cost price of NRP {formatCurrency(existingProduct.currentCostPrice)}.</p>
               </Label>
@@ -285,7 +284,7 @@ export default function HandleExistingProductDialog({
               <Label htmlFor="condition2" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition2" id="condition2" />
-                   <span className="font-semibold">Restock (Same Supplier, New Price)</span>
+                   <span className="font-semibold">Restock (Same Vendor/Supplier, New Price)</span>
                 </div>
                  <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units and update product prices.</p>
                 {(selectedCondition === 'condition2') && (
@@ -307,14 +306,14 @@ export default function HandleExistingProductDialog({
               <Label htmlFor="condition3" className="flex flex-col p-3 border rounded-md hover:border-primary cursor-pointer has-[:checked]:border-primary has-[:checked]:bg-primary/5 transition-all">
                 <div className="flex items-center gap-2">
                   <RadioGroupItem value="condition3" id="condition3" />
-                  <span className="font-semibold">Restock (New Supplier, Optional New Price)</span>
+                  <span className="font-semibold">Restock (New Vendor/Supplier, Optional New Price)</span>
                 </div>
-                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Log new supplier. Optionally update product prices for this batch and ongoing.</p>
+                <p className="text-xs text-muted-foreground ml-6">Add {quantityToRestock} units. Log new vendor/supplier. Optionally update product prices for this batch and ongoing.</p>
                 {selectedCondition === 'condition3' && (
                   <div className="ml-6 mt-2 space-y-2">
                     <div>
-                        <Label htmlFor="newSupplierName" className="text-xs">New Supplier Name</Label>
-                        <Input id="newSupplierName" value={newSupplierName} onChange={(e) => setNewSupplierName(e.target.value)} placeholder="Enter supplier name" className="h-8 text-xs"/>
+                        <Label htmlFor="newSupplierName" className="text-xs">New Vendor/Supplier Name</Label>
+                        <Input id="newSupplierName" value={newSupplierName} onChange={(e) => setNewSupplierName(e.target.value)} placeholder="Enter vendor/supplier name" className="h-8 text-xs"/>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         <div>
@@ -343,7 +342,7 @@ export default function HandleExistingProductDialog({
                     <SelectContent>
                         <SelectItem value="Cash">Cash</SelectItem>
                         <SelectItem value="Digital">Digital Payment</SelectItem>
-                        <SelectItem value="Due">Due to Supplier</SelectItem>
+                        <SelectItem value="Due">Due to Vendor/Supplier</SelectItem>
                         <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
                     </SelectContent>
                     </Select>
@@ -362,7 +361,7 @@ export default function HandleExistingProductDialog({
                             <Input id="resAcqDigitalPaid" type="number" value={acquisitionDigitalPaid} onChange={(e) => setAcquisitionDigitalPaid(e.target.value)} placeholder="0.00" min="0" step="0.01" className="h-8 text-xs"/>
                         </div>
                         <div>
-                            <Label htmlFor="resAcqAmountDue" className="text-xs">Amount Due to Supplier (NRP)</Label>
+                            <Label htmlFor="resAcqAmountDue" className="text-xs">Amount Due to Vendor/Supplier (NRP)</Label>
                             <Input id="resAcqAmountDue" type="number" value={acquisitionAmountDueToSupplier} onChange={(e) => setAcquisitionAmountDueToSupplier(e.target.value)} placeholder="0.00" min="0" step="0.01" className="h-8 text-xs"/>
                         </div>
                         {acquisitionPaymentValidationError && (
@@ -383,7 +382,7 @@ export default function HandleExistingProductDialog({
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Zero Quantity</AlertTitle>
                 <AlertDescription>
-                  The quantity to restock is zero. No stock will be added. You can still update prices or log supplier if applicable.
+                  The quantity to restock is zero. No stock will be added. You can still update prices or log vendor/supplier if applicable.
                 </AlertDescription>
               </Alert>
            )}

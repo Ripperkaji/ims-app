@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
@@ -235,8 +234,8 @@ export default function AccountsPage() {
       batch.dueToSupplier -= totalPayment;
       batch.cashPaid += paymentDetails.cashPaid;
       batch.digitalPaid += paymentDetails.digitalPaid;
-      globalAddLog(user.name, "Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
-      toast({title: "Success", description: "Supplier due updated."});
+      globalAddLog(user.name, "Vendor/Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
+      toast({title: "Success", description: "Vendor/Supplier due updated."});
     } else if (settlePayableType === 'expense') {
         const expenseIndex = mockExpenses.findIndex(e => e.id === itemId);
         if (expenseIndex === -1) { toast({ title: "Error", description: "Expense not found.", variant: "destructive"}); return; }
@@ -369,13 +368,13 @@ export default function AccountsPage() {
                   <Landmark className="h-5 w-5 text-primary" /> Payable Details
                 </CardTitle>
                 <CardDescription>
-                  View outstanding amounts owed to suppliers or for expenses.
+                  View outstanding amounts owed to vendors/suppliers or for expenses.
                 </CardDescription>
               </div>
               <Select value={selectedPayableType} onValueChange={(value) => setSelectedPayableType(value as PayableType)}>
                 <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select Payable Type" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="supplier">Supplier Due</SelectItem>
+                  <SelectItem value="supplier">Vendor/Supplier Due</SelectItem>
                   <SelectItem value="expense">Expenses Due</SelectItem>
                 </SelectContent>
               </Select>
@@ -385,9 +384,9 @@ export default function AccountsPage() {
               {selectedPayableType === 'supplier' && (
                 supplierDueItems.length > 0 ? (
                   <>
-                  <p className="text-sm text-muted-foreground mb-3">Total Supplier Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalSupplierDue)}</span></p>
+                  <p className="text-sm text-muted-foreground mb-3">Total Vendor/Supplier Due: <span className="font-semibold text-destructive">NRP ${formatCurrency(totalSupplierDue)}</span></p>
                   <Table>
-                    <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Product Name</TableHead><TableHead>Vendor/Supplier</TableHead><TableHead className="text-right">Due Amount</TableHead><TableHead>Batch Pmt. Details</TableHead><TableHead>Acq. Date</TableHead><TableHead className="text-right">Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {supplierDueItems.map((item) => (
                         <TableRow key={item.batchId}>
@@ -402,7 +401,7 @@ export default function AccountsPage() {
                     </TableBody>
                   </Table>
                   </>
-                ) : <p className="text-center py-4 text-muted-foreground">No supplier dues found.</p>
+                ) : <p className="text-center py-4 text-muted-foreground">No vendor/supplier dues found.</p>
               )}
 
               {selectedPayableType === 'expense' && (

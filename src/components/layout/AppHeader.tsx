@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuthStore } from '@/stores/authStore';
@@ -26,7 +25,7 @@ const navItems: NavItem[] = [
   { href: '/sales', label: 'Sales', icon: ShoppingCart, roles: ['admin', 'staff'] },
   { href: '/damaged-products', label: 'Damaged & Returned', icon: AlertOctagon, roles: ['admin'] },
   { href: '/customers', label: 'Customers', icon: Users, roles: ['admin'] },
-  { href: '/suppliers', label: 'Suppliers', icon: Briefcase, roles: ['admin'] },
+  { href: '/suppliers', label: 'Vendors/Suppliers', icon: Briefcase, roles: ['admin'] },
   { href: '/expenses', label: 'Expenses', icon: CreditCard, roles: ['admin'] },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, roles: ['admin'] },
   { href: '/accounts', label: 'Finance', icon: Wallet, roles: ['admin'] },

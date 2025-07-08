@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -83,7 +82,7 @@ export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, pr
               </div>
                {supplierName && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground flex items-center gap-2"><Users /> Supplier</span>
+                  <span className="text-muted-foreground flex items-center gap-2"><Users /> Vendor/Supplier</span>
                   <span className="font-semibold">{supplierName}</span>
                 </div>
               )}
@@ -151,7 +150,7 @@ export default function AddProductSummaryDialog({ isOpen, onClose, onConfirm, pr
               )}
                {(method === 'Due' || (method === 'Hybrid' && dueAmount > 0)) && (
                 <div className="flex justify-between text-destructive font-bold">
-                  <span className="">Amount Due to Supplier</span>
+                  <span className="">Amount Due to Vendor/Supplier</span>
                   <span>NRP {formatCurrency(dueAmount)}</span>
                 </div>
               )}

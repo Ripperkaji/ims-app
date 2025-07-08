@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -295,7 +294,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
           <div className="space-y-3 pt-3 border-t">
             <div className="grid grid-cols-2 gap-4">
                <div className="space-y-1.5">
-                <Label>Supplier Name (Optional)</Label>
+                <Label>Vendor/Supplier Name (Optional)</Label>
                 <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="E.g., Vape Supplies Co."/>
               </div>
                <div className="space-y-1.5">
@@ -322,7 +321,7 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
                 <SelectContent>
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Digital">Digital Payment</SelectItem>
-                  <SelectItem value="Due">Due to Supplier</SelectItem>
+                  <SelectItem value="Due">Due to Vendor/Supplier</SelectItem>
                   <SelectItem value="Hybrid">Hybrid Payment</SelectItem>
                 </SelectContent>
               </Select>
@@ -351,5 +350,3 @@ export default function AddProductDialog({ isOpen, onClose, onContinueToSummary 
     </Dialog>
   );
 }
-
-    

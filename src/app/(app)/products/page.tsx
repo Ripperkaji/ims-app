@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -343,7 +342,7 @@ export default function ProductsPage() {
           newBatch.costPricePerUnit = productToUpdate.currentCostPrice;
           newBatch.sellingPricePerUnitAtAcquisition = productToUpdate.currentSellingPrice;
       }
-      logDetails += `New Supplier: ${resolutionData.newSupplierName}. Batch Cost: NRP ${formatCurrency(newBatch.costPricePerUnit)}. `;
+      logDetails += `New Vendor/Supplier: ${resolutionData.newSupplierName}. Batch Cost: NRP ${formatCurrency(newBatch.costPricePerUnit)}. `;
       if (!mainPricesUpdated) {
           logDetails += `Main product prices remain unchanged. `;
       }
@@ -387,9 +386,9 @@ export default function ProductsPage() {
   const formatAcquisitionConditionForDisplay = (conditionKey?: string) => {
     if (!conditionKey) return 'N/A';
     const conditionMap: { [key: string]: string } = {
-        'condition1': 'Restock (Same Supplier/Price)',
-        'condition2': 'Restock (Same Supplier, New Price)',
-        'condition3': 'Restock (New Supplier)',
+        'condition1': 'Restock (Same Vendor/Supplier, Price)',
+        'condition2': 'Restock (Same Vendor/Supplier, New Price)',
+        'condition3': 'Restock (New Vendor/Supplier)',
         'Product Added': 'Product Added',
         'Initial Stock': 'Initial Stock'
     };
@@ -449,22 +448,22 @@ export default function ProductsPage() {
             </Select>
           </div>
           <div>
-            <Label htmlFor="supplierFilter">Supplier</Label>
+            <Label htmlFor="supplierFilter">Vendor/Supplier</Label>
             <Select
               value={selectedSupplierFilter}
               onValueChange={(value) => setSelectedSupplierFilter(value === 'ALL_SUPPLIERS_FILTER_VALUE' ? '' : value)}
             >
               <SelectTrigger id="supplierFilter" className="mt-1">
-                <SelectValue placeholder="All Suppliers" />
+                <SelectValue placeholder="All Vendors/Suppliers" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL_SUPPLIERS_FILTER_VALUE">All Suppliers</SelectItem>
+                <SelectItem value="ALL_SUPPLIERS_FILTER_VALUE">All Vendors/Suppliers</SelectItem>
                 {availableSuppliers.map(supplier => <SelectItem key={supplier} value={supplier}>{supplier}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label htmlFor="supplierDueFilter">Has Supplier Due</Label>
+            <Label htmlFor="supplierDueFilter">Has Due to Vendor/Supplier</Label>
             <Select value={showOnlyDueFilter} onValueChange={(value) => setShowOnlyDueFilter(value)}>
               <SelectTrigger id="supplierDueFilter" className="mt-1">
                 <SelectValue />
@@ -545,7 +544,7 @@ export default function ProductsPage() {
                                             <div className="overflow-x-auto">
                                             <Table className="text-xs min-w-[550px]">
                                                 <TableHeader>
-                                                <TableRow><TableHead className="h-6 px-1.5 py-1">Date</TableHead><TableHead className="h-6 px-1.5 py-1">Condition</TableHead><TableHead className="h-6 px-1.5 py-1">Supplier</TableHead><TableHead className="h-6 px-1.5 py-1 text-center">Qty</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Cost/U</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Batch MRP</TableHead><TableHead className="h-6 px-1.5 py-1">Payment</TableHead></TableRow>
+                                                <TableRow><TableHead className="h-6 px-1.5 py-1">Date</TableHead><TableHead className="h-6 px-1.5 py-1">Condition</TableHead><TableHead className="h-6 px-1.5 py-1">Vendor/Supplier</TableHead><TableHead className="h-6 px-1.5 py-1 text-center">Qty</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Cost/U</TableHead><TableHead className="h-6 px-1.5 py-1 text-right">Batch MRP</TableHead><TableHead className="h-6 px-1.5 py-1">Payment</TableHead></TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                 {variant.acquisitionHistory.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((batch) => (
@@ -640,4 +639,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
