@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -165,9 +165,16 @@ export default function AccountsPage() {
     }, 0);
   }, [mockProducts, mockSales, refreshTrigger]);
 
+  const currentDigitalBalance = useMemo(() => {
+    const digitalInflows = mockSales.reduce((sum, sale) => sum + (sale.digitalPaid || 0), 0);
+    const digitalOutflowsFromSuppliers = mockProducts.flatMap(p => p.acquisitionHistory).reduce((sum, batch) => sum + (batch.digitalPaid || 0), 0);
+    const digitalOutflowsFromExpenses = mockExpenses.reduce((sum, expense) => sum + (expense.digitalPaid || 0), 0);
+    return digitalInflows - digitalOutflowsFromSuppliers - digitalOutflowsFromExpenses;
+  }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
+
   const totalCapital = useMemo(() => {
-    return currentCashInHand + currentInventoryValue;
-  }, [currentCashInHand, currentInventoryValue]);
+    return currentCashInHand + currentDigitalBalance + currentInventoryValue;
+  }, [currentCashInHand, currentDigitalBalance, currentInventoryValue]);
 
   const handleUpdateCash = () => {
     if (!user) return;
@@ -373,8 +380,9 @@ export default function AccountsPage() {
                 <CardTitle>Capital Overview</CardTitle>
                 <CardDescription>A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-3">
+              <CardContent className="grid gap-4 md:grid-cols-4">
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
                   <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCapital)}</p></div>
               </CardContent>
