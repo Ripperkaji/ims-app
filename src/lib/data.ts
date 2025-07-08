@@ -1,7 +1,7 @@
 
-import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole } from '@/types';
-import { formatISO } from 'date-fns';
-import { calculateCurrentStock as calculateStockShared } from './productUtils'; // For internal use if needed
+import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole, ProductType } from '@/types';
+import { formatISO, subDays, subHours, subMonths } from 'date-fns'; 
+import { calculateCurrentStock as calculateStockShared } from './productUtils';
 
 export let mockProducts: Product[] = []; 
 export let mockSales: Sale[] = [];
@@ -32,9 +32,9 @@ export function addSystemExpense(expenseData: Omit<Expense, 'id'>, actorName: st
       id: `exp-sys-${Date.now()}-${Math.random().toString(36).substring(2,7)}`, 
       ...expenseData,
       recordedBy: actorName, 
-      paymentMethod: 'Digital',
-      cashPaid: expenseData.amount,
-      digitalPaid: 0,
+      paymentMethod: 'Digital', // Assuming system expenses are digital for mock
+      cashPaid: 0,
+      digitalPaid: expenseData.amount,
       amountDue: 0,
   };
   mockExpenses.push(newExpense);
@@ -122,15 +122,149 @@ export function deleteManagedUser(userId: string, deletedBy: string): boolean {
 }
 
 
-function initializeDefaultUsers() {
-    if (mockManagedUsers.length === 0) {
-        mockManagedUsers.push(
-            { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-            { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
-        );
-         addLogEntry('System', 'Initialization', 'Default admin users created.');
+function initializeData() {
+    if (mockProducts.length > 0 || mockManagedUsers.length > 0) {
+        return;
     }
+
+    addLogEntry('System', 'Initialization', 'Starting data initialization...');
+
+    // 1. Initialize Users
+    mockManagedUsers.push(
+        { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
+        { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
+        { id: 'user-staff-1', name: 'Staff User', email: 'staff.user@sh.com', contactNumber: '9800000003', role: 'staff', passwordHash: 'staff123', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
+    );
+    addLogEntry('System', 'Initialization', 'Default users created.');
+
+    // 2. Initialize Capital
+    mockCapital.cashInHand = 50000;
+    mockCapital.lastUpdated = new Date().toISOString();
+    addLogEntry('System', 'Initialization', `Initial cash in hand set to NRP ${mockCapital.cashInHand}.`);
+
+    // 3. Initialize Products
+    const productDefinitions = [
+        // Disposables
+        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Lush Ice', category: 'Disposables', cost: 800, price: 1200, stock: 20, supplier: 'Vape Supplies Co.' },
+        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Grape Ice', category: 'Disposables', cost: 800, price: 1200, stock: 15, supplier: 'Vape Supplies Co.' },
+        { name: 'ELFBAR', modelName: 'BC5000', flavorName: 'Watermelon Ice', category: 'Disposables', cost: 1500, price: 2200, stock: 10, supplier: 'Global Vapes Inc.', due: 7500 }, // Has due
+        { name: 'YUOTO', modelName: 'THANOS', flavorName: 'Blueberry Ice', category: 'Disposables', cost: 1600, price: 2500, stock: 5, supplier: 'Global Vapes Inc.'},
+
+        // E-liquids
+        { name: 'DR. VAPES', modelName: 'PANTHER', flavorName: 'Pink', category: 'E-liquid Free Base', cost: 1200, price: 1800, stock: 8, supplier: 'E-Juice World' },
+        { name: 'BLVK', modelName: 'SALT', flavorName: 'Cuban Cigar', category: 'E-liquid Nic Salt', cost: 1300, price: 2000, stock: 12, supplier: 'E-Juice World' },
+        { name: 'NASTY', modelName: 'SALT', flavorName: 'Cush Man', category: 'E-liquid Nic Salt', cost: 1100, price: 1700, stock: 7, supplier: 'E-Juice World' },
+
+        // Devices and Coils
+        { name: 'VOOPOO', modelName: 'DRAG S', category: 'POD/MOD Devices', cost: 4500, price: 6500, stock: 4, supplier: 'Hardware Distribution', due: 4500 },
+        { name: 'SMOK', modelName: 'RPM 2', flavorName: '0.16 Mesh', category: 'Coils', cost: 350, price: 500, stock: 50, supplier: 'Hardware Distribution' },
+        { name: 'GEEKVAPE', modelName: 'Z-COIL', flavorName: '0.4 Mesh', category: 'Coils', cost: 380, price: 550, stock: 30, supplier: 'Hardware Distribution' }
+    ];
+
+    productDefinitions.forEach((p, index) => {
+        const newProductId = `prod-${index}-${Date.now()}`;
+        const totalBatchCost = p.cost * p.stock;
+        const dueAmount = p.due || 0;
+        const cashPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : totalBatchCost;
+        const digitalPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : 0;
+        const paymentMethod: AcquisitionPaymentMethod = dueAmount > 0 ? 'Hybrid' : 'Cash';
+
+        const firstBatch: AcquisitionBatch = {
+            batchId: `batch-${newProductId}-${Date.now()}`,
+            date: subDays(new Date(), 30 + index * 2).toISOString(),
+            condition: 'Initial Stock',
+            supplierName: p.supplier,
+            quantityAdded: p.stock,
+            costPricePerUnit: p.cost,
+            sellingPricePerUnitAtAcquisition: p.price,
+            paymentMethod,
+            totalBatchCost,
+            cashPaid,
+            digitalPaid,
+            dueToSupplier: dueAmount,
+            addedBy: 'SKG'
+        };
+
+        const newProduct: Product = {
+            id: newProductId,
+            name: p.name,
+            modelName: p.modelName,
+            flavorName: p.flavorName,
+            category: p.category as ProductType,
+            currentSellingPrice: p.price,
+            currentCostPrice: p.cost,
+            acquisitionHistory: [firstBatch],
+            damagedQuantity: index % 4 === 0 ? 1 : 0, // Some damaged items
+            testerQuantity: index % 5 === 0 ? 1 : 0 // Some testers
+        };
+        mockProducts.push(newProduct);
+    });
+    addLogEntry('System', 'Initialization', `${mockProducts.length} products created.`);
+
+
+    // 4. Initialize Sales
+    const saleCustomers = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
+    for(let i=0; i < 15; i++) {
+        const product1 = mockProducts[i % mockProducts.length];
+        const product2 = mockProducts[(i + 3) % mockProducts.length];
+        const quantity1 = 1;
+        const quantity2 = (i % 3 === 0) ? 1 : 0;
+        let totalAmount = product1.currentSellingPrice * quantity1;
+
+        const saleItems : SaleItem[] = [{
+            productId: product1.id,
+            productName: `${product1.name}${product1.modelName ? ` (${product1.modelName})` : ''}${product1.flavorName ? ` - ${product1.flavorName}` : ''}`.trim(),
+            quantity: quantity1,
+            unitPrice: product1.currentSellingPrice,
+            totalPrice: product1.currentSellingPrice * quantity1
+        }];
+
+        if (quantity2 > 0 && product1.id !== product2.id) {
+             saleItems.push({
+                productId: product2.id,
+                productName: `${product2.name}${product2.modelName ? ` (${product2.modelName})` : ''}${product2.flavorName ? ` - ${product2.flavorName}` : ''}`.trim(),
+                quantity: quantity2,
+                unitPrice: product2.currentSellingPrice,
+                totalPrice: product2.currentSellingPrice * quantity2
+             });
+             totalAmount += product2.currentSellingPrice * quantity2;
+        }
+
+        const isDue = i % 4 === 0;
+        const isHybrid = i % 5 === 0 && !isDue;
+
+        const newSale: Sale = {
+            id: `sale-${i}-${Date.now()}`,
+            customerName: saleCustomers[i % saleCustomers.length],
+            customerContact: `98000000${10 + i}`,
+            items: saleItems,
+            totalAmount: totalAmount,
+            cashPaid: isDue ? 0 : (isHybrid ? totalAmount / 2 : totalAmount),
+            digitalPaid: isDue ? 0 : (isHybrid ? totalAmount / 2 : 0),
+            amountDue: isDue ? totalAmount : 0,
+            formPaymentMethod: isDue ? 'Due' : (isHybrid ? 'Hybrid' : 'Cash'),
+            date: subDays(new Date(), i * 2).toISOString(),
+            status: isDue ? 'Due' : 'Paid',
+            createdBy: i % 2 === 0 ? 'NPS' : 'Staff User',
+            saleOrigin: i % 2 === 0 ? 'store' : 'online',
+            isFlagged: i === 1,
+            flaggedComment: i === 1 ? 'Customer reported item was faulty. Exchanged on spot.' : ''
+        };
+        mockSales.push(newSale);
+    }
+     addLogEntry('System', 'Initialization', `${mockSales.length} sales created.`);
+
+     // 5. Initialize Expenses
+     mockExpenses.push(
+         { id: 'exp-1', date: subDays(new Date(), 40).toISOString(), description: 'Office Rent - May', category: 'Rent', amount: 25000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 25000, digitalPaid: 0, amountDue: 0},
+         { id: 'exp-2', date: subDays(new Date(), 25).toISOString(), description: 'Internet Bill', category: 'Utilities', amount: 2000, recordedBy: 'SKG', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 2000, amountDue: 0 },
+         { id: 'exp-3', date: subDays(new Date(), 15).toISOString(), description: 'Catering for event', category: 'Marketing and Advertising', amount: 5000, recordedBy: 'NPS', paymentMethod: 'Due', cashPaid: 0, digitalPaid: 0, amountDue: 5000 },
+         { id: 'exp-4', date: subDays(new Date(), 5).toISOString(), description: 'Staff Salary - May', category: 'Salaries and Benefits', amount: 15000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 10000, digitalPaid: 5000, amountDue: 0 }
+     );
+     addLogEntry('System', 'Initialization', `${mockExpenses.length} expenses created.`);
+
+     addLogEntry('System', 'Initialization', 'Mock data generation complete.');
 }
 
-// Initialize default users on load
-initializeDefaultUsers();
+
+initializeData();
