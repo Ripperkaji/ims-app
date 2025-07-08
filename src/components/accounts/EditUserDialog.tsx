@@ -75,17 +75,15 @@ export default function EditUserDialog({ isOpen, onClose, userToEdit, onUserEdit
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-1.5">
-            <Label htmlFor="editUserName">Full Name</Label>
+            <Label htmlFor="editUserName">Full Name / Username</Label>
             <Input id="editUserName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., John Staff" autoFocus />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="editUserContact">Contact Number</Label>
             <Input id="editUserContact" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98XXXXXXXX" />
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="editUserEmail">Email</Label>
-            <Input id="editUserEmail" value={userToEdit.email} disabled className="bg-muted/50" />
-            <p className="text-xs text-muted-foreground">Email and role cannot be changed.</p>
+           <div className="space-y-1.5">
+             <p className="text-sm text-muted-foreground">The user role cannot be changed.</p>
           </div>
         </div>
         <DialogFooter>

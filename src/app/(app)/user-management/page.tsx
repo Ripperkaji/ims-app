@@ -64,7 +64,7 @@ export default function UserManagementPage() {
   const handleCloseDeleteDialog = () => setUserToDelete(null);
 
 
-  const handleAddUser = (name: string, email: string, contact: string, role: UserRole, password_plaintext: string) => {
+  const handleAddUser = (name: string, contact: string, role: UserRole, password_plaintext: string) => {
     if (!user) return;
     const newUser = addManagedUser(name, role, password_plaintext, user.name, contact);
     if (newUser) {
@@ -72,7 +72,7 @@ export default function UserManagementPage() {
       toast({ title: "User Added", description: `User ${name} has been added successfully.` });
       handleCloseAddUserDialog();
     } else {
-      toast({ title: "Error", description: "Failed to add user. Email might already exist.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to add user. A user with a similar name might already exist.", variant: "destructive" });
     }
   };
   
@@ -134,7 +134,6 @@ export default function UserManagementPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created At</TableHead>
@@ -145,7 +144,6 @@ export default function UserManagementPage() {
                   {managedUsers.map((managedUser) => (
                     <TableRow key={managedUser.id}>
                       <TableCell className="font-medium">{managedUser.name}</TableCell>
-                      <TableCell>{managedUser.email}</TableCell>
                       <TableCell>{managedUser.contactNumber}</TableCell>
                       <TableCell><Badge variant={managedUser.status === 'active' ? 'default' : 'secondary'}>{managedUser.status}</Badge></TableCell>
                       <TableCell>{format(parseISO(managedUser.createdAt), 'MMM dd, yyyy')}</TableCell>
