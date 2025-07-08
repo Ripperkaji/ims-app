@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect } from 'react';
@@ -7,7 +6,6 @@ import AppHeader from '@/components/layout/AppHeader';
 import { useAuthStore } from '@/stores/authStore';
 import { useRouter } from 'next/navigation'; // Keep for potential direct usage if needed
 import { Loader2 } from 'lucide-react';
-import TawkToChat from '@/components/chat/TawkToChat';
 
 export default function AppLayout({
   children,
@@ -54,7 +52,6 @@ export default function AppLayout({
         <AppHeader />
         <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
       </div>
-      <TawkToChat />
     </div>
   );
 }
