@@ -171,7 +171,7 @@ export default function AccountsPage() {
     return digitalInflows - digitalOutflowsFromSuppliers - digitalOutflowsFromExpenses;
   }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
 
-  const totalCapital = useMemo(() => {
+  const totalCurrentAssets = useMemo(() => {
     return currentCashInHand + currentDigitalBalance + currentInventoryValue;
   }, [currentCashInHand, currentDigitalBalance, currentInventoryValue]);
 
@@ -369,7 +369,7 @@ export default function AccountsPage() {
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentCashInHand)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentDigitalBalance)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP ${formatCurrency(currentInventoryValue)}</p></div>
-                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Capital</h3><p className="text-2xl font-bold text-primary">NRP ${formatCurrency(totalCapital)}</p></div>
+                  <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Current Assets</h3><p className="text-2xl font-bold text-primary">NRP ${formatCurrency(totalCurrentAssets)}</p></div>
               </CardContent>
             </Card>
           </div>
