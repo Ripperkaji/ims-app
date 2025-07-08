@@ -66,8 +66,8 @@ export const updateCashInHand = (newAmount: number, actorName: string): { newAmo
 
 export function addManagedUser(name: string, role: UserRole, password_plaintext: string, addedBy: string, contactNumber: string): ManagedUser | null {
   const email = `${name.toLowerCase().replace(/\s+/g, '.')}@sh.com`;
-  if (mockManagedUsers.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-    console.error(`User with email ${email} already exists.`);
+  if (mockManagedUsers.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+    console.error(`User with name ${name} already exists.`);
     return null;
   }
   
@@ -117,7 +117,7 @@ export function deleteManagedUser(userId: string, deletedBy: string): boolean {
       return false;
   }
   mockManagedUsers.splice(userIndex, 1);
-  addLogEntry(deletedBy, 'User Deleted', `User '${deletedUser.name}' (${deletedUser.email}) was deleted by ${deletedBy}.`);
+  addLogEntry(deletedBy, 'User Deleted', `User '${deletedUser.name}' was deleted by ${deletedBy}.`);
   return true;
 }
 
@@ -126,10 +126,9 @@ function initializeDefaultUsers() {
     if (mockManagedUsers.length === 0) {
         mockManagedUsers.push(
             { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-            { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-            { id: 'user-staff-test', name: 'Staff User', email: 'staff@sh.com', contactNumber: '9800000003', role: 'staff', passwordHash: 'staff123', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
+            { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
         );
-         addLogEntry('System', 'Initialization', 'Default admin and staff users created.');
+         addLogEntry('System', 'Initialization', 'Default admin users created.');
     }
 }
 
