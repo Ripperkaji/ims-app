@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { KeyRound, ShieldCheck, Eye, EyeOff } from "lucide-react";
-import { mockLogEntries } from '@/lib/data'; 
+import { mockLogEntries, mockManagedUsers } from '@/lib/data'; 
 import ThemeSettings from '@/components/theme/ThemeSettings';
 import type { LogEntry } from '@/types';
 
 export default function AdminAccountSettingsPage() {
-  const { user } = useAuthStore();
+  const { user, actions } = useAuthStore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -27,7 +27,7 @@ export default function AdminAccountSettingsPage() {
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
 
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if (user && user.role !== 'admin' && user.role !== 'super-admin') {
       toast({
         title: "Access Denied",
         description: "You do not have permission to view this page.",
@@ -53,9 +53,14 @@ export default function AdminAccountSettingsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    
+    const currentUserData = mockManagedUsers.find(u => u.id === user.id);
+    if (!currentUserData) {
+        toast({ title: "Error", description: "Could not find your user data.", variant: "destructive" });
+        return;
+    }
 
-    const MOCK_ADMIN_DEFAULT_PASSWORD = "12345"; 
-    if (currentPassword !== MOCK_ADMIN_DEFAULT_PASSWORD) {
+    if (currentPassword !== currentUserData.passwordHash) {
       toast({ title: "Error", description: "Current password incorrect.", variant: "destructive" });
       return;
     }
@@ -64,27 +69,37 @@ export default function AdminAccountSettingsPage() {
       toast({ title: "Error", description: "New password cannot be empty.", variant: "destructive" });
       return;
     }
+    
+    if (newPassword.length < 6) {
+      toast({ title: "Error", description: "New password must be at least 6 characters.", variant: "destructive" });
+      return;
+    }
 
     if (newPassword !== confirmNewPassword) {
       toast({ title: "Error", description: "New passwords do not match.", variant: "destructive" });
       return;
     }
 
-    if (newPassword === MOCK_ADMIN_DEFAULT_PASSWORD) {
+    if (newPassword === currentUserData.passwordHash) {
       toast({ title: "Error", description: "New password cannot be the same as the old password.", variant: "destructive" });
       return;
     }
 
-    console.log(`Admin ${user.name} 'changed' password from '${currentPassword}' to '${newPassword}'`);
-    addLog("Admin Password Changed", `Admin ${user.name} updated their password.`);
-    toast({ title: "Success", description: "Password changed successfully (simulated)." });
+    // Update password in mock data
+    currentUserData.passwordHash = newPassword;
+    // If the auth store holds the full user object, we might need to update it too.
+    // For this mock, we assume the password check on next login will use the updated mockManagedUsers.
+    // actions.login(currentUserData, ()=>{}); // This would re-login user with new data if needed
+
+    addLog(`${user.role.replace('-', ' ')} Password Changed`, `${user.name} updated their password.`);
+    toast({ title: "Success", description: "Password changed successfully." });
 
     setCurrentPassword('');
     setNewPassword('');
     setConfirmNewPassword('');
   };
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     return (
         <div className="flex h-screen items-center justify-center">
             <p>Redirecting...</p>
@@ -102,7 +117,7 @@ export default function AdminAccountSettingsPage() {
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Change Your Password</CardTitle>
-            <CardDescription>Update the password for your admin account ({user.name}).</CardDescription>
+            <CardDescription>Update the password for your account ({user.name}).</CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-6">

@@ -1,15 +1,15 @@
 
 "use client";
 
-import type { UserRole } from '@/types';
+import type { ManagedUser } from '@/types';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 interface AuthState {
-  user: { role: UserRole; name: string } | null;
+  user: ManagedUser | null;
   isLoading: boolean; // True until persisted state is loaded or first check is done
   actions: {
-    login: (role: UserRole, name: string, routerPush: (path: string) => void) => void;
+    login: (userData: ManagedUser, routerPush: (path: string) => void) => void;
     logout: (routerPush: (path: string) => void) => void;
     setLoading: (loading: boolean) => void;
     initializeSession: () => void; // Action to call on initial mount if not hydrated
@@ -22,8 +22,7 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isLoading: true, // Start as true
       actions: {
-        login: (role, name, routerPush) => {
-          const userData = { role, name };
+        login: (userData, routerPush) => {
           set({ user: userData, isLoading: false });
           routerPush('/dashboard');
         },
@@ -61,7 +60,3 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
-
-// Ensure no onFinishHydration listener is present here at the module level,
-// as it was causing SSR issues. The onRehydrateStorage callback and ClientAuthInitializer
-// now handle the post-hydration logic correctly.

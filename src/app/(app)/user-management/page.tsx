@@ -9,6 +9,7 @@ import { UserCog, UserPlus, Edit, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { mockManagedUsers, addManagedUser, editManagedUser, deleteManagedUser } from "@/lib/data"; 
 import type { ManagedUser, UserRole } from "@/types";
 import { format } from 'date-fns';
@@ -38,13 +39,16 @@ export default function UserManagementPage() {
   const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null); 
   const [isDeleteUserConfirmationDialogOpen, setIsDeleteUserConfirmationDialogOpen] = useState(false); 
 
+  const refreshUsers = () => {
+     setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  };
+
   useEffect(() => {
-    setManagedUsersList([...mockManagedUsers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    refreshUsers();
   }, []);
 
-
   useEffect(() => {
-    if (user && user.role !== 'admin') {
+    if (user && user.role !== 'admin' && user.role !== 'super-admin') {
       toast({
         title: "Access Denied",
         description: "You do not have permission to view this page.",
@@ -54,46 +58,43 @@ export default function UserManagementPage() {
     }
   }, [user, router, toast]);
 
-  const handleUserAdded = (name: string, role: UserRole, defaultPassword: string) => {
+  const handleUserAdded = (name: string, email: string, contact: string, role: UserRole, password_plaintext: string) => {
     if (!user) return;
-    const newUser = addManagedUser(name, 'staff', defaultPassword, user.name); // Role is fixed to staff here
+    const newUser = addManagedUser(name, email, contact, role, password_plaintext, user.name);
     if (newUser) {
-      setManagedUsersList(prevUsers => [...prevUsers, newUser].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      refreshUsers();
       toast({
-        title: "Staff User Added",
-        description: `Staff user '${newUser.name}' has been added.`,
+        title: "User Added",
+        description: `User '${newUser.name}' has been added.`,
       });
     } else {
       toast({
         title: "Error",
-        description: "Failed to add staff user. Ensure name and password are provided.",
+        description: "Failed to add user. The email might already be in use.",
         variant: "destructive",
       });
     }
     setIsAddUserDialogOpen(false);
   };
 
-  const handleOpenEditDialog = (staffUser: ManagedUser) => {
-    setUserToEdit(staffUser);
+  const handleOpenEditDialog = (userToEdit: ManagedUser) => {
+    setUserToEdit(userToEdit);
     setIsEditUserDialogOpen(true);
   };
 
-  const handleUserEdited = (userId: string, newName: string) => {
+  const handleUserEdited = (userId: string, newName: string, newContact: string) => {
     if (!user) return;
-    const updatedUser = editManagedUser(userId, newName, user.name);
+    const updatedUser = editManagedUser(userId, newName, newContact, user.name);
     if (updatedUser) {
-      setManagedUsersList(prevUsers => 
-        prevUsers.map(u => u.id === userId ? updatedUser : u)
-                 .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      );
+      refreshUsers();
       toast({
-        title: "Staff User Updated",
-        description: `Staff user '${updatedUser.name}' has been updated.`,
+        title: "User Updated",
+        description: `User '${updatedUser.name}' has been updated.`,
       });
     } else {
       toast({
         title: "Error",
-        description: "Failed to update staff user. Ensure the new name is valid.",
+        description: "Failed to update user.",
         variant: "destructive",
       });
     }
@@ -101,25 +102,24 @@ export default function UserManagementPage() {
     setUserToEdit(null);
   };
 
-  const handleOpenDeleteConfirmationDialog = (staffUser: ManagedUser) => {
-    setUserToDelete(staffUser);
+  const handleOpenDeleteConfirmationDialog = (userToDelete: ManagedUser) => {
+    setUserToDelete(userToDelete);
     setIsDeleteUserConfirmationDialogOpen(true);
   };
 
   const handleConfirmDeleteUser = () => {
     if (!userToDelete || !user) return;
-
     const deletedUser = deleteManagedUser(userToDelete.id, user.name);
     if (deletedUser) {
-      setManagedUsersList(prevUsers => prevUsers.filter(u => u.id !== userToDelete.id));
+      refreshUsers();
       toast({
-        title: "Staff User Deleted",
-        description: `Staff user '${deletedUser.name}' has been successfully deleted.`,
+        title: "User Deleted",
+        description: `User '${deletedUser.name}' has been successfully deleted.`,
       });
     } else {
       toast({
         title: "Error",
-        description: "Failed to delete staff user. The user might not exist or cannot be deleted.",
+        description: "Failed to delete user. The user might not exist or cannot be deleted (e.g. Super Admin).",
         variant: "destructive",
       });
     }
@@ -127,12 +127,12 @@ export default function UserManagementPage() {
     setUserToDelete(null);
   };
 
-
-  if (!user || user.role !== 'admin') {
+  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     return null;
   }
-
-  const displayableUsers = managedUsersList.filter(u => u.role === 'staff');
+  
+  const displayableUsers = managedUsersList.filter(u => u.id !== user.id); // Don't show self in list
+  const canAddUsers = user.role === 'super-admin' || user.role === 'admin';
 
   return (
     <div className="space-y-8">
@@ -146,15 +146,17 @@ export default function UserManagementPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <UserCog className="h-5 w-5 text-primary" /> Manage Staff Users
+              <UserCog className="h-5 w-5 text-primary" /> Manage Users
             </CardTitle>
             <CardDescription>
-              View, add, edit, or delete staff users. Admins are fixed and cannot be managed here.
+              View, add, edit, or delete users based on your role.
             </CardDescription>
           </div>
-          <Button onClick={() => setIsAddUserDialogOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" /> Add New Staff
-          </Button>
+          {canAddUsers && (
+            <Button onClick={() => setIsAddUserDialogOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" /> Add New User
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {displayableUsers.length > 0 ? (
@@ -162,31 +164,43 @@ export default function UserManagementPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayableUsers.map((managedStaffUser) => (
-                  <TableRow key={managedStaffUser.id}>
-                    <TableCell className="font-medium">{managedStaffUser.name}</TableCell>
-                    <TableCell className="capitalize">{managedStaffUser.role}</TableCell>
-                    <TableCell>{format(new Date(managedStaffUser.createdAt), 'MMM dd, yyyy HH:mm')}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(managedStaffUser)}>
-                        <Edit className="mr-2 h-3.5 w-3.5" /> Edit
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirmationDialog(managedStaffUser)}>
-                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {displayableUsers.map((managedUser) => {
+                  const canEdit = user.role === 'super-admin' || (user.role === 'admin' && managedUser.role === 'staff');
+                  const canDelete = (user.role === 'super-admin' && managedUser.role !== 'super-admin') || (user.role === 'admin' && managedUser.role === 'staff');
+                  return (
+                    <TableRow key={managedUser.id}>
+                      <TableCell className="font-medium">{managedUser.name}</TableCell>
+                      <TableCell>{managedUser.email}</TableCell>
+                      <TableCell>{managedUser.contactNumber}</TableCell>
+                      <TableCell className="capitalize">{managedUser.role.replace('-',' ')}</TableCell>
+                       <TableCell>
+                        <Badge variant={managedUser.status === 'active' ? 'default' : 'secondary'}>{managedUser.status}</Badge>
+                       </TableCell>
+                      <TableCell>{format(new Date(managedUser.createdAt), 'MMM dd, yyyy')}</TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEditDialog(managedUser)} disabled={!canEdit}>
+                          <Edit className="mr-2 h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleOpenDeleteConfirmationDialog(managedUser)} disabled={!canDelete}>
+                          <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           ) : (
-            <p className="text-center py-4 text-muted-foreground">No staff users found. Add new staff using the button above.</p>
+            <p className="text-center py-4 text-muted-foreground">No other users found. Add new users using the button above.</p>
           )}
         </CardContent>
       </Card>
@@ -196,6 +210,7 @@ export default function UserManagementPage() {
           isOpen={isAddUserDialogOpen}
           onClose={() => setIsAddUserDialogOpen(false)}
           onUserAdded={handleUserAdded}
+          currentUserRole={user.role}
         />
       )}
 
@@ -212,9 +227,9 @@ export default function UserManagementPage() {
         <AlertDialog open={isDeleteUserConfirmationDialogOpen} onOpenChange={setIsDeleteUserConfirmationDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Staff User Deletion</AlertDialogTitle>
+              <AlertDialogTitle>Confirm User Deletion</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete the staff user "<strong>{userToDelete.name}</strong>"? 
+                Are you sure you want to delete the user "<strong>{userToDelete.name}</strong>"? 
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

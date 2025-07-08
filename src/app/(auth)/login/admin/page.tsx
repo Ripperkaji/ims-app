@@ -1,6 +1,7 @@
 
-import LoginForm from '@/components/auth/LoginForm';
+import { redirect } from 'next/navigation';
 
 export default function AdminLoginPage() {
-  return <LoginForm role="admin" adminUsernames={["NPS", "SKG"]} />;
+  redirect('/login');
+  return null;
 }

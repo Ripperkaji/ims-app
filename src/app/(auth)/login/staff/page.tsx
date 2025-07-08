@@ -1,5 +1,7 @@
-import LoginForm from '@/components/auth/LoginForm';
+
+import { redirect } from 'next/navigation';
 
 export default function StaffLoginPage() {
-  return <LoginForm role="staff" />;
+  redirect('/login');
+  return null;
 }

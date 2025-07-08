@@ -14,7 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { UserCog, Edit } from 'lucide-react';
+import { Edit } from 'lucide-react';
 import type { ManagedUser } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,18 +22,21 @@ interface EditUserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   userToEdit: ManagedUser | null;
-  onUserEdited: (userId: string, newName: string) => void;
+  onUserEdited: (userId: string, newName: string, newContact: string) => void;
 }
 
 export default function EditUserDialog({ isOpen, onClose, userToEdit, onUserEdited }: EditUserDialogProps) {
   const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
     if (userToEdit && isOpen) {
       setName(userToEdit.name);
+      setContact(userToEdit.contactNumber);
     } else if (!isOpen) {
-      setName(''); // Reset name when dialog is closed or no user
+      setName('');
+      setContact('');
     }
   }, [userToEdit, isOpen]);
 
@@ -43,15 +46,17 @@ export default function EditUserDialog({ isOpen, onClose, userToEdit, onUserEdit
       return;
     }
     if (!name.trim()) {
-      toast({ title: "Name Required", description: "Please enter a name for the staff user.", variant: "destructive" });
+      toast({ title: "Name Required", description: "Please enter a name for the user.", variant: "destructive" });
       return;
     }
-    onUserEdited(userToEdit.id, name.trim());
-    // Do not resetForm here, parent will close and useEffect will reset
+    if (!contact.trim()) {
+      toast({ title: "Contact Required", description: "Please enter a contact number.", variant: "destructive" });
+      return;
+    }
+    onUserEdited(userToEdit.id, name.trim(), contact.trim());
   };
 
   const handleDialogClose = () => {
-    // Parent handles resetting userToEdit, which triggers useEffect to clear name
     onClose();
   };
 
@@ -62,32 +67,25 @@ export default function EditUserDialog({ isOpen, onClose, userToEdit, onUserEdit
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Edit className="h-5 w-5 text-primary" /> Edit Staff User
+            <Edit className="h-5 w-5 text-primary" /> Edit User
           </DialogTitle>
           <DialogDescription>
-            Modify the details for staff user: {userToEdit.name}.
+            Modify the details for user: {userToEdit.name}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-1.5">
-            <Label htmlFor="editUserName">Staff User Name</Label>
-            <Input
-              id="editUserName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="E.g., John Staff"
-              autoFocus
-            />
+            <Label htmlFor="editUserName">Full Name</Label>
+            <Input id="editUserName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., John Staff" autoFocus />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="editUserRole">Role</Label>
-            <Input
-              id="editUserRole"
-              value="Staff" // Role is fixed to Staff
-              disabled
-              className="bg-muted/50"
-            />
-             <p className="text-xs text-muted-foreground">Role cannot be changed.</p>
+            <Label htmlFor="editUserContact">Contact Number</Label>
+            <Input id="editUserContact" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98XXXXXXXX" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="editUserEmail">Email</Label>
+            <Input id="editUserEmail" value={userToEdit.email} disabled className="bg-muted/50" />
+            <p className="text-xs text-muted-foreground">Email and role cannot be changed.</p>
           </div>
         </div>
         <DialogFooter>

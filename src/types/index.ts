@@ -2,7 +2,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'staff';
+export type UserRole = 'super-admin' | 'admin' | 'staff';
 
 export const ALL_PRODUCT_TYPES = [
   "Disposables",
@@ -178,9 +178,13 @@ export type ResolutionData = Condition1Data | Condition2Data | Condition3Data;
 export interface ManagedUser {
   id: string;
   name: string;
+  email: string;
+  contactNumber: string;
   role: UserRole;
-  defaultPassword?: string; // Added for staff's initial password
+  passwordHash: string; // Storing a plaintext password for this mock, in real app this would be a hash.
+  status: 'active' | 'pending';
   createdAt: string;
+  addedBy: string;
 }
 
 // Accounts Payable Types
