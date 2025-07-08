@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -23,23 +22,21 @@ interface AddUserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onUserAdded: (name: string, contact: string, role: UserRole, password_plaintext: string) => void;
-  currentUserRole: UserRole;
 }
 
-export default function AddUserDialog({ isOpen, onClose, onUserAdded, currentUserRole }: AddUserDialogProps) {
+export default function AddUserDialog({ isOpen, onClose, onUserAdded }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole | ''>(currentUserRole === 'admin' ? 'staff' : '');
   const { toast } = useToast();
 
   const handleConfirmAddUser = () => {
     if (!name.trim()) { toast({ title: "Name Required", variant: "destructive" }); return; }
     if (!contact.trim()) { toast({ title: "Contact Required", variant: "destructive" }); return; }
-    if (!role) { toast({ title: "Role Required", variant: "destructive" }); return; }
     if (!password.trim()) { toast({ title: "Password Required", variant: "destructive"}); return; }
     
-    onUserAdded(name, contact, role, password);
+    // Role is always 'staff' when adding via this dialog
+    onUserAdded(name, contact, 'staff', password);
     resetForm();
   };
 
@@ -47,7 +44,6 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded, currentUse
     setName('');
     setContact('');
     setPassword('');
-    setRole(currentUserRole === 'admin' ? 'staff' : '');
   };
 
   const handleDialogClose = () => {
@@ -62,37 +58,20 @@ export default function AddUserDialog({ isOpen, onClose, onUserAdded, currentUse
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" /> Add New User
+            <UserPlus className="h-5 w-5 text-primary" /> Add New Staff User
           </DialogTitle>
           <DialogDescription>
-            Enter the details for the new user account.
+            Enter the details for the new staff account.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="space-y-1.5">
-            <Label htmlFor="userName">Full Name / Username</Label>
-            <Input id="userName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., Jane Doe" autoFocus />
+            <Label htmlFor="userName">Username</Label>
+            <Input id="userName" value={name} onChange={(e) => setName(e.target.value)} placeholder="E.g., jane.doe" autoFocus />
           </div>
            <div className="space-y-1.5">
             <Label htmlFor="userContact">Contact Number</Label>
             <Input id="userContact" type="tel" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="98XXXXXXXX" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="userRole">Role</Label>
-             <Select 
-                value={role} 
-                onValueChange={(value) => setRole(value as UserRole)}
-                disabled={currentUserRole === 'admin'}
-            >
-              <SelectTrigger id="userRole">
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                {currentUserRole === 'super-admin' && <SelectItem value="admin">Admin</SelectItem>}
-                <SelectItem value="staff">Staff</SelectItem>
-              </SelectContent>
-            </Select>
-            {currentUserRole === 'admin' && <p className="text-xs text-muted-foreground">Admins can only add Staff users.</p>}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="defaultPassword">Set Initial Password</Label>

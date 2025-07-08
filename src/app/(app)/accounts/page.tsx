@@ -173,7 +173,7 @@ export default function AccountsPage() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-          <Wallet className="h-7 w-7 text-primary" /> Accounts & Capital
+          <Wallet className="h-7 w-7 text-primary" /> Finance
         </h1>
       </div>
 

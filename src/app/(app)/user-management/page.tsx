@@ -5,13 +5,12 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { UserCog, UserPlus, Edit, Trash2 } from "lucide-react"; 
+import { UserCog, UserPlus, Edit, Trash2, Loader2 } from "lucide-react"; 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { ManagedUser, UserRole } from '@/types';
-import { mockManagedUsers, addManagedUser, editManagedUser, deleteManagedUser } from '@/lib/data';
 import AddUserDialog from '@/components/accounts/AddUserDialog';
 import EditUserDialog from '@/components/accounts/EditUserDialog';
 import {
@@ -23,7 +22,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { format, parseISO } from 'date-fns';
 
@@ -33,19 +31,33 @@ export default function UserManagementPage() {
   const { toast } = useToast();
 
   const [managedUsers, setManagedUsers] = useState<ManagedUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<ManagedUser | null>(null);
   const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<ManagedUser | null>(null);
   
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/users');
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
+      setManagedUsers(data);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not fetch user data.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user && user.role !== 'admin') {
       toast({ title: "Access Denied", description: "You do not have permission to view this page.", variant: "destructive" });
       router.push('/dashboard');
       return;
     }
-    // Filter to only show staff users that can be managed
-    setManagedUsers(mockManagedUsers.filter(u => u.role === 'staff').sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+    fetchUsers();
   }, [user, router, toast]);
 
   const handleOpenAddUserDialog = () => setIsAddUserDialogOpen(true);
@@ -64,40 +76,64 @@ export default function UserManagementPage() {
   const handleCloseDeleteDialog = () => setUserToDelete(null);
 
 
-  const handleAddUser = (name: string, contact: string, role: UserRole, password_plaintext: string) => {
+  const handleAddUser = async (name: string, contact: string, role: UserRole, password_plaintext: string) => {
     if (!user) return;
-    const newUser = addManagedUser(name, role, password_plaintext, user.name, contact);
-    if (newUser) {
-      setManagedUsers(prev => [newUser, ...prev].filter(u => u.role === 'staff'));
+    try {
+      const response = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, contactNumber: contact, defaultPassword: password_plaintext, addedBy: user.name }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to add user');
+      
       toast({ title: "User Added", description: `User ${name} has been added successfully.` });
+      fetchUsers(); // Refresh list
       handleCloseAddUserDialog();
-    } else {
-      toast({ title: "Error", description: "Failed to add user. A user with a similar name might already exist.", variant: "destructive" });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     }
   };
   
-  const handleEditUser = (userId: string, newName: string, newContact: string) => {
+  const handleEditUser = async (userId: string, newName: string, newContact: string) => {
     if (!user) return;
-    const updatedUser = editManagedUser(userId, newName, user.name, newContact);
-    if (updatedUser) {
-        setManagedUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
-        toast({ title: "User Updated", description: `User ${newName}'s details have been updated.` });
-        handleCloseEditUserDialog();
-    } else {
-        toast({ title: "Error", description: "Failed to update user.", variant: "destructive" });
+    try {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName, contactNumber: newContact, editedBy: user.name }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update user');
+
+      toast({ title: "User Updated", description: `User ${newName}'s details have been updated.` });
+      fetchUsers(); // Refresh list
+      handleCloseEditUserDialog();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
     }
   };
   
-  const handleDeleteUser = () => {
+  const handleDeleteUser = async () => {
     if (!user || !userToDelete) return;
-    const success = deleteManagedUser(userToDelete.id, user.name);
-    if (success) {
-      setManagedUsers(prev => prev.filter(u => u.id !== userToDelete.id));
+    try {
+      const response = await fetch(`/api/users/${userToDelete.id}?deletedBy=${user.name}`, {
+        method: 'DELETE',
+      });
+       if (!response.ok) {
+         const result = await response.json();
+         throw new Error(result.error || 'Failed to delete user');
+       }
       toast({ title: "User Deleted", description: `User ${userToDelete.name} has been deleted.` });
-    } else {
-      toast({ title: "Error", description: "Failed to delete user.", variant: "destructive" });
+      fetchUsers(); // Refresh list
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Error", description: errorMessage, variant: "destructive" });
+    } finally {
+        handleCloseDeleteDialog();
     }
-    handleCloseDeleteDialog();
   };
 
 
@@ -129,7 +165,11 @@ export default function UserManagementPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {managedUsers.length > 0 ? (
+            {isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+            ) : managedUsers.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -170,7 +210,6 @@ export default function UserManagementPage() {
         isOpen={isAddUserDialogOpen}
         onClose={handleCloseAddUserDialog}
         onUserAdded={handleAddUser}
-        currentUserRole={user.role}
       />
       
       {userToEdit && (

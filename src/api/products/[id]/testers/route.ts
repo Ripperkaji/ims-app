@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 const updateTesterSchema = z.object({
   newTesterQuantity: z.number().min(0, "Sample/Tester quantity cannot be negative."),
+  actorName: z.string().min(1, "Actor name is required."),
 });
 
 export async function PUT(
@@ -28,11 +29,10 @@ export async function PUT(
       return NextResponse.json({ error: "Invalid input", details: validation.error.flatten().fieldErrors }, { status: 400 });
     }
     
-    const { newTesterQuantity } = validation.data;
+    const { newTesterQuantity, actorName } = validation.data;
     const productToUpdate = mockProducts[productIndex];
     const oldTesterQty = productToUpdate.testerQuantity || 0;
     
-    // Calculate current stock *before* changing tester quantity to see how many are available to convert
     const oldStock = calculateCurrentStock(productToUpdate, mockSales);
 
     if (newTesterQuantity === oldTesterQty) {
@@ -54,22 +54,20 @@ export async function PUT(
         description: `Sample/Demo Allocation: ${deltaTesters}x ${productToUpdate.name}`,
         category: "Sample/Demo Allocation",
         amount: deltaTesters * productToUpdate.currentCostPrice,
-        recordedBy: "API System", // As this is an API action
+        recordedBy: actorName, 
       };
-      addSystemExpense(testerExpense, "API System");
+      addSystemExpense(testerExpense, actorName);
     }
-    // If deltaTesters < 0, we are decreasing testers. Stock will be effectively increased by calculateCurrentStock.
 
     productToUpdate.testerQuantity = newTesterQuantity;
     mockProducts[productIndex] = productToUpdate;
 
-    // Recalculate stock *after* tester quantity change
     const newStockAfterUpdate = calculateCurrentStock(productToUpdate, mockSales);
 
     addLogEntry(
-        "API System", 
+        actorName, 
         "Sample/Demo Quantity Updated", 
-        `Sample/Demo quantity for '${productToUpdate.name}' (ID: ${productId}) changed from ${oldTesterQty} to ${newTesterQuantity} by API. Sellable stock changed from ${oldStock} to ${newStockAfterUpdate}.`
+        `Sample/Demo quantity for '${productToUpdate.name}' (ID: ${productId}) changed from ${oldTesterQty} to ${newTesterQuantity} by ${actorName}. Sellable stock changed from ${oldStock} to ${newStockAfterUpdate}.`
     );
     
     const updatedProductWithStock = {
