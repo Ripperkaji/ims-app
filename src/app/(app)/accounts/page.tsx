@@ -499,7 +499,7 @@ export default function AccountsPage() {
           <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
           <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
           <TabsTrigger value="monthly-reports">Monthly Reports</TabsTrigger>
-          <TabsTrigger value="capital">Capital Management</TabsTrigger>
+          <TabsTrigger value="capital">Current Assets Management</TabsTrigger>
         </TabsList>
         <TabsContent value="payables" className="mt-4">
           <Card className="shadow-lg">
@@ -748,8 +748,8 @@ export default function AccountsPage() {
           <div className="space-y-6">
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle>Capital Overview</CardTitle>
-                <CardDescription>A snapshot of your business's current capital. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
+                <CardTitle>Current Assets Overview</CardTitle>
+                <CardDescription>A snapshot of your business's current assets. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-4">
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
