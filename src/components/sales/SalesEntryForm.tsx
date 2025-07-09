@@ -234,6 +234,22 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     newItems[index] = item;
     setSelectedItems(newItems);
   };
+  
+  const handleItemUnitPriceChange = (index: number, priceStr: string) => {
+    const newItems = [...selectedItems];
+    const item = newItems[index];
+    const price = parseFloat(priceStr);
+
+    if (isNaN(price) || price < 0) {
+      item.unitPrice = 0;
+    } else {
+      item.unitPrice = price;
+    }
+
+    item.totalPrice = Math.round(item.quantity * item.unitPrice * 100) / 100;
+    newItems[index] = item;
+    setSelectedItems(newItems);
+  };
 
   const handleRemoveItem = (index: number) => {
     setSelectedItems(selectedItems.filter((_, i) => i !== index));
@@ -336,7 +352,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                 const availableVariants = allGlobalProducts.filter(p => p.category === item.selectedCategory && p.name === item.selectedCompanyName);
 
                 return (
-                  <div key={item.tempId} className="grid grid-cols-[1fr_1fr_1.5fr_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
+                  <div key={item.tempId} className="grid grid-cols-[1fr_1fr_1.5fr_auto_auto_auto_auto] items-end gap-2 p-2.5 border rounded-lg bg-card">
                     <div className="space-y-1"> <Label htmlFor={`category-${index}`} className="text-xs">Category</Label> <Select value={item.selectedCategory} onValueChange={(value) => handleItemCategoryChange(index, value as ProductType | '')}> <SelectTrigger id={`category-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger> <SelectContent> {ALL_PRODUCT_TYPES.map(type => (<SelectItem key={type} value={type} className="text-xs">{type}</SelectItem>))} </SelectContent> </Select> </div>
                     <div className="space-y-1"> <Label htmlFor={`company-${index}`} className="text-xs">Company</Label> <Select value={item.selectedCompanyName} onValueChange={(value) => handleItemCompanyChange(index, value)} disabled={!item.selectedCategory}> <SelectTrigger id={`company-${index}`} className="h-9 text-xs"> <SelectValue placeholder="Select" /> </SelectTrigger> <SelectContent> {availableCompanies.length > 0 ? availableCompanies.map(c => (<SelectItem key={c} value={c} className="text-xs">{c}</SelectItem>)) : (<SelectItem value="no-companies" disabled>No companies</SelectItem>)} </SelectContent> </Select> </div>
                     <div className="space-y-1">
@@ -373,6 +389,19 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
                       </Select>
                     </div>
                     <div className="w-20 space-y-1"> <Label htmlFor={`quantity-${index}`} className="text-xs">Quantity</Label> <Input id={`quantity-${index}`} type="number" min="0" value={item.quantity} onChange={(e) => handleItemQuantityChange(index, e.target.value)} className="text-center h-9 text-xs" disabled={!item.productId} /> </div>
+                    <div className="w-24 space-y-1">
+                        <Label htmlFor={`price-${index}`} className="text-xs">Price/Unit</Label>
+                        <Input
+                            id={`price-${index}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.unitPrice}
+                            onChange={(e) => handleItemUnitPriceChange(index, e.target.value)}
+                            className="text-center h-9 text-xs"
+                            disabled={!item.productId}
+                        />
+                    </div>
                     <div className="text-right w-24 space-y-1"> <Label className="text-xs">Subtotal</Label> <p className="font-semibold text-base h-9 flex items-center justify-end">NRP {formatCurrency(item.totalPrice)}</p> </div>
                     <Button type="button" variant="destructive" size="icon" onClick={() => handleRemoveItem(index)} className="shrink-0 self-center h-8 w-8"> <Trash2 className="h-3.5 w-3.5" /> </Button>
                   </div>
