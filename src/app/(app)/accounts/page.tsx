@@ -43,20 +43,22 @@ type ReportType = 'sales' | 'expenses' | 'acquisitions';
 // --- Aging Calculation ---
 
 type AgingData = {
-  current: number; // 0-30 days
-  '31-60': number;
-  '61-90': number;
-  '90+': number;
+  "1-15": number;
+  "16-30": number;
+  "31-45": number;
+  "46-60": number;
+  "60+": number;
   total: number;
 };
 
 const calculateAging = (items: { date: string; amount: number }[]): AgingData => {
   const today = new Date();
   const agingData: AgingData = {
-    current: 0,
-    '31-60': 0,
-    '61-90': 0,
-    '90+': 0,
+    "1-15": 0,
+    "16-30": 0,
+    "31-45": 0,
+    "46-60": 0,
+    "60+": 0,
     total: 0,
   };
 
@@ -69,14 +71,20 @@ const calculateAging = (items: { date: string; amount: number }[]): AgingData =>
         }
         const diffDays = differenceInDays(today, itemDate);
 
-        if (diffDays <= 30) {
-          agingData.current += item.amount;
+        if (diffDays <= 0) { // Not overdue yet
+            return;
+        }
+        
+        if (diffDays <= 15) {
+          agingData["1-15"] += item.amount;
+        } else if (diffDays <= 30) {
+          agingData["16-30"] += item.amount;
+        } else if (diffDays <= 45) {
+          agingData["31-45"] += item.amount;
         } else if (diffDays <= 60) {
-          agingData['31-60'] += item.amount;
-        } else if (diffDays <= 90) {
-          agingData['61-90'] += item.amount;
-        } else {
-          agingData['90+'] += item.amount;
+          agingData["46-60"] += item.amount;
+        } else { // diffDays > 60
+          agingData["60+"] += item.amount;
         }
         agingData.total += item.amount;
     } catch(e) {
@@ -92,10 +100,11 @@ const AgingTable = ({ data, title }: { data: AgingData; title: string }) => {
   }
 
   const buckets = [
-    { label: "0-30 Days", value: data.current },
-    { label: "31-60 Days", value: data["31-60"] },
-    { label: "61-90 Days", value: data["61-90"] },
-    { label: "90+ Days", value: data["90+"] },
+    { label: "1-15 Days", value: data["1-15"] },
+    { label: "16-30 Days", value: data["16-30"] },
+    { label: "31-45 Days", value: data["31-45"] },
+    { label: "46-60 Days", value: data["46-60"] },
+    { label: "60+ Days", value: data["60+"] },
   ];
 
   return (
