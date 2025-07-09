@@ -12,12 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Phone, ShoppingCart, DollarSign, Filter } from "lucide-react";
+import { Users, Phone, ShoppingCart, DollarSign, Filter, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import SaleDetailsDialog from '@/components/sales/SaleDetailsDialog';
 
 interface Customer {
   id: string;
@@ -38,6 +40,7 @@ export default function CustomersPage() {
   const [filterContact, setFilterContact] = useState('');
   const [filterProduct, setFilterProduct] = useState('');
   const [filterCategory, setFilterCategory] = useState<ProductType | ''>('');
+  const [saleToView, setSaleToView] = useState<Sale | null>(null);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -118,6 +121,7 @@ export default function CustomersPage() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
@@ -210,6 +214,7 @@ export default function CustomersPage() {
                           <TableHead>Items</TableHead>
                           <TableHead className="text-right">Total Amount</TableHead>
                           <TableHead className="text-center">Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -224,6 +229,12 @@ export default function CustomersPage() {
                               <Badge variant={sale.status === 'Paid' ? 'default' : 'destructive'} className="text-xs">
                                 {sale.status}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="outline" size="icon" onClick={() => setSaleToView(sale)} title="View Details" className="h-8 w-8">
+                                  <Eye className="h-4 w-4" />
+                                  <span className="sr-only">View Details</span>
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -245,5 +256,14 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
     </div>
+
+    {saleToView && (
+      <SaleDetailsDialog
+          isOpen={!!saleToView}
+          onClose={() => setSaleToView(null)}
+          sale={saleToView}
+      />
+    )}
+    </>
   );
 }
