@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -285,7 +285,7 @@ export default function AccountsPage() {
     setSettlePayableType('');
   };
 
-  // --- Logic for Capital ---
+  // --- Logic for Current Assets ---
   const currentInventoryValue = useMemo(() => {
     return mockProducts.reduce((sum, product) => {
       const stock = calculateCurrentStock(product, mockSales);
@@ -299,10 +299,15 @@ export default function AccountsPage() {
     const digitalOutflowsFromExpenses = mockExpenses.reduce((sum, expense) => sum + (expense.digitalPaid || 0), 0);
     return digitalInflows - digitalOutflowsFromSuppliers - digitalOutflowsFromExpenses;
   }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
+  
+  const totalReceivables = useMemo(() => {
+    return mockSales.reduce((sum, sale) => sum + (sale.amountDue || 0), 0);
+  }, [mockSales, refreshTrigger]);
 
   const totalCurrentAssets = useMemo(() => {
-    return currentCashInHand + currentDigitalBalance + currentInventoryValue;
-  }, [currentCashInHand, currentDigitalBalance, currentInventoryValue]);
+    return currentCashInHand + currentDigitalBalance + currentInventoryValue + totalReceivables;
+  }, [currentCashInHand, currentDigitalBalance, currentInventoryValue, totalReceivables]);
+
 
   // --- Logic for Receivables (Due Sales) ---
   const receivablesForAging = useMemo(() => {
@@ -751,10 +756,11 @@ export default function AccountsPage() {
                 <CardTitle>Current Assets Overview</CardTitle>
                 <CardDescription>A snapshot of your business's current assets. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-4">
+              <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><FileText/> Accounts Receivable</h3><p className="text-2xl font-bold">NRP {formatCurrency(totalReceivables)}</p></div>
                   <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Current Assets</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCurrentAssets)}</p></div>
               </CardContent>
             </Card>
@@ -790,3 +796,5 @@ export default function AccountsPage() {
     </>
   );
 }
+
+    
