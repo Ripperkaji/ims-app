@@ -20,16 +20,17 @@ export async function GET(request: NextRequest) {
     const damagedProductList: DamagedProductInfo[] = mockProducts
       .filter(p => p.damagedQuantity > 0)
       .map(product => {
+        const fullProductName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+        
         const relevantLogs = mockLogEntries
           .filter(
             log =>
               log.action === "Product Damage & Stock Update (Exchange)" &&
-              log.details.includes(product.name) 
+              log.details.includes(fullProductName) 
           )
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         
         const sellableStock = calculateCurrentStock(product, mockSales);
-        const fullProductName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
         const totalDamageCost = product.damagedQuantity * product.currentCostPrice;
 
         return {
