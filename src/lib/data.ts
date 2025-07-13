@@ -5,7 +5,7 @@ import { calculateCurrentStock as calculateStockShared } from './productUtils';
 import { formatCurrency } from './utils';
 
 export let mockProducts: Product[] = []; 
-export let mockSales: Sale[] = [];
+export let mockSales: Sale[] = []; 
 export let mockExpenses: Expense[] = [];
 export let mockLogEntries: LogEntry[] = []; 
 export let mockManagedUsers: ManagedUser[] = [];
@@ -57,7 +57,7 @@ export const updateCashInHand = (newAmount: number, actorName: string): { newAmo
   addLogEntry(
     actorName,
     'Capital Updated',
-    `Cash in Hand updated by ${actorName}. Old: NRP ${formatCurrency(oldAmount)}, New: NRP ${formatCurrency(newAmount)}.`
+    `Initial Cash in Hand updated by ${actorName}. Old: NRP ${formatCurrency(oldAmount)}, New: NRP ${formatCurrency(newAmount)}.`
   );
   
   return { newAmount: mockCapital.cashInHand, lastUpdated: mockCapital.lastUpdated };

@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus, FileText } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus, FileText, Info, Save } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital, updateCashInHand, addLogEntry as globalAddLog } from "@/lib/data";
+import { mockLogEntries, mockProducts, mockExpenses, mockSales, mockCapital } from "@/lib/data";
 import type { SupplierDueItem, ExpenseDueItem, Expense, Sale, SaleItem, AcquisitionBatch } from "@/types";
 import { format, parseISO, differenceInDays, isValid, parse } from 'date-fns';
 import { cn, formatCurrency } from '@/lib/utils';
@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 type PayableType = 'supplier' | 'expense' | '';
@@ -163,7 +164,9 @@ export default function AccountsPage() {
   const [settlePayableType, setSettlePayableType] = useState<PayableType>('');
   const [isSettleDialogOpen, setIsSettleDialogOpen] = useState(false);
   
-  // State for Capital - only lastUpdated is needed now
+  // State for Capital
+  const [initialCapital, setInitialCapital] = useState(mockCapital.cashInHand);
+  const [capitalInput, setCapitalInput] = useState(mockCapital.cashInHand.toString());
   const [lastUpdated, setLastUpdated] = useState(mockCapital.lastUpdated);
   
   // State for Receivables
@@ -263,7 +266,13 @@ export default function AccountsPage() {
       batch.dueToSupplier -= totalPayment;
       batch.cashPaid += paymentDetails.cashPaid;
       batch.digitalPaid += paymentDetails.digitalPaid;
-      globalAddLog(user.name, "Vendor/Supplier Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`);
+      mockLogEntries.unshift({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: user.name,
+        action: "Vendor/Supplier Due Settled",
+        details: `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`
+      });
       toast({title: "Success", description: "Vendor/Supplier due updated."});
     } else if (settlePayableType === 'expense') {
         const expenseIndex = mockExpenses.findIndex(e => e.id === itemId);
@@ -275,7 +284,13 @@ export default function AccountsPage() {
         expense.amountDue -= totalPayment;
         expense.cashPaid += paymentDetails.cashPaid;
         expense.digitalPaid += paymentDetails.digitalPaid;
-        globalAddLog(user.name, "Expense Due Settled", `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`);
+        mockLogEntries.unshift({
+            id: `log-${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            user: user.name,
+            action: "Expense Due Settled",
+            details: `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`
+        });
         toast({title: "Success", description: "Expense due updated."});
     }
     setRefreshTrigger(prev => prev + 1);
@@ -289,9 +304,8 @@ export default function AccountsPage() {
     const cashInflowsFromSales = mockSales.reduce((sum, sale) => sum + (sale.cashPaid || 0), 0);
     const cashOutflowsForSuppliers = mockProducts.flatMap(p => p.acquisitionHistory).reduce((sum, batch) => sum + (batch.cashPaid || 0), 0);
     const cashOutflowsForExpenses = mockExpenses.reduce((sum, expense) => sum + (expense.cashPaid || 0), 0);
-    // Assuming mockCapital.cashInHand is the initial capital injection
-    return mockCapital.cashInHand + cashInflowsFromSales - cashOutflowsForSuppliers - cashOutflowsForExpenses;
-  }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
+    return initialCapital + cashInflowsFromSales - cashOutflowsForSuppliers - cashOutflowsForExpenses;
+  }, [mockSales, mockProducts, mockExpenses, refreshTrigger, initialCapital]);
 
   const currentInventoryValue = useMemo(() => {
     return mockProducts.reduce((sum, product) => {
@@ -340,7 +354,13 @@ export default function AccountsPage() {
       mockSales[saleIndex].cashPaid += mockSales[saleIndex].amountDue; 
       mockSales[saleIndex].amountDue = 0;
       mockSales[saleIndex].status = 'Paid'; 
-      globalAddLog(user.name, "Sale Marked as Paid", `Sale ID ${saleToMarkAsPaid.id} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`);
+      mockLogEntries.unshift({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: user.name,
+        action: "Sale Marked as Paid",
+        details: `Sale ID ${saleToMarkAsPaid.id} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`
+      });
       setRefreshTrigger(p => p + 1);
       toast({ title: "Sale Updated", description: `Sale ${saleToMarkAsPaid.id} marked as Paid.` });
     } else {
@@ -378,7 +398,13 @@ export default function AccountsPage() {
     if (adjustmentComment.trim()) { finalFlaggedComment = (finalFlaggedComment ? finalFlaggedComment + "\n" : "") + `Adjusted by ${user.name} on ${format(new Date(), 'MMM dd, yyyy HH:mm')}: ${adjustmentComment}`; }
     
     mockSales[originalSaleIndex] = { ...originalSale, ...updatedSaleDataFromDialog, flaggedComment: finalFlaggedComment, status: updatedSaleDataFromDialog.amountDue > 0 ? 'Due' : 'Paid' };
-    globalAddLog(user.name, "Sale Adjusted", `Sale ID ${originalSaleId} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`);
+    mockLogEntries.unshift({
+        id: `log-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        user: user.name,
+        action: "Sale Adjusted",
+        details: `Sale ID ${originalSaleId} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`
+    });
     setRefreshTrigger(p => p + 1);
     toast({ title: "Sale Adjusted", description: `Sale ${originalSaleId} has been updated.` });
     setSaleToAdjust(null);
@@ -493,6 +519,36 @@ export default function AccountsPage() {
     return Array.from(months).sort((a,b) => b.localeCompare(a));
   }, [salesByMonth, expensesByMonth, acquisitionsByMonth]);
 
+  // --- Logic for Capital Management ---
+  const handleUpdateCapital = async () => {
+    if (!user) return;
+    const numericCapital = parseFloat(capitalInput);
+    if (isNaN(numericCapital) || numericCapital < 0) {
+      toast({ title: "Invalid Amount", description: "Please enter a valid positive number for capital.", variant: "destructive" });
+      return;
+    }
+    
+    try {
+        const response = await fetch('/api/capital', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: numericCapital, actorName: user.name }),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to update capital');
+        }
+        setInitialCapital(result.newAmount);
+        setCapitalInput(result.newAmount.toString());
+        setLastUpdated(result.lastUpdated);
+        toast({ title: "Success", description: "Initial Cash in Hand (Capital) has been updated." });
+        setRefreshTrigger(p => p + 1);
+    } catch(error) {
+        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({ title: "Update Failed", description: errorMessage, variant: "destructive" });
+    }
+  };
+
 
   if (!user || user.role !== 'admin') { return null; }
 
@@ -506,12 +562,13 @@ export default function AccountsPage() {
       </div>
 
       <Tabs defaultValue="payables" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="payables">Accounts Payable</TabsTrigger>
           <TabsTrigger value="receivables">Accounts Receivable</TabsTrigger>
           <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
           <TabsTrigger value="monthly-reports">Monthly Reports</TabsTrigger>
-          <TabsTrigger value="capital">Current Assets Management</TabsTrigger>
+          <TabsTrigger value="current-assets">Current Assets</TabsTrigger>
+          <TabsTrigger value="capital">Capital Management</TabsTrigger>
         </TabsList>
         <TabsContent value="payables" className="mt-4">
           <Card className="shadow-lg">
@@ -756,7 +813,7 @@ export default function AccountsPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="capital" className="mt-4">
+        <TabsContent value="current-assets" className="mt-4">
           <div className="space-y-6">
             <Card className="shadow-lg">
               <CardHeader>
@@ -772,6 +829,42 @@ export default function AccountsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+         <TabsContent value="capital" className="mt-4">
+          <Card className="shadow-lg max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle>Capital Management</CardTitle>
+              <CardDescription>
+                Set the initial cash-in-hand for the business. This value is the starting point for calculating real-time cash flow.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Important Note</AlertTitle>
+                <AlertDescription>
+                  This value should only represent your initial business capital or a manually adjusted amount after a physical cash count. It is not affected by daily sales or expenses.
+                </AlertDescription>
+              </Alert>
+              <div>
+                <Label htmlFor="initial-capital" className="text-base">Initial Cash in Hand (NRP)</Label>
+                <Input
+                  id="initial-capital"
+                  type="number"
+                  value={capitalInput}
+                  onChange={(e) => setCapitalInput(e.target.value)}
+                  placeholder="e.g., 50000"
+                  className="mt-1 text-lg h-12"
+                />
+                 <p className="text-xs text-muted-foreground mt-1.5">Last Updated: {format(parseISO(lastUpdated), "PPP 'at' h:mm a")}</p>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleUpdateCapital} disabled={parseFloat(capitalInput) === initialCapital}>
+                <Save className="mr-2 h-4 w-4" /> Save Capital Amount
+              </Button>
+            </CardFooter>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
