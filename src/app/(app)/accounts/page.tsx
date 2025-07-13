@@ -168,6 +168,9 @@ export default function AccountsPage() {
   const [initialCapital, setInitialCapital] = useState(mockCapital.cashInHand);
   const [capitalInput, setCapitalInput] = useState(mockCapital.cashInHand.toString());
   const [lastUpdated, setLastUpdated] = useState(mockCapital.lastUpdated);
+  const [initialDigitalBalance, setInitialDigitalBalance] = useState(mockCapital.digitalBalance);
+  const [digitalBalanceInput, setDigitalBalanceInput] = useState(mockCapital.digitalBalance.toString());
+  const [lastDigitalUpdated, setLastDigitalUpdated] = useState(mockCapital.lastDigitalUpdated);
   
   // State for Receivables
   const [dueSales, setDueSales] = useState<Sale[]>([]);
@@ -318,8 +321,8 @@ export default function AccountsPage() {
     const digitalInflows = mockSales.reduce((sum, sale) => sum + (sale.digitalPaid || 0), 0);
     const digitalOutflowsFromSuppliers = mockProducts.flatMap(p => p.acquisitionHistory).reduce((sum, batch) => sum + (batch.digitalPaid || 0), 0);
     const digitalOutflowsFromExpenses = mockExpenses.reduce((sum, expense) => sum + (expense.digitalPaid || 0), 0);
-    return digitalInflows - digitalOutflowsFromSuppliers - digitalOutflowsFromExpenses;
-  }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
+    return initialDigitalBalance + digitalInflows - digitalOutflowsFromSuppliers - digitalOutflowsFromExpenses;
+  }, [mockSales, mockProducts, mockExpenses, refreshTrigger, initialDigitalBalance]);
   
   const totalReceivables = useMemo(() => {
     return mockSales.reduce((sum, sale) => sum + (sale.amountDue || 0), 0);
@@ -546,6 +549,35 @@ export default function AccountsPage() {
     } catch(error) {
         const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
         toast({ title: "Update Failed", description: errorMessage, variant: "destructive" });
+    }
+  };
+
+  const handleUpdateDigitalBalance = async () => {
+    if (!user) return;
+    const numericBalance = parseFloat(digitalBalanceInput);
+    if (isNaN(numericBalance) || numericBalance < 0) {
+      toast({ title: "Invalid Amount", description: "Please enter a valid positive number for the balance.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/capital/digital', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: numericBalance, actorName: user.name }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update balance');
+      }
+      setInitialDigitalBalance(result.newAmount);
+      setDigitalBalanceInput(result.newAmount.toString());
+      setLastDigitalUpdated(result.lastUpdated);
+      toast({ title: "Success", description: "Initial Bank/Digital Balance has been updated." });
+      setRefreshTrigger(p => p + 1);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      toast({ title: "Update Failed", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -831,40 +863,77 @@ export default function AccountsPage() {
           </div>
         </TabsContent>
          <TabsContent value="capital" className="mt-4">
-          <Card className="shadow-lg max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle>Capital Management</CardTitle>
-              <CardDescription>
-                Set the initial cash-in-hand for the business. This value is the starting point for calculating real-time cash flow.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Important Note</AlertTitle>
-                <AlertDescription>
-                  This value should only represent your initial business capital or a manually adjusted amount after a physical cash count. It is not affected by daily sales or expenses.
-                </AlertDescription>
-              </Alert>
-              <div>
-                <Label htmlFor="initial-capital" className="text-base">Initial Cash in Hand (NRP)</Label>
-                <Input
-                  id="initial-capital"
-                  type="number"
-                  value={capitalInput}
-                  onChange={(e) => setCapitalInput(e.target.value)}
-                  placeholder="e.g., 50000"
-                  className="mt-1 text-lg h-12"
-                />
-                 <p className="text-xs text-muted-foreground mt-1.5">Last Updated: {format(parseISO(lastUpdated), "PPP 'at' h:mm a")}</p>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleUpdateCapital} disabled={parseFloat(capitalInput) === initialCapital}>
-                <Save className="mr-2 h-4 w-4" /> Save Capital Amount
-              </Button>
-            </CardFooter>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Cash Capital Management</CardTitle>
+                <CardDescription>
+                  Set the initial cash-in-hand for the business. This value is the starting point for calculating real-time cash flow.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Important Note</AlertTitle>
+                  <AlertDescription>
+                    This value should only represent your initial business capital or a manually adjusted amount after a physical cash count. It is not affected by daily sales or expenses.
+                  </AlertDescription>
+                </Alert>
+                <div>
+                  <Label htmlFor="initial-capital" className="text-base">Initial Cash in Hand (NRP)</Label>
+                  <Input
+                    id="initial-capital"
+                    type="number"
+                    value={capitalInput}
+                    onChange={(e) => setCapitalInput(e.target.value)}
+                    placeholder="e.g., 50000"
+                    className="mt-1 text-lg h-12"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Last Updated: {format(parseISO(lastUpdated), "PPP 'at' h:mm a")}</p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={handleUpdateCapital} disabled={parseFloat(capitalInput) === initialCapital}>
+                  <Save className="mr-2 h-4 w-4" /> Save Cash Capital
+                </Button>
+              </CardFooter>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>Bank/Digital Capital Management</CardTitle>
+                <CardDescription>
+                  Set the initial bank or digital balance. This value is the starting point for calculating real-time digital balance.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                 <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertTitle>Important Note</AlertTitle>
+                  <AlertDescription>
+                    This value should represent your initial digital capital. It is not affected by daily sales or expenses.
+                  </AlertDescription>
+                </Alert>
+                <div>
+                  <Label htmlFor="initial-digital-balance" className="text-base">Initial Bank/Digital Balance (NRP)</Label>
+                  <Input
+                    id="initial-digital-balance"
+                    type="number"
+                    value={digitalBalanceInput}
+                    onChange={(e) => setDigitalBalanceInput(e.target.value)}
+                    placeholder="e.g., 100000"
+                    className="mt-1 text-lg h-12"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">Last Updated: {format(parseISO(lastDigitalUpdated), "PPP 'at' h:mm a")}</p>
+                </div>
+              </CardContent>
+              <CardFooter>
+                 <Button onClick={handleUpdateDigitalBalance} disabled={parseFloat(digitalBalanceInput) === initialDigitalBalance}>
+                    <Save className="mr-2 h-4 w-4" /> Save Digital Balance
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

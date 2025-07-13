@@ -11,7 +11,9 @@ export let mockLogEntries: LogEntry[] = [];
 export let mockManagedUsers: ManagedUser[] = [];
 export let mockCapital = {
   cashInHand: 0,
+  digitalBalance: 0,
   lastUpdated: new Date().toISOString(),
+  lastDigitalUpdated: new Date().toISOString()
 };
 
 // --- Core Data Functions ---
@@ -61,6 +63,20 @@ export const updateCashInHand = (newAmount: number, actorName: string): { newAmo
   );
   
   return { newAmount: mockCapital.cashInHand, lastUpdated: mockCapital.lastUpdated };
+};
+
+export const updateDigitalBalance = (newAmount: number, actorName: string): { newAmount: number; lastUpdated: string } => {
+  const oldAmount = mockCapital.digitalBalance;
+  mockCapital.digitalBalance = newAmount;
+  mockCapital.lastDigitalUpdated = new Date().toISOString();
+  
+  addLogEntry(
+    actorName,
+    'Capital Updated',
+    `Initial Bank/Digital Balance updated by ${actorName}. Old: NRP ${formatCurrency(oldAmount)}, New: NRP ${formatCurrency(newAmount)}.`
+  );
+  
+  return { newAmount: mockCapital.digitalBalance, lastUpdated: mockCapital.lastDigitalUpdated };
 };
 
 // --- Managed User Functions ---
@@ -138,7 +154,10 @@ function initializeData() {
     // 2. Initialize Capital
     mockCapital.cashInHand = 50000;
     mockCapital.lastUpdated = new Date().toISOString();
+    mockCapital.digitalBalance = 100000;
+    mockCapital.lastDigitalUpdated = new Date().toISOString();
     addLogEntry('NPS', 'Capital Updated', `Initial cash in hand set to NRP ${formatCurrency(mockCapital.cashInHand)}.`);
+    addLogEntry('NPS', 'Capital Updated', `Initial bank/digital balance set to NRP ${formatCurrency(mockCapital.digitalBalance)}.`);
 
     // 3. Initialize Products
     const productDefinitions = [
