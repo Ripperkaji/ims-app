@@ -140,202 +140,153 @@ export function deleteManagedUser(userId: string, deletedBy: string): boolean {
 
 
 function initializeData() {
-    if (mockProducts.length > 0 || mockManagedUsers.length > 2) { // check for > 2 to allow re-init if only admins are there
+    if (mockProducts.length > 0 || mockManagedUsers.length > 2) { 
         return;
     }
 
-    // 1. Initialize Users
     mockManagedUsers.push(
         { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
         { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
     );
     addManagedUser('Staff User', 'staff', 'staff123', 'SKG', '9800000003');
+    addManagedUser('Jane Doe', 'staff', 'jane123', 'NPS', '9800000004');
 
-    // 2. Initialize Capital
-    mockCapital.cashInHand = 50000;
-    mockCapital.lastUpdated = new Date().toISOString();
-    mockCapital.digitalBalance = 100000;
-    mockCapital.lastDigitalUpdated = new Date().toISOString();
+
+    mockCapital.cashInHand = 75000;
+    mockCapital.lastUpdated = subDays(new Date(), 45).toISOString();
+    mockCapital.digitalBalance = 150000;
+    mockCapital.lastDigitalUpdated = subDays(new Date(), 45).toISOString();
     addLogEntry('NPS', 'Capital Updated', `Initial cash in hand set to NRP ${formatCurrency(mockCapital.cashInHand)}.`);
     addLogEntry('NPS', 'Capital Updated', `Initial bank/digital balance set to NRP ${formatCurrency(mockCapital.digitalBalance)}.`);
 
-    // 3. Initialize Products
     const productDefinitions = [
-        // Disposables
-        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Lush Ice', category: 'Disposables', cost: 800, price: 1200, stock: 20, supplier: 'Vape Supplies Co.' },
-        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Grape Ice', category: 'Disposables', cost: 800, price: 1200, stock: 15, supplier: 'Vape Supplies Co.' },
-        { name: 'ELFBAR', modelName: 'BC5000', flavorName: 'Watermelon Ice', category: 'Disposables', cost: 1500, price: 2200, stock: 10, supplier: 'Global Vapes Inc.', due: 7500 }, // Has due
-        { name: 'YUOTO', modelName: 'THANOS', flavorName: 'Blueberry Ice', category: 'Disposables', cost: 1600, price: 2500, stock: 5, supplier: 'Global Vapes Inc.'},
+        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Lush Ice', category: 'Disposables', cost: 800, price: 1200, stock: 25, supplier: 'Vape Supplies Co.' },
+        { name: 'IGET', modelName: 'LEGEND', flavorName: 'Grape Ice', category: 'Disposables', cost: 800, price: 1200, stock: 18, supplier: 'Vape Supplies Co.' },
+        { name: 'IGET', modelName: 'BAR', flavorName: 'Cola Ice', category: 'Disposables', cost: 750, price: 1100, stock: 30, supplier: 'Vape Supplies Co.' },
+        { name: 'ELFBAR', modelName: 'BC5000', flavorName: 'Watermelon Ice', category: 'Disposables', cost: 1500, price: 2200, stock: 12, supplier: 'Global Vapes Inc.', due: 9000 },
+        { name: 'ELFBAR', modelName: 'BC5000', flavorName: 'Strawberry Kiwi', category: 'Disposables', cost: 1500, price: 2200, stock: 8, supplier: 'Global Vapes Inc.'},
+        { name: 'YUOTO', modelName: 'THANOS', flavorName: 'Blueberry Ice', category: 'Disposables', cost: 1600, price: 2500, stock: 7, supplier: 'Global Vapes Inc.'},
 
-        // E-liquids
-        { name: 'DR. VAPES', modelName: 'PANTHER', flavorName: 'Pink', category: 'E-liquid Free Base', cost: 1200, price: 1800, stock: 8, supplier: 'E-Juice World' },
-        { name: 'BLVK', modelName: 'SALT', flavorName: 'Cuban Cigar', category: 'E-liquid Nic Salt', cost: 1300, price: 2000, stock: 12, supplier: 'E-Juice World' },
-        { name: 'NASTY', modelName: 'SALT', flavorName: 'Cush Man', category: 'E-liquid Nic Salt', cost: 1100, price: 1700, stock: 7, supplier: 'E-Juice World' },
+        { name: 'DR. VAPES', modelName: 'PANTHER', flavorName: 'Pink', category: 'E-liquid Free Base', cost: 1200, price: 1800, stock: 10, supplier: 'E-Juice World' },
+        { name: 'DR. VAPES', modelName: 'PANTHER', flavorName: 'Purple', category: 'E-liquid Free Base', cost: 1200, price: 1800, stock: 5, supplier: 'E-Juice World' },
+        { name: 'BLVK', modelName: 'SALT', flavorName: 'Cuban Cigar', category: 'E-liquid Nic Salt', cost: 1300, price: 2000, stock: 15, supplier: 'E-Juice World' },
+        { name: 'NASTY', modelName: 'SALT', flavorName: 'Cush Man', category: 'E-liquid Nic Salt', cost: 1100, price: 1700, stock: 9, supplier: 'E-Juice World' },
 
-        // Devices and Coils
-        { name: 'VOOPOO', modelName: 'DRAG S', category: 'POD/MOD Devices', cost: 4500, price: 6500, stock: 4, supplier: 'Hardware Distribution', due: 4500 },
+        { name: 'VOOPOO', modelName: 'DRAG S', category: 'POD/MOD Devices', cost: 4500, price: 6500, stock: 6, supplier: 'Hardware Distribution', due: 13500 },
+        { name: 'GEEKVAPE', modelName: 'AEGIS L200', category: 'POD/MOD Devices', cost: 7000, price: 9500, stock: 3, supplier: 'Hardware Distribution'},
         { name: 'SMOK', modelName: 'RPM 2', flavorName: '0.16 Mesh', category: 'Coils', cost: 350, price: 500, stock: 50, supplier: 'Hardware Distribution' },
-        { name: 'GEEKVAPE', modelName: 'Z-COIL', flavorName: '0.4 Mesh', category: 'Coils', cost: 380, price: 550, stock: 30, supplier: 'Hardware Distribution' }
+        { name: 'GEEKVAPE', modelName: 'Z-COIL', flavorName: '0.4 Mesh', category: 'Coils', cost: 380, price: 550, stock: 40, supplier: 'Hardware Distribution' },
+        { name: 'MUJI', modelName: 'ORGANIC', category: 'Cotton', cost: 50, price: 150, stock: 100, supplier: 'DIY Vapes' },
+        { name: 'COIL MASTER', modelName: 'DIY KIT', category: 'Coil Build & Maintenance', cost: 1800, price: 2800, stock: 5, supplier: 'DIY Vapes' }
     ];
 
     productDefinitions.forEach((p, index) => {
         const newProductId = `prod-${index}-${Date.now()}`;
         const totalBatchCost = p.cost * p.stock;
         const dueAmount = p.due || 0;
-        const cashPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : totalBatchCost;
-        const digitalPaid = dueAmount > 0 ? (totalBatchCost - dueAmount) / 2 : 0;
+        const paidAmount = totalBatchCost - dueAmount;
+        const cashPaid = dueAmount > 0 ? paidAmount : totalBatchCost;
+        const digitalPaid = 0;
         const paymentMethod: AcquisitionPaymentMethod = dueAmount > 0 ? 'Hybrid' : 'Cash';
-        const addedBy = index % 2 === 0 ? 'SKG' : 'NPS';
+        const addedBy = index % 3 === 0 ? 'SKG' : 'NPS';
 
         const firstBatch: AcquisitionBatch = {
             batchId: `batch-${newProductId}-${Date.now()}`,
-            date: subDays(new Date(), 30 + index * 2).toISOString(),
+            date: subDays(new Date(), 40 - index).toISOString(),
             condition: 'Initial Stock',
             supplierName: p.supplier,
             quantityAdded: p.stock,
             costPricePerUnit: p.cost,
             sellingPricePerUnitAtAcquisition: p.price,
-            paymentMethod,
-            totalBatchCost,
-            cashPaid,
-            digitalPaid,
-            dueToSupplier: dueAmount,
-            addedBy: addedBy
+            paymentMethod, totalBatchCost, cashPaid, digitalPaid, dueToSupplier: dueAmount, addedBy
         };
 
         const newProduct: Product = {
-            id: newProductId,
-            name: p.name,
-            modelName: p.modelName,
-            flavorName: p.flavorName,
-            category: p.category as ProductType,
-            currentSellingPrice: p.price,
-            currentCostPrice: p.cost,
-            acquisitionHistory: [firstBatch],
-            damagedQuantity: index % 4 === 0 ? 1 : 0, // Some damaged items
-            testerQuantity: index % 5 === 0 ? 1 : 0 // Some testers
+            id: newProductId, name: p.name, modelName: p.modelName, flavorName: p.flavorName, category: p.category as ProductType,
+            currentSellingPrice: p.price, currentCostPrice: p.cost, acquisitionHistory: [firstBatch],
+            damagedQuantity: index === 3 ? 2 : 0, 
+            testerQuantity: index === 0 ? 1 : 0 
         };
         mockProducts.push(newProduct);
-        
-        const fullProductName = `${newProduct.name}${newProduct.modelName ? ` (${newProduct.modelName})` : ''}${newProduct.flavorName ? ` - ${newProduct.flavorName}` : ''}`;
-        let logDetails = `Product '${fullProductName}' added by ${addedBy}. Current Cost: NRP ${formatCurrency(newProduct.currentCostPrice)}, Current MRP: NRP ${formatCurrency(newProduct.currentSellingPrice)}. Initial Batch Qty: ${p.stock}.`;
-        if (p.supplier) logDetails += ` Supplier: ${p.supplier}.`;
-         if (firstBatch.totalBatchCost > 0) {
-            logDetails += ` Batch Cost: NRP ${formatCurrency(firstBatch.totalBatchCost)} via ${firstBatch.paymentMethod}.`;
-            if (firstBatch.paymentMethod === 'Hybrid') {
-                logDetails += ` (Cash: ${formatCurrency(firstBatch.cashPaid)}, Digital: ${formatCurrency(firstBatch.digitalPaid)}, Due: ${formatCurrency(firstBatch.dueToSupplier)})`;
-            } else if (firstBatch.paymentMethod === 'Due') {
-                logDetails += ` (Due: ${formatCurrency(firstBatch.dueToSupplier)})`;
-            }
-        }
-        addLogEntry(addedBy, "Product Added", logDetails);
+        const fullProductName = `${p.name}${p.modelName ? ` (${p.modelName})` : ''}${p.flavorName ? ` - ${p.flavorName}` : ''}`;
+        addLogEntry(addedBy, "Product Added", `Product '${fullProductName}' added by ${addedBy}. Initial Qty: ${p.stock}.`);
 
         if (newProduct.damagedQuantity > 0) {
-            addLogEntry(
-                'SKG', 
-                "Product Damage & Stock Update (Exchange)", 
-                `Product Damage & Stock Update (Exchange): Item '${fullProductName}' (Qty: ${newProduct.damagedQuantity}) marked damaged & exchanged by SKG as part of initial setup.`
-            );
+            addSystemExpense({
+                date: new Date().toISOString(),
+                description: `Damaged Goods: ${newProduct.damagedQuantity}x ${fullProductName}`,
+                category: "Product Damage",
+                amount: newProduct.damagedQuantity * newProduct.currentCostPrice,
+                recordedBy: addedBy
+            }, addedBy);
+             addLogEntry(addedBy, "Product Damage & Stock Update (Exchange)", `Initial setup: Item '${fullProductName}' (Qty: ${newProduct.damagedQuantity}) marked damaged by ${addedBy}.`);
         }
         if (newProduct.testerQuantity > 0) {
-            addLogEntry(
-                'NPS', 
-                "Sample/Demo Quantity Updated", 
-                `Sample/Demo quantity for '${fullProductName}' changed from 0 to ${newProduct.testerQuantity} by NPS as part of initial setup.`
-            );
+            addSystemExpense({
+                date: new Date().toISOString(),
+                description: `Sample/Demo Allocation: ${newProduct.testerQuantity}x ${fullProductName}`,
+                category: "Sample/Demo Allocation",
+                amount: newProduct.testerQuantity * newProduct.currentCostPrice,
+                recordedBy: addedBy
+            }, addedBy);
+            addLogEntry(addedBy, "Sample/Demo Quantity Updated", `Initial setup: Sample/Demo quantity for '${fullProductName}' set to ${newProduct.testerQuantity} by ${addedBy}.`);
         }
     });
 
-    // 4. Initialize Sales
-    const saleCustomers = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank'];
-    for(let i=0; i < 15; i++) {
+    const saleCustomers = ['Alice', 'Bob', 'Charlie', 'David', 'Eve', 'Frank', 'Grace', 'Heidi'];
+    for(let i=0; i < 25; i++) {
         const product1 = mockProducts[i % mockProducts.length];
-        const product2 = mockProducts[(i + 3) % mockProducts.length];
-        const quantity1 = 1;
-        const quantity2 = (i % 3 === 0) ? 1 : 0;
+        const product2 = mockProducts[(i + 5) % mockProducts.length];
+        if (product1.id === product2.id) continue;
+        const quantity1 = 1 + (i % 2);
+        const quantity2 = (i % 4 === 0) ? 1 : 0;
         let totalAmount = product1.currentSellingPrice * quantity1;
+        const saleItems : SaleItem[] = [{ productId: product1.id, productName: `${product1.name} ${product1.modelName || ''} ${product1.flavorName || ''}`.trim(), quantity: quantity1, unitPrice: product1.currentSellingPrice, totalPrice: product1.currentSellingPrice * quantity1 }];
 
-        const saleItems : SaleItem[] = [{
-            productId: product1.id,
-            productName: `${product1.name}${product1.modelName ? ` (${product1.modelName})` : ''}${product1.flavorName ? ` - ${product1.flavorName}` : ''}`.trim(),
-            quantity: quantity1,
-            unitPrice: product1.currentSellingPrice,
-            totalPrice: product1.currentSellingPrice * quantity1
-        }];
-
-        if (quantity2 > 0 && product1.id !== product2.id) {
-             saleItems.push({
-                productId: product2.id,
-                productName: `${product2.name}${product2.modelName ? ` (${product2.modelName})` : ''}${product2.flavorName ? ` - ${product2.flavorName}` : ''}`.trim(),
-                quantity: quantity2,
-                unitPrice: product2.currentSellingPrice,
-                totalPrice: product2.currentSellingPrice * quantity2
-             });
+        if (quantity2 > 0) {
+             saleItems.push({ productId: product2.id, productName: `${product2.name} ${product2.modelName || ''} ${product2.flavorName || ''}`.trim(), quantity: quantity2, unitPrice: product2.currentSellingPrice, totalPrice: product2.currentSellingPrice * quantity2 });
              totalAmount += product2.currentSellingPrice * quantity2;
         }
 
-        const isDue = i % 4 === 0;
-        const isHybrid = i % 5 === 0 && !isDue;
-        const saleDate = subDays(new Date(), i * 2);
+        const paymentType = i % 5;
+        let formPaymentMethod: Sale['formPaymentMethod'] = 'Cash';
+        let cashPaid = 0, digitalPaid = 0, amountDue = 0;
+        if(paymentType === 1) { formPaymentMethod = 'Digital'; digitalPaid = totalAmount; }
+        else if (paymentType === 2) { formPaymentMethod = 'Due'; amountDue = totalAmount; }
+        else if (paymentType === 3) { formPaymentMethod = 'Hybrid'; cashPaid = totalAmount * 0.5; amountDue = totalAmount * 0.5; }
+        else { cashPaid = totalAmount; }
+
+        const saleDate = subHours(new Date(), i * 10);
+        const saleUser = i % 3 === 0 ? 'NPS' : (i % 3 === 1 ? 'SKG' : 'Staff User');
 
         const newSale: Sale = {
             id: String(i + 1).padStart(4, '0'),
             customerName: saleCustomers[i % saleCustomers.length],
-            customerContact: `98000000${10 + i}`,
-            items: saleItems,
-            totalAmount: totalAmount,
-            cashPaid: isDue ? 0 : (isHybrid ? totalAmount / 2 : totalAmount),
-            digitalPaid: isDue ? 0 : (isHybrid ? totalAmount / 2 : 0),
-            amountDue: isDue ? totalAmount : 0,
-            formPaymentMethod: isDue ? 'Due' : (isHybrid ? 'Hybrid' : 'Cash'),
-            date: saleDate.toISOString(),
-            status: isDue ? 'Due' : 'Paid',
-            createdBy: i % 2 === 0 ? 'NPS' : 'Staff User',
-            saleOrigin: i % 2 === 0 ? 'store' : 'online',
+            customerContact: i % 2 === 0 ? `98000000${10 + i}` : undefined,
+            items: saleItems, totalAmount, cashPaid, digitalPaid, amountDue, formPaymentMethod,
+            date: saleDate.toISOString(), status: amountDue > 0 ? 'Due' : 'Paid',
+            createdBy: saleUser, saleOrigin: i % 2 === 0 ? 'store' : 'online',
             isFlagged: i === 1,
             flaggedComment: i === 1 ? 'Customer reported item was faulty. Exchanged on spot.' : ''
         };
         mockSales.push(newSale);
-        
-        const contactInfoLog = newSale.customerContact ? ` (${newSale.customerContact})` : '';
-        let paymentLogDetails = '';
-        if (newSale.formPaymentMethod === 'Hybrid') { const parts = []; if (newSale.cashPaid > 0) parts.push(`NRP ${formatCurrency(newSale.cashPaid)} by cash`); if (newSale.digitalPaid > 0) parts.push(`NRP ${formatCurrency(newSale.digitalPaid)} by digital`); if (newSale.amountDue > 0) parts.push(`NRP ${formatCurrency(newSale.amountDue)} due`); paymentLogDetails = `Payment: ${parts.join(', ')}.`; }
-        else { paymentLogDetails = `Payment: ${newSale.formPaymentMethod}.`; }
-        const logDetails = `Sale ID ${newSale.id} for ${newSale.customerName}${contactInfoLog}, Total: NRP ${formatCurrency(newSale.totalAmount)}. ${paymentLogDetails} Status: ${newSale.status}. Origin: ${newSale.saleOrigin}. Items: ${newSale.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}`;
-        addLogEntry(newSale.createdBy, "Sale Created", logDetails);
-
-        if (newSale.isFlagged) {
-            addLogEntry(newSale.createdBy, "Sale Flagged", `Sale ID ${newSale.id} flagged by ${newSale.createdBy}. ${newSale.flaggedComment}`);
-        }
+        addLogEntry(saleUser, "Sale Created", `Sale ID ${newSale.id} for ${newSale.customerName}, Total: NRP ${formatCurrency(newSale.totalAmount)}.`);
     }
      
-     // 5. Initialize Expenses
      const tempExpenses: Omit<Expense, 'id'>[] = [
-         { date: subDays(new Date(), 40).toISOString(), description: 'Office Rent - May', category: 'Rent', amount: 25000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 25000, digitalPaid: 0, amountDue: 0},
-         { date: subDays(new Date(), 25).toISOString(), description: 'Internet Bill', category: 'Utilities', amount: 2000, recordedBy: 'SKG', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 2000, amountDue: 0 },
-         { date: subDays(new Date(), 15).toISOString(), description: 'Catering for event', category: 'Marketing and Advertising', amount: 5000, recordedBy: 'NPS', paymentMethod: 'Due', cashPaid: 0, digitalPaid: 0, amountDue: 5000 },
-         { date: subDays(new Date(), 5).toISOString(), description: 'Staff Salary - May', category: 'Salaries and Benefits', amount: 15000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 10000, digitalPaid: 5000, amountDue: 0 }
+         { date: subDays(new Date(), 35).toISOString(), description: 'Office Rent - Last Month', category: 'Rent', amount: 30000, recordedBy: 'NPS', paymentMethod: 'Cash', cashPaid: 30000, digitalPaid: 0, amountDue: 0},
+         { date: subDays(new Date(), 20).toISOString(), description: 'Internet Bill', category: 'Utilities', amount: 2500, recordedBy: 'SKG', paymentMethod: 'Digital', cashPaid: 0, digitalPaid: 2500, amountDue: 0 },
+         { date: subDays(new Date(), 10).toISOString(), description: 'Catering for event', category: 'Marketing and Advertising', amount: 7500, recordedBy: 'NPS', paymentMethod: 'Due', cashPaid: 0, digitalPaid: 0, amountDue: 7500 },
+         { date: subDays(new Date(), 2).toISOString(), description: 'Staff Salaries', category: 'Salaries and Benefits', amount: 45000, recordedBy: 'SKG', paymentMethod: 'Hybrid', cashPaid: 20000, digitalPaid: 25000, amountDue: 0 }
      ];
      tempExpenses.forEach((exp, index) => {
-        const newExpense: Expense = {
-            id: `exp-${index}-${Date.now()}`,
-            ...exp
-        }
+        const newExpense: Expense = { id: `exp-${index}-${Date.now()}`, ...exp };
         mockExpenses.push(newExpense);
-        let paymentLogString = `Paid via ${newExpense.paymentMethod}.`;
-        if (newExpense.paymentMethod === 'Hybrid') {
-          const parts = [];
-          if (newExpense.cashPaid && newExpense.cashPaid > 0) parts.push(`Cash: NRP ${formatCurrency(newExpense.cashPaid)}`);
-          if (newExpense.digitalPaid && newExpense.digitalPaid > 0) parts.push(`Digital: NRP ${formatCurrency(newExpense.digitalPaid)}`);
-          if (newExpense.amountDue && newExpense.amountDue > 0) parts.push(`Due: NRP ${formatCurrency(newExpense.amountDue)}`);
-          paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
-        } else if (newExpense.paymentMethod === 'Due') {
-            paymentLogString = `Marked as Due (NRP ${formatCurrency(newExpense.amount)}).`;
-        }
-        const logDetails = `Expense for '${newExpense.description}' (Category: ${newExpense.category}), Amount: NRP ${formatCurrency(newExpense.amount)} recorded by ${newExpense.recordedBy}. ${paymentLogString}`;
-        addLogEntry(newExpense.recordedBy, "Expense Recorded", logDetails);
-     })
+        addLogEntry(exp.recordedBy, "Expense Recorded", `Expense for '${exp.description}', Amount: NRP ${formatCurrency(exp.amount)}.`);
+     });
 }
 
 
 initializeData();
+
+    
