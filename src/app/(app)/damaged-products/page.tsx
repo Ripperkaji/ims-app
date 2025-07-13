@@ -14,6 +14,8 @@ import { formatCurrency } from '@/lib/utils';
 interface DamagedProductEntry {
   id: string;
   name: string;
+  modelName?: string;
+  flavorName?: string;
   category: string;
   damagedQuantity: number;
   sellableStock: number;
@@ -84,8 +86,9 @@ export default function DamagedProductsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Category</TableHead>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead>Variant</TableHead>
                   <TableHead className="text-center">Units Damaged</TableHead>
                   <TableHead className="text-center">Sellable Stock</TableHead>
                   <TableHead className="text-right">Total Damage Cost</TableHead>
@@ -96,7 +99,8 @@ export default function DamagedProductsPage() {
                 {damagedProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{product.category}</TableCell>
+                    <TableCell>{product.modelName || 'N/A'}</TableCell>
+                    <TableCell>{product.flavorName || 'N/A'}</TableCell>
                     <TableCell className="text-center font-semibold text-destructive">{product.damagedQuantity}</TableCell>
                     <TableCell className="text-center">{product.sellableStock}</TableCell>
                     <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(product.totalDamageCost)}</TableCell>
@@ -116,7 +120,7 @@ export default function DamagedProductsPage() {
             </div>
           )}
         </CardContent>
-        {totalCostOfAllDamaged > 0 && !isLoading && (
+        {!isLoading && totalCostOfAllDamaged > 0 && (
             <CardFooter className="flex justify-end items-center gap-2 border-t pt-4">
                 <DollarSign className="h-5 w-5 text-destructive"/>
                 <p className="text-base font-semibold">Total Cost of Damaged Goods:</p>

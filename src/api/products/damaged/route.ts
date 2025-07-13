@@ -7,7 +7,9 @@ import { parseISO } from 'date-fns';
 
 interface DamagedProductInfo {
   id: string;
-  name: string;
+  name: string; // This will now be the base company name e.g., "IGET"
+  modelName?: string;
+  flavorName?: string;
   category: string;
   damagedQuantity: number;
   sellableStock: number;
@@ -20,13 +22,13 @@ export async function GET(request: NextRequest) {
     const damagedProductList: DamagedProductInfo[] = mockProducts
       .filter(p => p.damagedQuantity > 0)
       .map(product => {
-        const fullProductName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+        const fullProductNameForLog = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
         
         const relevantLogs = mockLogEntries
           .filter(
             log =>
               log.action === "Product Damage & Stock Update (Exchange)" &&
-              log.details.includes(fullProductName) 
+              log.details.includes(fullProductNameForLog) 
           )
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         
@@ -35,7 +37,9 @@ export async function GET(request: NextRequest) {
 
         return {
           id: product.id,
-          name: fullProductName,
+          name: product.name,
+          modelName: product.modelName,
+          flavorName: product.flavorName,
           category: product.category,
           damagedQuantity: product.damagedQuantity,
           sellableStock: sellableStock,
@@ -52,7 +56,10 @@ export async function GET(request: NextRequest) {
         } else if (b.dateOfDamageLogged) {
           return 1;  
         }
-        return a.name.localeCompare(b.name);
+        // Fallback sorting
+        const nameA = `${a.name} ${a.modelName} ${a.flavorName}`;
+        const nameB = `${b.name} ${b.modelName} ${b.flavorName}`;
+        return nameA.localeCompare(nameB);
       });
 
     return NextResponse.json(damagedProductList, { status: 200 });
