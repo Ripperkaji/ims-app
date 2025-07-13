@@ -94,7 +94,7 @@ export function addManagedUser(name: string, role: UserRole, password_plaintext:
   }
   
   const newUser: ManagedUser = {
-    id: `user-${role}-${Date.now()}`,
+    id: `user-${role}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     name,
     email,
     contactNumber,
@@ -143,10 +143,17 @@ function initializeData() {
     if (mockProducts.length > 0 || mockManagedUsers.length > 2) { 
         return;
     }
+    
+    // Clear all existing data to ensure a fresh start
+    mockProducts.length = 0;
+    mockSales.length = 0;
+    mockExpenses.length = 0;
+    mockLogEntries.length = 0;
+    mockManagedUsers.length = 0;
 
     mockManagedUsers.push(
-        { id: 'user-admin-nps', name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
-        { id: 'user-admin-skg', name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
+        { id: `user-admin-nps-${Date.now()}`, name: 'NPS', email: 'nps@sh.com', contactNumber: '9800000001', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' },
+        { id: `user-admin-skg-${Date.now()}`, name: 'SKG', email: 'skg@sh.com', contactNumber: '9800000002', role: 'admin', passwordHash: '12345', status: 'active', createdAt: new Date().toISOString(), addedBy: 'System' }
     );
     addManagedUser('Staff User', 'staff', 'staff123', 'SKG', '9800000003');
     addManagedUser('Jane Doe', 'staff', 'jane123', 'NPS', '9800000004');
@@ -181,7 +188,7 @@ function initializeData() {
     ];
 
     productDefinitions.forEach((p, index) => {
-        const newProductId = `prod-${index}-${Date.now()}`;
+        const newProductId = `prod-${index}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         const totalBatchCost = p.cost * p.stock;
         const dueAmount = p.due || 0;
         const paidAmount = totalBatchCost - dueAmount;
@@ -288,5 +295,3 @@ function initializeData() {
 
 
 initializeData();
-
-    
