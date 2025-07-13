@@ -88,6 +88,7 @@ export default function DamagedProductsPage() {
                 <TableRow>
                   <TableHead>Company</TableHead>
                   <TableHead>Model</TableHead>
+                  <TableHead>Category</TableHead>
                   <TableHead>Variant</TableHead>
                   <TableHead className="text-center">Units Damaged</TableHead>
                   <TableHead className="text-center">Sellable Stock</TableHead>
@@ -100,6 +101,7 @@ export default function DamagedProductsPage() {
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>{product.modelName || 'N/A'}</TableCell>
+                    <TableCell>{product.category}</TableCell>
                     <TableCell>{product.flavorName || 'N/A'}</TableCell>
                     <TableCell className="text-center font-semibold text-destructive">{product.damagedQuantity}</TableCell>
                     <TableCell className="text-center">{product.sellableStock}</TableCell>

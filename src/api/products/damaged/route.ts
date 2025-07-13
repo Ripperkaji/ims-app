@@ -7,13 +7,13 @@ import { parseISO } from 'date-fns';
 
 interface DamagedProductInfo {
   id: string;
-  name: string; // This will now be the base company name e.g., "IGET"
+  name: string; // This is the base company name e.g., "IGET"
   modelName?: string;
   flavorName?: string;
   category: string;
   damagedQuantity: number;
   sellableStock: number;
-  totalDamageCost: number;
+  totalDamageCost: number; // This will now be calculated correctly
   dateOfDamageLogged?: string; // ISO string
 }
 
@@ -22,6 +22,8 @@ export async function GET(request: NextRequest) {
     const damagedProductList: DamagedProductInfo[] = mockProducts
       .filter(p => p.damagedQuantity > 0)
       .map(product => {
+        // Correctly construct the full product name for searching in logs.
+        // This must be precise to match how logs are created.
         const fullProductNameForLog = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
         
         const relevantLogs = mockLogEntries
@@ -33,6 +35,8 @@ export async function GET(request: NextRequest) {
           .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         
         const sellableStock = calculateCurrentStock(product, mockSales);
+        
+        // **FIX**: Correctly calculate totalDamageCost here.
         const totalDamageCost = product.damagedQuantity * product.currentCostPrice;
 
         return {
