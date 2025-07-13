@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAuthStore } from "@/stores/authStore";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus, FileText, Info, Save } from "lucide-react";
+import { Banknote, Landmark, Edit, Wallet, DollarSign, Archive, Edit3, CheckCircle2, Phone, Flag, HandCoins, CreditCard, PieChart as PieChartIcon, CalendarClock, TrendingUp, TrendingDown, PackagePlus, FileText, Info, Save, PiggyBank } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -327,6 +327,8 @@ export default function AccountsPage() {
   const totalReceivables = useMemo(() => {
     return mockSales.reduce((sum, sale) => sum + (sale.amountDue || 0), 0);
   }, [mockSales, refreshTrigger]);
+
+  const availableWorkingCapital = useMemo(() => cashInHand + currentDigitalBalance, [cashInHand, currentDigitalBalance]);
 
   const totalCurrentAssets = useMemo(() => {
     return cashInHand + currentDigitalBalance + currentInventoryValue + totalReceivables;
@@ -852,9 +854,10 @@ export default function AccountsPage() {
                 <CardTitle>Current Assets Overview</CardTitle>
                 <CardDescription>A real-time snapshot of your business's liquid and inventory assets.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(cashInHand)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
+                  <div className="p-4 border rounded-lg bg-blue-50 dark:bg-blue-900/20"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><PiggyBank/> Available Working Capital</h3><p className="text-2xl font-bold text-blue-600 dark:text-blue-400">NRP {formatCurrency(availableWorkingCapital)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><FileText/> Accounts Receivable</h3><p className="text-2xl font-bold">NRP {formatCurrency(totalReceivables)}</p></div>
                   <div className="p-4 border rounded-lg bg-muted/50"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Wallet/> Total Current Assets</h3><p className="text-2xl font-bold text-primary">NRP {formatCurrency(totalCurrentAssets)}</p></div>
