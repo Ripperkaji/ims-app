@@ -11,6 +11,7 @@ interface DamagedProductInfo {
   category: string;
   damagedQuantity: number;
   sellableStock: number;
+  totalDamageCost: number;
   dateOfDamageLogged?: string; // ISO string
 }
 
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
         
         const sellableStock = calculateCurrentStock(product, mockSales);
         const fullProductName = `${product.name}${product.modelName ? ` (${product.modelName})` : ''}${product.flavorName ? ` - ${product.flavorName}` : ''}`;
+        const totalDamageCost = product.damagedQuantity * product.currentCostPrice;
 
         return {
           id: product.id,
@@ -36,6 +38,7 @@ export async function GET(request: NextRequest) {
           category: product.category,
           damagedQuantity: product.damagedQuantity,
           sellableStock: sellableStock,
+          totalDamageCost: totalDamageCost,
           dateOfDamageLogged: relevantLogs.length > 0 ? relevantLogs[0].timestamp : undefined,
         };
       })

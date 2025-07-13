@@ -3,12 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { useAuthStore } from "@/stores/authStore";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertOctagon, Loader2 } from "lucide-react";
+import { AlertOctagon, Loader2, DollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { format, parseISO } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 interface DamagedProductEntry {
   id: string;
@@ -17,6 +18,7 @@ interface DamagedProductEntry {
   damagedQuantity: number;
   sellableStock: number;
   dateOfDamageLogged?: string;
+  totalDamageCost: number;
 }
 
 export default function DamagedProductsPage() {
@@ -52,6 +54,8 @@ export default function DamagedProductsPage() {
     fetchDamagedProducts();
   }, [user, router, toast]);
 
+  const totalCostOfAllDamaged = damagedProducts.reduce((sum, p) => sum + p.totalDamageCost, 0);
+
   if (!user || user.role !== 'admin') {
     return null;
   }
@@ -84,6 +88,7 @@ export default function DamagedProductsPage() {
                   <TableHead>Category</TableHead>
                   <TableHead className="text-center">Units Damaged</TableHead>
                   <TableHead className="text-center">Sellable Stock</TableHead>
+                  <TableHead className="text-right">Total Damage Cost</TableHead>
                   <TableHead>Date of Damage Logged</TableHead>
                 </TableRow>
               </TableHeader>
@@ -94,6 +99,7 @@ export default function DamagedProductsPage() {
                     <TableCell>{product.category}</TableCell>
                     <TableCell className="text-center font-semibold text-destructive">{product.damagedQuantity}</TableCell>
                     <TableCell className="text-center">{product.sellableStock}</TableCell>
+                    <TableCell className="text-right font-semibold text-destructive">NRP {formatCurrency(product.totalDamageCost)}</TableCell>
                     <TableCell>
                       {product.dateOfDamageLogged
                         ? format(parseISO(product.dateOfDamageLogged), 'MMM dd, yyyy HH:mm') 
@@ -110,6 +116,13 @@ export default function DamagedProductsPage() {
             </div>
           )}
         </CardContent>
+        {totalCostOfAllDamaged > 0 && !isLoading && (
+            <CardFooter className="flex justify-end items-center gap-2 border-t pt-4">
+                <DollarSign className="h-5 w-5 text-destructive"/>
+                <p className="text-base font-semibold">Total Cost of Damaged Goods:</p>
+                <p className="text-xl font-bold text-destructive">NRP {formatCurrency(totalCostOfAllDamaged)}</p>
+            </CardFooter>
+        )}
       </Card>
     </div>
   );
