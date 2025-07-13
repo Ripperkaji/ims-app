@@ -162,9 +162,8 @@ export default function AccountsPage() {
   const [itemToSettle, setItemToSettle] = useState<PayableItem | null>(null);
   const [settlePayableType, setSettlePayableType] = useState<PayableType>('');
   const [isSettleDialogOpen, setIsSettleDialogOpen] = useState(false);
-
-  // State for Capital
-  const [currentCashInHand, setCurrentCashInHand] = useState(mockCapital.cashInHand);
+  
+  // State for Capital - only lastUpdated is needed now
   const [lastUpdated, setLastUpdated] = useState(mockCapital.lastUpdated);
   
   // State for Receivables
@@ -286,6 +285,14 @@ export default function AccountsPage() {
   };
 
   // --- Logic for Current Assets ---
+  const cashInHand = useMemo(() => {
+    const cashInflowsFromSales = mockSales.reduce((sum, sale) => sum + (sale.cashPaid || 0), 0);
+    const cashOutflowsForSuppliers = mockProducts.flatMap(p => p.acquisitionHistory).reduce((sum, batch) => sum + (batch.cashPaid || 0), 0);
+    const cashOutflowsForExpenses = mockExpenses.reduce((sum, expense) => sum + (expense.cashPaid || 0), 0);
+    // Assuming mockCapital.cashInHand is the initial capital injection
+    return mockCapital.cashInHand + cashInflowsFromSales - cashOutflowsForSuppliers - cashOutflowsForExpenses;
+  }, [mockSales, mockProducts, mockExpenses, refreshTrigger]);
+
   const currentInventoryValue = useMemo(() => {
     return mockProducts.reduce((sum, product) => {
       const stock = calculateCurrentStock(product, mockSales);
@@ -305,8 +312,8 @@ export default function AccountsPage() {
   }, [mockSales, refreshTrigger]);
 
   const totalCurrentAssets = useMemo(() => {
-    return currentCashInHand + currentDigitalBalance + currentInventoryValue + totalReceivables;
-  }, [currentCashInHand, currentDigitalBalance, currentInventoryValue, totalReceivables]);
+    return cashInHand + currentDigitalBalance + currentInventoryValue + totalReceivables;
+  }, [cashInHand, currentDigitalBalance, currentInventoryValue, totalReceivables]);
 
 
   // --- Logic for Receivables (Due Sales) ---
@@ -754,10 +761,10 @@ export default function AccountsPage() {
             <Card className="shadow-lg">
               <CardHeader>
                 <CardTitle>Current Assets Overview</CardTitle>
-                <CardDescription>A snapshot of your business's current assets. Last updated: {format(new Date(lastUpdated), "MMM dd, yyyy 'at' p")}</CardDescription>
+                <CardDescription>A real-time snapshot of your business's liquid and inventory assets.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentCashInHand)}</p></div>
+                  <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><DollarSign/> Cash in Hand</h3><p className="text-2xl font-bold">NRP {formatCurrency(cashInHand)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><CreditCard/> Current Digital Balance</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentDigitalBalance)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Archive/> Inventory Value (Cost)</h3><p className="text-2xl font-bold">NRP {formatCurrency(currentInventoryValue)}</p></div>
                   <div className="p-4 border rounded-lg"><h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><FileText/> Accounts Receivable</h3><p className="text-2xl font-bold">NRP {formatCurrency(totalReceivables)}</p></div>
@@ -796,5 +803,3 @@ export default function AccountsPage() {
     </>
   );
 }
-
-    
