@@ -23,19 +23,10 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true, // Start as true
       actions: {
         login: (identifier, password_plaintext, role, routerPush) => {
-          let userToLogin;
-
-          if (role === 'admin') {
-            // Admin logs in with email
-            userToLogin = mockManagedUsers.find(
-              u => u.email.toLowerCase() === identifier.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
-            );
-          } else {
-            // Staff logs in with username (name)
-            userToLogin = mockManagedUsers.find(
-              u => u.name.toLowerCase() === identifier.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
-            );
-          }
+          // Both admin and staff now log in with email (identifier) and password.
+          const userToLogin = mockManagedUsers.find(
+            u => u.email.toLowerCase() === identifier.toLowerCase() && u.passwordHash === password_plaintext && u.role === role
+          );
 
           if (userToLogin) {
             set({ user: { id: userToLogin.id, name: userToLogin.name, email: userToLogin.email, role: userToLogin.role }, isLoading: false });
