@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, EyeOff, LogIn, KeyRound, User as UserIcon } from 'lucide-react';
 import type { UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +26,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
   const router = useRouter();
 
   // State for forms
-  const [username, setUsername] = useState(''); // for staff
+  const [selectedStaffName, setSelectedStaffName] = useState<string | null>(null);
   const [password, setPassword] = useState(''); // for staff AND admin
   const [showPassword, setShowPassword] = useState(false);
   const [selectedAdmin, setSelectedAdmin] = useState<string | null>(null);
@@ -47,7 +49,11 @@ export default function LoginForm({ userType }: LoginFormProps) {
         loginSuccess = actions.login(adminToLogin.email, password, 'admin', router.push);
       }
     } else { // staff
-      loginSuccess = actions.login(username, password, 'staff', router.push);
+       if (!selectedStaffName) {
+        toast({ title: "Selection Required", description: "Please select a staff user to login.", variant: "destructive" });
+        return;
+      }
+      loginSuccess = actions.login(selectedStaffName, password, 'staff', router.push);
     }
     
     if (loginSuccess) {
@@ -141,6 +147,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
   }
 
   // Staff Login Form (the original design)
+  const staffUsers = mockManagedUsers.filter(u => u.role === 'staff');
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
@@ -155,18 +162,16 @@ export default function LoginForm({ userType }: LoginFormProps) {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-               <div className="relative">
-                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="E.g., Staff User"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                  className="text-base pl-10"
-                />
-              </div>
+               <Select value={selectedStaffName || ''} onValueChange={setSelectedStaffName}>
+                  <SelectTrigger id="staff-user-select" className="mt-1">
+                      <SelectValue placeholder="Select your username" />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {staffUsers.map(staff => (
+                          <SelectItem key={staff.id} value={staff.name}>{staff.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -180,6 +185,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   className="text-base pl-10"
+                  disabled={!selectedStaffName}
                 />
                 <Button
                   type="button"
@@ -187,6 +193,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
                   size="icon"
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={!selectedStaffName}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </Button>
@@ -197,6 +204,7 @@ export default function LoginForm({ userType }: LoginFormProps) {
              <Button 
                 type="submit" 
                 className="w-full text-lg py-6"
+                disabled={!selectedStaffName || !password}
               >
               <LogIn className="mr-2 h-5 w-5" /> Login
             </Button>
