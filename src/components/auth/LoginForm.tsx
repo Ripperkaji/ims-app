@@ -30,18 +30,19 @@ export default function LoginForm({ userType }: LoginFormProps) {
   
   const staffUsers = mockManagedUsers.filter(u => u.role === 'staff');
   const adminUsers = mockManagedUsers.filter(u => u.role === 'admin');
+  const usersToList = userType === 'admin' ? adminUsers : staffUsers;
 
   useEffect(() => {
-    // When user selection changes, reset password and update placeholder
+    // When user selection changes, reset password and auto-populate for convenience
     setPassword('');
-    if (userType === 'staff' && selectedUserId) {
-      const selectedUser = staffUsers.find(u => u.id === selectedUserId);
+    if (selectedUserId) {
+      const selectedUser = usersToList.find(u => u.id === selectedUserId);
       if (selectedUser) {
         // Set password for convenience in mock environment
         setPassword(selectedUser.passwordHash);
       }
     }
-  }, [selectedUserId, userType, staffUsers]);
+  }, [selectedUserId, userType, usersToList]);
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -78,17 +79,14 @@ export default function LoginForm({ userType }: LoginFormProps) {
   };
 
   const selectedUser = mockManagedUsers.find(u => u.id === selectedUserId);
-  const passwordPlaceholder = userType === 'staff' && selectedUser ? `Password is "${selectedUser.passwordHash}"` : "Enter password";
-
-  const usersToList = userType === 'admin' ? adminUsers : staffUsers;
-
+  const passwordPlaceholder = selectedUser ? `Password is "${selectedUser.passwordHash}"` : "Enter password";
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
            <div className="mx-auto mb-4">
-            <Image src="/SHLOGO.png" alt="Logo" height={70} width={150} />
+            <Image src="/SHLOGO.png" alt="Logo" height={70} width={150} data-ai-hint="logo" />
            </div>
           <CardTitle className="text-3xl font-headline capitalize">{userType} Login</CardTitle>
           <CardDescription className="text-lg">Access your SH IMS panel.</CardDescription>
