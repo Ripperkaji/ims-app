@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, defaultPassword, addedBy } = validation.data;
+    const contactNumber = body.contactNumber || '';
 
     // The addManagedUser function already handles logging and ensuring only staff are added.
-    const newUser = addManagedUser(name, 'staff', defaultPassword, addedBy);
+    const newUser = addManagedUser(name, 'staff', defaultPassword, addedBy, contactNumber);
 
     if (!newUser) {
       // This case might occur if addManagedUser internally prevents admin creation

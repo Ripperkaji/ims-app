@@ -1,5 +1,5 @@
 
-import type { Product, Sale, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole, ProductType } from '@/types';
+import type { Product, Sale, SaleItem, Expense, LogEntry, AcquisitionBatch, AcquisitionPaymentMethod, ExpensePaymentMethod, ManagedUser, UserRole, ProductType } from '@/types';
 import { formatISO, subDays, subHours, subMonths } from 'date-fns'; 
 import { calculateCurrentStock as calculateStockShared } from './productUtils';
 import { formatCurrency } from './utils';
@@ -22,6 +22,7 @@ export function addLogEntry(actorName: string, action: string, details: string):
     const newLog: LogEntry = {
       id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
+      date: new Date().toISOString(),
       user: actorName,
       action,
       details,
@@ -81,7 +82,7 @@ export const updateDigitalBalance = (newAmount: number, actorName: string): { ne
 
 // --- Managed User Functions ---
 
-export function addManagedUser(name: string, role: UserRole, password_plaintext: string, addedBy: string, contactNumber: string): ManagedUser | null {
+export function addManagedUser(name: string, role: UserRole, password_plaintext: string, addedBy: string, contactNumber: string = ''): ManagedUser | null {
   const email = `${name.toLowerCase().replace(/\s+/g, '.')}@sh.com`;
   if (mockManagedUsers.some(u => u.name.toLowerCase() === name.toLowerCase())) {
     console.error(`User with name ${name} already exists.`);

@@ -35,10 +35,10 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
   const dueAmount = useMemo(() => {
     if (!item) return 0;
     if (payableType === 'supplier' && 'dueAmount' in item) {
-      return item.dueAmount;
+      return item.dueAmount ?? 0;
     }
     if (payableType === 'expense' && 'amountDue' in item) {
-      return item.amountDue;
+      return item.amountDue ?? 0;
     }
     return 0;
   }, [item, payableType]);
@@ -66,7 +66,7 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
           setValidationError(null);
           return;
       }
-      if (totalHybridPayment > dueAmount + 0.001) { // Allow for float inaccuracies
+      if (totalHybridPayment > (dueAmount ?? 0) + 0.001) { // Allow for float inaccuracies
         setValidationError(`Total payment (NRP ${formatCurrency(totalHybridPayment)}) cannot exceed due amount.`);
       } else {
         setValidationError(null);
@@ -89,8 +89,8 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
             toast({ title: "Invalid Amount", description: "Please enter a valid positive payment amount.", variant: "destructive" });
             return;
         }
-        if (numericPaymentAmount > dueAmount + 0.001) { // Allow for float inaccuracies
-            toast({ title: "Overpayment", description: `Payment amount (NRP ${formatCurrency(numericPaymentAmount)}) cannot exceed the due amount of NRP ${formatCurrency(dueAmount)}.`, variant: "destructive" });
+        if (numericPaymentAmount > (dueAmount ?? 0) + 0.001) { // Allow for float inaccuracies
+            toast({ title: "Overpayment", description: `Payment amount (NRP ${formatCurrency(numericPaymentAmount)}) cannot exceed the due amount of NRP ${formatCurrency(dueAmount ?? 0)}.`, variant: "destructive" });
             return;
         }
         if (paymentMethod === 'Cash') cashPaid = numericPaymentAmount;
@@ -105,8 +105,8 @@ export default function SettlePayableDialog({ isOpen, onClose, item, payableType
             toast({ title: "Invalid Amount", description: "Total hybrid payment must be a positive amount.", variant: "destructive" });
             return;
         }
-        if (totalPaid > dueAmount + 0.001) {
-            toast({ title: "Overpayment", description: `Total payment (NRP ${formatCurrency(totalPaid)}) cannot exceed the due amount of NRP ${formatCurrency(dueAmount)}.`, variant: "destructive" });
+        if (totalPaid > (dueAmount ?? 0) + 0.001) {
+            toast({ title: "Overpayment", description: `Total payment (NRP ${formatCurrency(totalPaid)}) cannot exceed the due amount of NRP ${formatCurrency(dueAmount ?? 0)}.`, variant: "destructive" });
             setValidationError(`Total payment (NRP ${formatCurrency(totalPaid)}) cannot exceed due amount.`);
             return;
         }

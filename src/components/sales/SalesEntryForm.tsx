@@ -140,6 +140,7 @@ export default function SalesEntryForm({ onSaleAdded }: SalesEntryFormProps) {
     const newLog: LogEntry = {
       id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
+      date: new Date().toISOString(),
       user: user.name,
       action,
       details,

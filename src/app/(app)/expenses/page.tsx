@@ -99,6 +99,7 @@ export default function ExpensesPage() {
     const newLog: LogEntry = {
       id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       timestamp: new Date().toISOString(),
+      date: new Date().toISOString(),
       user: user.name,
       action,
       details,
@@ -168,9 +169,9 @@ export default function ExpensesPage() {
     let paymentLogString = `Paid via ${newExpense.paymentMethod}.`;
     if (newExpense.paymentMethod === 'Hybrid') {
       const parts = [];
-      if (newExpense.cashPaid > 0) parts.push(`Cash: NRP ${formatCurrency(newExpense.cashPaid)}`);
-      if (newExpense.digitalPaid > 0) parts.push(`Digital: NRP ${formatCurrency(newExpense.digitalPaid)}`);
-      if (newExpense.amountDue > 0) parts.push(`Due: NRP ${formatCurrency(newExpense.amountDue)}`);
+      if ((newExpense.cashPaid ?? 0) > 0) parts.push(`Cash: NRP ${formatCurrency(newExpense.cashPaid ?? 0)}`);
+      if ((newExpense.digitalPaid ?? 0) > 0) parts.push(`Digital: NRP ${formatCurrency(newExpense.digitalPaid ?? 0)}`);
+      if ((newExpense.amountDue ?? 0) > 0) parts.push(`Due: NRP ${formatCurrency(newExpense.amountDue ?? 0)}`);
       paymentLogString = `Paid via Hybrid (${parts.join(', ')}).`;
     } else if (newExpense.paymentMethod === 'Due') {
         paymentLogString = `Marked as Due (NRP ${formatCurrency(newExpense.amount)}).`;

@@ -42,7 +42,8 @@ export async function PUT(
     }
     
     const { name, editedBy } = validation.data;
-    const updatedUser = editManagedUser(userId, name, editedBy);
+    const contactNumber = body.contactNumber || '';
+    const updatedUser = editManagedUser(userId, name, editedBy, contactNumber);
 
     if (!updatedUser) {
       // This might happen if editManagedUser has internal validation that fails (e.g. name conflict if we add that)

@@ -294,8 +294,8 @@ export default function ProductsPage() {
     const fullProductName = `${productToUpdate.name}${productToUpdate.modelName ? ` (${productToUpdate.modelName})` : ''}${productToUpdate.flavorName ? ` - ${productToUpdate.flavorName}` : ''}`;
     let logDetails = `Product '${fullProductName}' restocked by ${user.name}. `;
     
-    const costPriceFromDialog = resolutionData.newCostPrice; 
-    const sellingPriceFromDialog = resolutionData.newSellingPrice;
+    const costPriceFromDialog = resolutionData.condition === 'condition1' ? undefined : resolutionData.newCostPrice;
+    const sellingPriceFromDialog = resolutionData.condition === 'condition1' ? undefined : resolutionData.newSellingPrice;
 
     const newBatch: AcquisitionBatch = {
       batchId: `batch-${productToUpdate.id}-${Date.now()}`,
@@ -576,9 +576,9 @@ export default function ProductsPage() {
                                                 <TableCell className="pl-4 font-medium">{variant.flavorName || 'Base Variant'}</TableCell>
                                                 <TableCell>NRP {formatCurrency(variant.currentSellingPrice)}</TableCell>
                                                 <TableCell className="text-center">
-                                                    {variant.currentDisplayStock}
-                                                    {(variant.currentDisplayStock) > 0 && variant.currentDisplayStock <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
-                                                    {(variant.currentDisplayStock) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
+                                                    {variant.currentDisplayStock ?? 0}
+                                                    {(variant.currentDisplayStock ?? 0) > 0 && (variant.currentDisplayStock ?? 0) <= 10 && <Badge variant="secondary" className="ml-1.5 text-xs bg-yellow-500 text-black px-1.5 py-0.5">Low</Badge>}
+                                                    {(variant.currentDisplayStock ?? 0) === 0 && <Badge variant="destructive" className="ml-1.5 text-xs px-1.5 py-0.5">Empty</Badge>}
                                                 </TableCell>
                                             </TableRow>
                                         ))}

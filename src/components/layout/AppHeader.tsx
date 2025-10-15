@@ -4,7 +4,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogOut, Settings2, ChevronsLeftRight, UserShield } from 'lucide-react';
+import { LogOut, Settings2, ChevronsLeftRight, ShieldCheck } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Link from 'next/link';
 import { Zap, LayoutDashboard, ShoppingCart, Package, CreditCard, FileText, FlaskConical, AlertOctagon, BarChart3, UserCog, Wallet, Users, Briefcase } from 'lucide-react';

@@ -56,6 +56,7 @@ export interface Product {
   category: ProductType;
   currentSellingPrice: number;
   currentCostPrice: number;
+  currentDisplayStock?: number;
   acquisitionHistory: AcquisitionBatch[];
   damagedQuantity: number;
   testerQuantity: number;
@@ -108,6 +109,7 @@ export interface Expense {
 export interface LogEntry {
   id: string;
   timestamp: string;
+  date: string;
   user: string;
   action: string;
   details: string;

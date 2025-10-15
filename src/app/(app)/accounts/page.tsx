@@ -272,6 +272,7 @@ export default function AccountsPage() {
       mockLogEntries.unshift({
         id: `log-${Date.now()}`,
         timestamp: new Date().toISOString(),
+        date: new Date().toISOString(),
         user: user.name,
         action: "Vendor/Supplier Due Settled",
         details: `Settled NRP ${formatCurrency(totalPayment)} for '${product.name}' (Batch: ${batchId?.substring(0,8)}...) via ${paymentMethodLog}. New Due: NRP ${formatCurrency(batch.dueToSupplier)}.`
@@ -290,6 +291,7 @@ export default function AccountsPage() {
         mockLogEntries.unshift({
             id: `log-${Date.now()}`,
             timestamp: new Date().toISOString(),
+            date: new Date().toISOString(),
             user: user.name,
             action: "Expense Due Settled",
             details: `Settled NRP ${formatCurrency(totalPayment)} for expense '${expense.description}' via ${paymentMethodLog}. New Due: NRP ${formatCurrency(expense.amountDue)}.`
@@ -362,6 +364,7 @@ export default function AccountsPage() {
       mockLogEntries.unshift({
         id: `log-${Date.now()}`,
         timestamp: new Date().toISOString(),
+        date: new Date().toISOString(),
         user: user.name,
         action: "Sale Marked as Paid",
         details: `Sale ID ${saleToMarkAsPaid.id} for ${mockSales[saleIndex].customerName} marked as fully paid by ${user.name}. Amount cleared: NRP ${formatCurrency(paidAmount)}.`
@@ -406,6 +409,7 @@ export default function AccountsPage() {
     mockLogEntries.unshift({
         id: `log-${Date.now()}`,
         timestamp: new Date().toISOString(),
+        date: new Date().toISOString(),
         user: user.name,
         action: "Sale Adjusted",
         details: `Sale ID ${originalSaleId} updated by ${user.name}. New Total: NRP ${formatCurrency(updatedSaleDataFromDialog.totalAmount)}. Comment: ${adjustmentComment}`
