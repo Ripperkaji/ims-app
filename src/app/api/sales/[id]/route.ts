@@ -30,9 +30,9 @@ const updateSaleSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const saleId = params.id;
+  const { id: saleId } = await params;
   const sale = mockSales.find(s => s.id === saleId);
 
   if (!sale) {
@@ -43,9 +43,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const saleId = params.id;
+  const { id: saleId } = await params;
   const saleIndex = mockSales.findIndex(s => s.id === saleId);
 
   if (saleIndex === -1) {
@@ -167,9 +167,9 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const saleId = params.id;
+  const { id: saleId } = await params;
   const saleIndex = mockSales.findIndex(s => s.id === saleId);
 
   if (saleIndex === -1) {

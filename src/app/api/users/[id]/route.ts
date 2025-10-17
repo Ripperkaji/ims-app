@@ -11,9 +11,9 @@ const updateUserSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = params.id;
+  const { id: userId } = await params;
   const user = mockManagedUsers.find(u => u.id === userId && u.role === 'staff');
 
   if (!user) {
@@ -24,9 +24,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = params.id;
+  const { id: userId } = await params;
   const userToUpdate = mockManagedUsers.find(u => u.id === userId && u.role === 'staff');
 
   if (!userToUpdate) {
@@ -61,9 +61,9 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = params.id;
+  const { id: userId } = await params;
   const userToDelete = mockManagedUsers.find(u => u.id === userId && u.role === 'staff');
 
   if (!userToDelete) {

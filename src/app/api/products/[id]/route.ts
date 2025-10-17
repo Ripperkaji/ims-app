@@ -25,9 +25,9 @@ const productUpdateSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const productId = params.id;
+  const { id: productId } = await params;
   const product = mockProducts.find(p => p.id === productId);
 
   if (!product) {
@@ -44,9 +44,9 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const productId = params.id;
+  const { id: productId } = await params;
   const productIndex = mockProducts.findIndex(p => p.id === productId);
 
   if (productIndex === -1) {
